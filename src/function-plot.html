@@ -32,13 +32,20 @@ Example:
 			is: 'function-plot',
 
 			properties: {
-				func: Object,
+				func: {
+					type: Object,
+					observer: "_funcChanged"
+				}
 			},
 
 			attached: function() {
 				var self = this;
 				var plotEl = this.$.plot;
 				plotEl.set('data.0', self._computePoints(100));
+			},
+
+			_funcChanged: function() {
+				this.$.plot.set('data.0', this._computePoints(100));
 			},
 
 			_computePoints: function(numPoints) {

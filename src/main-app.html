@@ -1,5 +1,8 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/algebrite/index.html">
 <link rel="import" href="function-plot.html">
+<script src="../bower_components/mathjs/dist/math.js"></script>
 
 <!--
 A comment describing this element
@@ -22,23 +25,52 @@ Example:
     <style>
       :host {
         display: block;
-      }
-    </style>
+    }
+</style>
 
-    <function-plot func="[[testFunc]]"></function-plot>
+<paper-input label="Function" id="formula" on-keyup="formulaChanged"></paper-input>
+<function-plot func="[[testFunc]]"></function-plot>
 
-  </template>
-  <script>
+</template>
+<script>
     Polymer({
-      is: 'main-app',
-      properties: {
-        testFunc: {
-          type: Object,
-          value: {
-            eval: function(x) {return 1/x;},
-          }
+        is: 'main-app',
+        properties: {
+            testFunc: {
+                type: Object,
+                value: {
+                    eval: function(x) {return 1/x;},
+                }
+            }
+        },
+        formulaChanged: function(e) {
+            try {
+                testFunc = this.parseFunction(this.$.formula.value);
+            }
+            catch (e) {
+            }
+        },
+        parseFunction: function(funcString) {
+            var parsed = math.parse(funcString);
+            var symbols = this.getSymbols(parsed);
+            var compiled = parsed.compile();
+            this.testFunc = {
+                eval: function(x) {
+                    var scope = {};
+                    scope[symbols[0]] = x;
+                    return compiled.eval(scope);
+                }
+            }
+        },
+        getSymbols: function(rootNode) {
+           var symbols = [];
+           rootNode.traverse(function (node) {
+                if (node.type == 'SymbolNode' && !symbols.includes(node.name)) {
+                    symbols.push(node.name);
+                }
+           });
+           return symbols;
         }
-      }
     });
-  </script>
+</script>
 </dom-module>
