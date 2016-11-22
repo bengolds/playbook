@@ -42,9 +42,22 @@ Example:
 				var self = this;
 				var plotEl = this.$.plot;
 				plotEl.set('data.0', self._computePoints(100));
+				plotEl.set('config', {displayModeBar: false});
 			},
 
 			_funcChanged: function() {
+				// var newData = this._computePoints(100);
+				// var plotlyplot = this.$.plot;
+				// Plotly.animate(plotlyplot.$.plot, {
+				// 	data: [newData],
+				// 	traces: [0],
+				// 	layout: {}
+				// 	}, {
+				// 		transition: {
+				// 			duration: 500,
+				// 			ease: 'cubic-in-out'
+				// 		}
+				// 	});
 				this.$.plot.set('data.0', this._computePoints(100));
 			},
 
