@@ -1,0 +1,54 @@
+<link rel="import" href="../bower_components/plotly-plot/plotly-plot.html">
+<!--
+A comment describing this element
+
+Example:
+
+    <my-elem></my-elem>
+
+Example:
+
+    <my-elem>
+      <h2>Hello my-elem</h2>
+    </my-elem>
+
+@demo demo/index.html
+-->
+
+<dom-module id="function-plot">
+	<template>
+		<style>
+			:host {
+				display: block;
+			}
+		</style>
+		
+		<plotly-plot id="plot"></plotly-plot> 
+
+	</template>
+
+	<script>
+		Polymer({
+			is: 'function-plot',
+
+			properties: {
+				func: Object,
+			},
+
+			attached: function() {
+				var self = this;
+				var plotEl = this.$.plot;
+				plotEl.set('data.0', self._computePoints(100));
+			},
+
+			_computePoints: function(numPoints) {
+				data = { "x":[], "y":[]}
+				for (var i = 0; i < numPoints; i++) {
+					data.x[i] = i;
+					data.y[i] = this.func.eval(i);
+				}
+				return data;
+			}
+		});
+	</script>
+</dom-module>

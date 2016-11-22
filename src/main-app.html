@@ -1,0 +1,44 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="function-plot.html">
+
+<!--
+A comment describing this element
+
+Example:
+
+    <my-elem></my-elem>
+
+Example:
+
+    <my-elem>
+      <h2>Hello my-elem</h2>
+    </my-elem>
+
+@demo demo/index.html
+-->
+
+<dom-module id="main-app">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+
+    <function-plot func="[[testFunc]]"></function-plot>
+
+  </template>
+  <script>
+    Polymer({
+      is: 'main-app',
+      properties: {
+        testFunc: {
+          type: Object,
+          value: {
+            eval: function(x) {return 1/x;},
+          }
+        }
+      }
+    });
+  </script>
+</dom-module>
