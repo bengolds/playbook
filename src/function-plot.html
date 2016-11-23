@@ -21,6 +21,9 @@ Example:
 			:host {
 				display: block;
 			}
+			::shadow .modebar {
+				display: none;
+			}
 		</style>
 		
 		<plotly-plot id="plot"></plotly-plot> 
@@ -41,8 +44,20 @@ Example:
 			attached: function() {
 				var self = this;
 				var plotEl = this.$.plot;
-				plotEl.set('data.0', self._computePoints(100));
-				plotEl.set('config', {displayModeBar: false});
+				plotEl.set('config', {
+					displayModeBar: false,
+				});
+				plotEl.set('layout', {
+					height:100,
+					margin: {
+						l: 0,
+						r: 0,
+						t: 0,
+						b: 0,
+						pad: 0
+					}
+
+				});
 			},
 
 			_funcChanged: function() {

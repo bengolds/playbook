@@ -1,0 +1,65 @@
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="function-plot.html">
+<!--
+A comment describing this element
+
+Example:
+
+    <my-elem></my-elem>
+
+Example:
+
+    <my-elem>
+      <h2>Hello my-elem</h2>
+    </my-elem>
+
+@demo demo/index.html
+-->
+
+<dom-module id="function-row">
+  <template>
+    <style>
+      :host {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+      }
+    </style>
+    <paper-input label="Function" id="formula" on-keyup="formulaChanged"></paper-input>
+    <function-plot func="[[functor]]"></function-plot>
+  </template>
+
+  <script>
+    Polymer({
+      is: 'function-row',
+      formulaChanged: function(e) {
+        try {
+          this.functor = this.parseFunction(this.$.formula.value);
+        }
+        catch (e) {
+        }
+      },
+      parseFunction: function(funcString) {
+        var parsed = math.parse(funcString);
+        var symbols = this.getSymbols(parsed);
+        var compiled = parsed.compile();
+        return {
+          eval: function(x) {
+            var scope = {};
+            scope[symbols[0]] = x;
+            return compiled.eval(scope);
+          }
+        }
+      },
+      getSymbols: function(rootNode) {
+       var symbols = [];
+       rootNode.traverse(function (node) {
+        if (node.type == 'SymbolNode' && !symbols.includes(node.name)) {
+          symbols.push(node.name);
+        }
+      });
+       return symbols;
+     }
+   });
+ </script>
+</dom-module>
