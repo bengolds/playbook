@@ -1,5 +1,6 @@
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="function-plot.html">
+<link rel="import" href="mathquill-input.html">
 <!--
 A comment describing this element
 
@@ -25,15 +26,26 @@ Example:
         align-items: center;
       }
     </style>
-    <paper-input label="Function" id="formula" on-keyup="formulaChanged"></paper-input>
+    <mathquill-input on-edit="mathquillChanged"></mathquill-input>
+    <!-- <paper-input label="Function" id="formula" on-keyup="paperinputChanged"></paper-input> -->
     <function-plot func="[[functor]]"></function-plot>
   </template>
 
   <script>
     Polymer({
       is: 'function-row',
-      formulaChanged: function(e) {
+      mathquillChanged: function(e) {
         try {
+          this.functor = this.parseFunction(e.detail.mathField.text());
+          console.log("successfully parsed function: " + e.detail.mathField.text())
+        }
+        catch (error) {
+          console.log("couldn't parse function: " + e.detail.mathField.text())
+        }
+      },
+      paperinputChanged: function(e) {
+        try {
+          console.log(this.$.formula.value);
           this.functor = this.parseFunction(this.$.formula.value);
         }
         catch (e) {

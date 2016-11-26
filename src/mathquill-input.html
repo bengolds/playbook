@@ -1,0 +1,44 @@
+<!--
+A comment describing this element
+
+Example:
+
+    <my-elem></my-elem>
+
+Example:
+
+    <my-elem>
+      <h2>Hello my-elem</h2>
+    </my-elem>
+
+@demo demo/index.html
+-->
+<link rel="import" href="mathquill/mathquill-import.html">
+<dom-module id="mathquill-input">
+  <link rel="import" type="css" href="mathquill/mathquill.css"/>
+	<template>
+		<style>
+			:host {
+				display: block;
+			}
+		</style>
+    <span id="quill"></span>
+	</template>
+	<script>
+		Polymer({
+			is: 'mathquill-input',
+			ready: function() {
+        this.scopeSubtree(this.$.quill, true);
+				var MQ = MathQuill.getInterface(2);
+        MQ.MathField(this.$.quill, {
+          handlers: {
+            edit: this.edit.bind(this)
+          }
+        });
+			},
+      edit: function(mathField) {
+        this.fire('edit', {mathField: mathField});
+      }
+		});
+	</script>
+</dom-module>

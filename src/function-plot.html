@@ -41,7 +41,7 @@ Example:
 				}
 			},
 
-			attached: function() {
+			ready: function() {
 				var self = this;
 				var plotEl = this.$.plot;
 				plotEl.set('config', {
@@ -73,14 +73,17 @@ Example:
 				// 			ease: 'cubic-in-out'
 				// 		}
 				// 	});
-				this.$.plot.set('data.0', this._computePoints(100));
+				// TODO: Find better way to get width and calculate sample rate.
+				var numPoints = this.offsetWidth;
+				this.$.plot.set('data.0', this._computePoints(numPoints));
 			},
 
 			_computePoints: function(numPoints) {
 				data = { "x":[], "y":[]}
+				var scaleFactor = 10/numPoints;
 				for (var i = 0; i < numPoints; i++) {
 					data.x[i] = i;
-					data.y[i] = this.func.eval(i);
+					data.y[i] = this.func.eval(i*scaleFactor);
 				}
 				return data;
 			}
