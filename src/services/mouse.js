@@ -58,6 +58,16 @@ Controller.open(function(_) {
       // listen on document not just body to not only hear about mousemove and
       // mouseup on page outside field, but even outside page, except iframes: https://github.com/mathquill/mathquill/commit/8c50028afcffcace655d8ae2049f6e02482346c5#commitcomment-6175800
     });
+
+    this.container.on('mouseover.mathquill', 'var', function(e) {
+      console.log("mouseover: " + e.target.textContent);
+      function mouseout(e) {
+        console.log("mouseout: " + e.target.textContent);
+        $(e.target).off('mouseout.mathquill', mouseout);
+      }
+      $(e.target).on('mouseout.mathquill', mouseout);
+      console.log(e);
+    });
   }
 });
 
