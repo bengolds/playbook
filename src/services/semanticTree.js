@@ -281,7 +281,7 @@ Digit.open(function(_) {
     while (remainingNodes[0] instanceof Digit) {
       number += remainingNodes.shift().ctrlSeq;
     }
-    return [Number(number)];
+    return [NumberNode(number)];
   };
   _.multiplyWith = [Fraction, Variable];
 });
