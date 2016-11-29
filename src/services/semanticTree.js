@@ -136,12 +136,25 @@ var VariableNode = P(SemanticNode, function(_, super_) {
 });
 
 function tokenizeNodes(siblingNodes) {
+  var isOneOf = function(object, types) {
+    if (!types)
+      return false;
+    for (var i = 0; i < types.length; i++) {
+      if (object instanceof types[i])
+        return true;
+    }
+    return false;
+  }
   //Takes display tree siblings and turns them into tokenized semantic nodes
   var semanticNodes = [];
   while (siblingNodes.length > 0) {
     currNode = siblingNodes.shift();
     var tokenizedNodes = currNode.toSemanticNodes(siblingNodes);
+    //If you're directly adjacent to something you multiply with, insert a mult.
     semanticNodes = semanticNodes.concat(tokenizedNodes);
+    if (isOneOf(siblingNodes[0], currNode.multiplyWith)) {
+      semanticNodes.push(FunctionNode('*'));
+    }
   }
   return semanticNodes;
 }
@@ -247,13 +260,20 @@ Superscript.open(function (_) {
 
 Variable.open(function(_) {
   _.toSemanticNodes = function (remainingNodes) {
-    if (remainingNodes[0] instanceof Variable) {
-      remainingNodes.unshift(CharCmds['*']());
-    }
     return [VariableNode(this.ctrlSeq)];
   }
+  _.multiplyWith = [Fraction, Variable, Digit];
 });
 
+Fraction.open(function (_) {
+  _.toSemanticNodes = function(remainingNodes) {
+
+    var operator = FunctionNode('/');
+    var args = [this.upInto.toSemanticNodes(), this.downInto.toSemanticNodes()];
+    return ApplicationNode(operator, args);
+  };
+  _.multiplyWith = [Fraction, Variable, Digit];
+});
 
 Digit.open(function(_) {
   _.toSemanticNodes = function (remainingNodes) {
@@ -261,13 +281,9 @@ Digit.open(function(_) {
     while (remainingNodes[0] instanceof Digit) {
       number += remainingNodes.shift().ctrlSeq;
     }
-    if (remainingNodes[0] instanceof Variable) {
-      //TODO: INCLUDE FUNCTIONS, PARENS, ETC HERE TOO
-      //If a number is next to a variable, insert an implicit multiplication
-      remainingNodes.unshift(CharCmds['*']());
-    }
     return [Number(number)];
   };
+  _.multiplyWith = [Fraction, Variable];
 });
 
 // Letter.open(function(_) {
