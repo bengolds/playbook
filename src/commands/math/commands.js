@@ -65,6 +65,7 @@ else {
 }
 
 var Style = P(MathCommand, function(_, super_) {
+  _.__type__ = 'Style';
   _.init = function(ctrlSeq, tagName, attrs) {
     super_.init.call(this, ctrlSeq, '<'+tagName+' '+attrs+'>&0</'+tagName+'>');
   };
@@ -90,6 +91,7 @@ LatexCmds.overleftarrow = bind(Style, '\\overleftarrow', 'span', 'class="mq-non-
 // [Mozilla docs]: https://developer.mozilla.org/en-US/docs/CSS/color_value#Values
 // [W3C spec]: http://dev.w3.org/csswg/css3-color/#colorunits
 var TextColor = LatexCmds.textcolor = P(MathCommand, function(_, super_) {
+  _.__type__ = 'TextColor';
   _.setColor = function(color) {
     this.color = color;
     this.htmlTemplate =
@@ -124,6 +126,7 @@ var TextColor = LatexCmds.textcolor = P(MathCommand, function(_, super_) {
 // Note regex that whitelists valid CSS classname characters:
 // https://github.com/mathquill/mathquill/pull/191#discussion_r4327442
 var Class = LatexCmds['class'] = P(MathCommand, function(_, super_) {
+  _.__type__ = 'Class';
   _.parser = function() {
     var self = this, string = Parser.string, regex = Parser.regex;
     return Parser.optWhitespace
@@ -142,6 +145,7 @@ var Class = LatexCmds['class'] = P(MathCommand, function(_, super_) {
 });
 
 var SupSub = P(MathCommand, function(_, super_) {
+  _.__type__ = 'SupSub';
   _.ctrlSeq = '_{...}^{...}';
   _.createLeftOf = function(cursor) {
     if (!this.replacedFragment && !cursor[L] && cursor.options.supSubsRequireOperand) return;
@@ -285,6 +289,7 @@ function insLeftOfMeUnlessAtEnd(cursor) {
 
 LatexCmds.subscript =
 LatexCmds._ = P(SupSub, function(_, super_) {
+  _.__type__ = 'Sub';
   _.supsub = 'sub';
   _.htmlTemplate =
       '<span class="mq-supsub mq-non-leaf">'
@@ -303,6 +308,7 @@ LatexCmds._ = P(SupSub, function(_, super_) {
 LatexCmds.superscript =
 LatexCmds.supscript =
 LatexCmds['^'] = P(SupSub, function(_, super_) {
+  _.__type__ = 'Sup';
   _.supsub = 'sup';
   _.htmlTemplate =
       '<span class="mq-supsub mq-non-leaf mq-sup-only">'
@@ -318,6 +324,7 @@ LatexCmds['^'] = P(SupSub, function(_, super_) {
 });
 
 var SummationNotation = P(MathCommand, function(_, super_) {
+  _.__type__ = 'SummationNotation';
   _.init = function(ch, html) {
     var htmlTemplate =
       '<span class="mq-large-operator mq-non-leaf">'
@@ -384,6 +391,7 @@ LatexCmds.coproduct = bind(SummationNotation,'\\coprod ','&#8720;');
 LatexCmds['∫'] =
 LatexCmds['int'] =
 LatexCmds.integral = P(SummationNotation, function(_, super_) {
+  _.__type__ = 'Integral';
   _.init = function() {
     var htmlTemplate =
       '<span class="mq-int mq-non-leaf">'
@@ -406,6 +414,7 @@ LatexCmds.frac =
 LatexCmds.dfrac =
 LatexCmds.cfrac =
 LatexCmds.fraction = P(MathCommand, function(_, super_) {
+  _.__type__ = 'Fraction';
   _.ctrlSeq = '\\frac';
   _.htmlTemplate =
       '<span class="mq-fraction mq-non-leaf">'
@@ -424,6 +433,7 @@ LatexCmds.fraction = P(MathCommand, function(_, super_) {
 var LiveFraction =
 LatexCmds.over =
 CharCmds['/'] = P(Fraction, function(_, super_) {
+  _.__type__ = 'LiveFraction';
   _.createLeftOf = function(cursor) {
     if (!this.replacedFragment) {
       var leftward = cursor[L];
@@ -455,6 +465,7 @@ CharCmds['/'] = P(Fraction, function(_, super_) {
 var SquareRoot =
 LatexCmds.sqrt =
 LatexCmds['√'] = P(MathCommand, function(_, super_) {
+  _.__type__ = 'SquareRoot';
   _.ctrlSeq = '\\sqrt';
   _.htmlTemplate =
       '<span class="mq-non-leaf">'
@@ -481,6 +492,7 @@ LatexCmds['√'] = P(MathCommand, function(_, super_) {
 });
 
 var Hat = LatexCmds.hat = P(MathCommand, function(_, super_) {
+  _.__type__ = 'Hat';
   _.ctrlSeq = '\\hat';
   _.htmlTemplate =
       '<span class="mq-non-leaf">'
@@ -493,6 +505,7 @@ var Hat = LatexCmds.hat = P(MathCommand, function(_, super_) {
 
 var NthRoot =
 LatexCmds.nthroot = P(SquareRoot, function(_, super_) {
+  _.__type__ = 'NthRoot';
   _.htmlTemplate =
       '<sup class="mq-nthroot mq-non-leaf">&0</sup>'
     + '<span class="mq-scaled">'
@@ -507,6 +520,7 @@ LatexCmds.nthroot = P(SquareRoot, function(_, super_) {
 });
 
 var DiacriticAbove = P(MathCommand, function(_, super_) {
+  _.__type__ = 'DiacriticAbove';
   _.init = function(ctrlSeq, symbol, textTemplate) {
     var htmlTemplate =
       '<span class="mq-non-leaf">'
@@ -538,6 +552,7 @@ function DelimsMixin(_, super_) {
 //   first typed as one-sided bracket with matching "ghost" bracket at
 //   far end of current block, until you type an opposing one
 var Bracket = P(P(MathCommand, DelimsMixin), function(_, super_) {
+  _.__type__ = 'Bracket';
   _.init = function(side, open, close, ctrlSeq, end) {
     super_.init.call(this, '\\left'+ctrlSeq, undefined, [open, close]);
     this.side = side;
@@ -714,6 +729,7 @@ LatexCmds.lVert = bind(Bracket, L, '&#8741;', '&#8741;', '\\lVert ', '\\rVert ')
 LatexCmds.rVert = bind(Bracket, R, '&#8741;', '&#8741;', '\\lVert ', '\\rVert ');
 
 LatexCmds.left = P(MathCommand, function(_) {
+  _.__type__ = 'Left';
   _.parser = function() {
     var regex = Parser.regex;
     var string = Parser.string;
@@ -744,6 +760,7 @@ LatexCmds.left = P(MathCommand, function(_) {
 });
 
 LatexCmds.right = P(MathCommand, function(_) {
+  _.__type__ = 'Right';
   _.parser = function() {
     return Parser.fail('unmatched \\right');
   };
@@ -752,6 +769,7 @@ LatexCmds.right = P(MathCommand, function(_) {
 var Binomial =
 LatexCmds.binom =
 LatexCmds.binomial = P(P(MathCommand, DelimsMixin), function(_, super_) {
+  _.__type__ = 'Binomial';
   _.ctrlSeq = '\\binom';
   _.htmlTemplate =
       '<span class="mq-non-leaf">'
@@ -770,6 +788,7 @@ LatexCmds.binomial = P(P(MathCommand, DelimsMixin), function(_, super_) {
 
 var Choose =
 LatexCmds.choose = P(Binomial, function(_) {
+  _.__type__ = 'Choose';
   _.createLeftOf = LiveFraction.prototype.createLeftOf;
 });
 

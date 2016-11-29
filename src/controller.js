@@ -7,6 +7,7 @@
  ********************************************/
 
 var Controller = P(function(_) {
+  _.__type__ = 'Controller';
   _.init = function(root, container, options) {
     this.id = root.id;
     this.data = {};
