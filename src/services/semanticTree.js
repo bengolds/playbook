@@ -1,10 +1,15 @@
 Controller.open(function(_) {
   _.exportSemanticTree = function() {
-    var semanticTree = this.root.toSemanticTree();
-    return semanticTree.toString();
+    var semanticNodes = this.root.toSemanticNodes();
+    var output = '[';
+    for (var i = 0; i < semanticNodes.length; i++) {
+      output += semanticNodes[i].toString() + ',';
+    }
+    output += ']';
+    return output;
   };
   _.logSemanticTree = function() {
-    console.log(this.root.toSemanticTree());
+    console.log(this.root.toSemanticNodes());
   };
   _.logDisplayTree = function() {
     console.log(this.root);
@@ -25,28 +30,43 @@ var SemanticNode = P(function(_) {
 	};
 });
 
-var FunctionNode = P(SemanticNode, function(_, super_) {
-	_.__type__ = "FunctionNode";
+var ApplicationNode = P(SemanticNode, function(_, super_) {
+	_.__type__ = "ApplicationNode";
   _.init = function (operator, args) {
     this.operator = operator;
     this.args = args;
     super_.init.call(this);
   };
   _.toString = function () {
-    var ret = '(' + this.args[0].toString() + this.operator.toString() + this.args[1].toString() + ')';
-    return ret;
+    if (this.args && this.args.length > 0) {
+      var output = '(' + this.args[0].toString();  
+      for (var i = 1; i < this.args.length; i++) {
+        output += this.operator + this.args[i].toString();
+      }
+      return output + ')';
+    } else {
+      console.error("No arguments for the operator.", this);
+      return '!';
+    }
   }
 });
 
 var SymbolNode = P(SemanticNode, function(_, super_) {
   _.__type__ = "SymbolNode";
-  _.init = function (symbol, rightAssociative) {
+  _.init = function (symbol) {
     this.symbol = symbol;
-    this.rightAssociative = rightAssociative;
-    super_.init.call(this);
   }
   _.toString = function () {
     return this.symbol;
+  }
+});
+
+var FunctionNode = P(SymbolNode, function(_, super_) {
+  _.__type__ = "FunctionNode";
+  _.init = function (symbol, rightAssociative, expectedArgs) {
+    this.rightAssociative = rightAssociative || false;
+    this.expectedArgs = expectedArgs || 2;
+    super_.init.call(this, symbol);
   }
 });
 
@@ -62,17 +82,9 @@ var VariableNode = P(SemanticNode, function(_, super_) {
   }
 });
 
-
-Fraction.open(function(_) {
-  _.toSemanticTree = function() {
-    return "hello";
-  };
-});
-
-
-
 function comparePrecedences(o1, o2) {
   var precedences = {
+    '^' : 3,
     '*' : 2,
     '/' : 2,
     '+' : 1,
@@ -101,13 +113,21 @@ function canStack(o1, o2) {
 function addNode(operandStack, operator) {
   //Combine the top two operands and the operator into one node,
   //then push it to the top of the stack.
-  var rNode = operandStack.pop(), lNode = operandStack.pop();
-  var args = [lNode, rNode];
-  operandStack.push(FunctionNode(operator, args));
+  var numOperands = operator.expectedArgs;
+  var args = [];
+  if (operandStack.length < numOperands) {
+    console.log("Malformed tree. Not enough args for our symbol!");
+    return SymbolNode("!");
+  }
+  for (var i = 0; i < numOperands; i++) {
+    args.unshift(operandStack.pop());
+  }
+
+  operandStack.push(ApplicationNode(operator, args));
 }
 
 function isOperand(semanticNode) {
-  return !(semanticNode instanceof SymbolNode);
+  return !(semanticNode instanceof FunctionNode);
 }
 
 function peekBack(stack) {
@@ -115,7 +135,7 @@ function peekBack(stack) {
 }
 
 Node.open(function(_) {
-  _.toSemanticTree = function() {
+  _.toSemanticNodes = function() {
     var operandStack = [];
     var operatorStack = [];
     var tree = {};
@@ -125,19 +145,23 @@ Node.open(function(_) {
     var prevNode = null;
 
     while(currNode) {
-      currSemanticNode = currNode.toSemanticTree();
-      if (isOperand(currSemanticNode)) {
-        operandStack.push(currSemanticNode);
-      } 
-      else {
-        //If we're trying to stack a low-precedence operator on top of a 
-        //high precedence operator, pop operators until we can fit ours.
-        while (operatorStack.length > 0 &&
-              !canStack(currSemanticNode, peekBack(operatorStack))) 
-        { 
-          addNode(operandStack, operatorStack.pop());
+      //Turn our current display node into the set of semantic nodes it represents.
+      currSemanticNodes = currNode.toSemanticNodes();
+      for (var i = 0; i < currSemanticNodes.length; i++) {
+        currSemanticNode = currSemanticNodes[i];
+        if (isOperand(currSemanticNode)) {
+          operandStack.push(currSemanticNode);
+        } 
+        else {
+          //If we're trying to stack a low-precedence operator on top of a 
+          //high precedence operator, pop operators until we can fit ours.
+          while (operatorStack.length > 0 &&
+                !canStack(currSemanticNode, peekBack(operatorStack))) 
+          { 
+            addNode(operandStack, operatorStack.pop());
+          }
+          operatorStack.push(currSemanticNode); 
         }
-        operatorStack.push(currSemanticNode); 
       }
       prevNode = currNode;
       currNode = currNode[R];
@@ -149,12 +173,12 @@ Node.open(function(_) {
 
     console.log(operandStack);
     console.log(operatorStack);
-    return operandStack[0];
+    return operandStack;
   };
 });
 
 BinaryOperator.open(function(_) {
-  _.toSemanticTree = function () {
+  _.toSemanticNodes = function () {
     var symbol = '!';
     var rightAssociative = false;
     switch (this.ctrlSeq) {
@@ -172,12 +196,26 @@ BinaryOperator.open(function(_) {
         symbol = '*';
         break;
     }
-    return SymbolNode(symbol, rightAssociative);
+    return [FunctionNode(symbol, rightAssociative, 2)];
+  }
+});
+
+Superscript.open(function (_) {
+  _.toSemanticNodes = function() {
+    var nodes = [FunctionNode('^', true, 2)];
+    nodes = nodes.concat(this.sup.toSemanticNodes());
+    return nodes;
   }
 });
 
 Variable.open(function(_) {
-  _.toSemanticTree = function () {
-    return VariableNode(this.ctrlSeq);
+  _.toSemanticNodes = function () {
+    return [VariableNode(this.ctrlSeq)];
   }
 });
+
+Digit.open(function(_) {
+  _.toSemanticNodes = function () {
+    return [SymbolNode(this.ctrlSeq)];
+  }
+})

@@ -305,6 +305,7 @@ LatexCmds._ = P(SupSub, function(_, super_) {
   };
 });
 
+var Superscript =
 LatexCmds.superscript =
 LatexCmds.supscript =
 LatexCmds['^'] = P(SupSub, function(_, super_) {
