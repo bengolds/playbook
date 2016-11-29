@@ -28,6 +28,12 @@ var SemanticNode = P(function(_) {
 	_.init = function() {
 		this.type = this.__type__;
 	};
+  _.toSemanticNodes = function () {
+    return [this];
+  }
+  _.preprocess = function (rightNode) {
+    return null;
+  }
 });
 
 var ApplicationNode = P(SemanticNode, function(_, super_) {
@@ -55,10 +61,26 @@ var SymbolNode = P(SemanticNode, function(_, super_) {
   _.__type__ = "SymbolNode";
   _.init = function (symbol) {
     this.symbol = symbol;
-  }
+  };
   _.toString = function () {
     return this.symbol;
-  }
+  };
+});
+
+var NumberNode = P(SymbolNode, function(_, super_) {
+  _.__type__ = "NumberNode";
+  _.preprocess = function (rightNode) {
+    //If two numbers are next to each other, merge them.
+    if (rightNode instanceof NumberNode) {
+      return [NumberNode(this.symbol + rightNode.symbol)];
+    }
+    else if (rightNode instanceof VariableNode) {
+      return [this, FunctionNode('*'), rightNode];
+    }
+    else {
+      return null;
+    }
+  };
 });
 
 var FunctionNode = P(SymbolNode, function(_, super_) {
@@ -76,9 +98,14 @@ var VariableNode = P(SemanticNode, function(_, super_) {
     this.variableName = variableName;
     this.variableType = variableType || SETS.REAL;
     super_.init.call(this);
-  }
+  };
   _.toString = function() {
     return this.variableName;
+  };
+  _.preprocess = function(rightNode) {
+    if (rightNode instanceof VariableNode) {
+      return [this, FunctionNode('*'), rightNode];
+    }
   }
 });
 
@@ -134,45 +161,58 @@ function peekBack(stack) {
   return stack[stack.length-1];
 }
 
+function childrenAsArray(root) {
+  var children = [];
+  for (var currNode = root.ends[L]; currNode; currNode = currNode[R]) {
+    children.push(currNode);
+  }
+  return children;
+}
+
+function preProcessChildren(node) {
+  var children = [];
+  var start = this.ends[L];
+}
+
 Node.open(function(_) {
   _.toSemanticNodes = function() {
+
+    //Tokenize the tree into Semantic Nodes
+    var children = childrenAsArray(this);
+    var semanticNodes = [];
+    while (children.length > 0) {
+      currNode = children.shift();
+      var tokenizedNodes = currNode.toSemanticNodes(children);
+      semanticNodes = semanticNodes.concat(tokenizedNodes);
+    }
+    console.log(semanticNodes);
+
     var operandStack = [];
     var operatorStack = [];
-    var tree = {};
 
-
-    var currNode = this.ends[L];
-    var prevNode = null;
-
-    while(currNode) {
-      //Turn our current display node into the set of semantic nodes it represents.
-      currSemanticNodes = currNode.toSemanticNodes();
-      for (var i = 0; i < currSemanticNodes.length; i++) {
-        currSemanticNode = currSemanticNodes[i];
-        if (isOperand(currSemanticNode)) {
-          operandStack.push(currSemanticNode);
-        } 
-        else {
-          //If we're trying to stack a low-precedence operator on top of a 
-          //high precedence operator, pop operators until we can fit ours.
-          while (operatorStack.length > 0 &&
-                !canStack(currSemanticNode, peekBack(operatorStack))) 
-          { 
-            addNode(operandStack, operatorStack.pop());
-          }
-          operatorStack.push(currSemanticNode); 
+    for (var i = 0; i < semanticNodes.length; i++) {
+      currSemanticNode = semanticNodes[i];
+      if (isOperand(currSemanticNode)) {
+        operandStack.push(currSemanticNode);
+      } 
+      else {
+        //If we're trying to stack a low-precedence operator on top of a 
+        //high precedence operator, pop operators until we can fit ours.
+        while (operatorStack.length > 0 &&
+              !canStack(currSemanticNode, peekBack(operatorStack))) 
+        { 
+          addNode(operandStack, operatorStack.pop());
         }
+        operatorStack.push(currSemanticNode); 
       }
-      prevNode = currNode;
-      currNode = currNode[R];
     }
 
     while(operatorStack.length > 0) {
       addNode(operandStack, operatorStack.pop());
     }
 
-    console.log(operandStack);
-    console.log(operatorStack);
+    // console.log(operandStack);
+    // console.log(operatorStack);
     return operandStack;
   };
 });
@@ -209,13 +249,38 @@ Superscript.open(function (_) {
 });
 
 Variable.open(function(_) {
-  _.toSemanticNodes = function () {
+  _.toSemanticNodes = function (remainingNodes) {
+    if (remainingNodes[0] instanceof Variable) {
+      remainingNodes.unshift(CharCmds['*']());
+    }
     return [VariableNode(this.ctrlSeq)];
   }
 });
 
+
 Digit.open(function(_) {
-  _.toSemanticNodes = function () {
-    return [SymbolNode(this.ctrlSeq)];
-  }
-})
+  _.toSemanticNodes = function (remainingNodes) {
+    var number = this.ctrlSeq;
+    while (remainingNodes[0] instanceof Digit) {
+      number += remainingNodes.shift().ctrlSeq;
+    }
+    if (remainingNodes[0] instanceof Variable) {
+      //TODO: INCLUDE FUNCTIONS, PARENS, ETC HERE TOO
+      //If a number is next to a variable, insert an implicit multiplication
+      remainingNodes.unshift(CharCmds['*']());
+    }
+    return [Number(number)];
+  };
+});
+
+// Letter.open(function(_) {
+//   _.toSemanticNodes = function (remainingNodes) {
+//     var symbol = this.ctrlSeq;
+//     if (this.isPartOfOperator) {
+//       while(remainingNodes[0].isPartOfOperator) {
+//         symbol += remainingNodes.shift().ctrlSeq;
+//       }
+//     }
+//     return [FunctionNode(symbol)];
+//   }
+// })
