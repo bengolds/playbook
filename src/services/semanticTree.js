@@ -44,15 +44,17 @@ var ApplicationNode = P(SemanticNode, function(_, super_) {
     super_.init.call(this);
   };
   _.toString = function () {
-    if (this.args && this.args.length > 0) {
-      var output = '(' + this.args[0].toString();  
-      for (var i = 1; i < this.args.length; i++) {
-        output += this.operator + this.args[i].toString();
-      }
-      return output + ')';
-    } else {
-      console.error("No arguments for the operator.", this);
-      return '!';
+    switch (this.operator.expectedArgs) {
+      case 0:
+        return this.operator.symbol;
+      case 1:
+        return this.operator.symbol + '(' + this.args[0] + ')';
+      default:
+        var output = '(' + this.args[0].toString();  
+        for (var i = 1; i < this.args.length; i++) {
+          output += this.operator + this.args[i].toString();
+        }
+        return output + ')';
     }
   }
 });
@@ -260,8 +262,17 @@ Superscript.open(function (_) {
 
 Variable.open(function(_) {
   _.toSemanticNodes = function (remainingNodes) {
-    return [VariableNode(this.ctrlSeq)];
-  }
+    if (this.isPartOfOperator) {
+      var symbol = this.text();
+      while(remainingNodes.length > 0 && remainingNodes[0].isPartOfOperator) {
+        symbol += remainingNodes.shift().text();
+      }
+      return [FunctionNode(symbol, true, 1)];
+    } 
+    else {
+      return [VariableNode(this.ctrlSeq)];
+    }
+  };
   _.multiplyWith = [Fraction, Variable, Digit];
 });
 
@@ -285,15 +296,3 @@ Digit.open(function(_) {
   };
   _.multiplyWith = [Fraction, Variable];
 });
-
-// Letter.open(function(_) {
-//   _.toSemanticNodes = function (remainingNodes) {
-//     var symbol = this.ctrlSeq;
-//     if (this.isPartOfOperator) {
-//       while(remainingNodes[0].isPartOfOperator) {
-//         symbol += remainingNodes.shift().ctrlSeq;
-//       }
-//     }
-//     return [FunctionNode(symbol)];
-//   }
-// })
