@@ -1,8 +1,6 @@
 Controller.open(function(_) {
   _.exportSemanticTree = function() {
-    var semanticTrees = this.root.toSemanticNodes();
-    if (semanticTrees) 
-      return semanticTrees[0].toString();
+    var semanticTrees = this.root.toSemanticNode();
   };
   _.debugSemanticTree = function() {
     var semanticNodes = this.root.toSemanticNodes();
@@ -35,7 +33,8 @@ var SemanticNode = P(function(_) {
 	};
   _.toSemanticNodes = function () {
     return [this];
-  }
+  };
+
   _.preprocess = function (rightNode) {
     return null;
   }
@@ -93,7 +92,8 @@ var OperatorNode = P(SymbolNode, function (_, super_) {
       '*' : 2,
       '/' : 2,
       '+' : 1,
-      '-' : 1
+      '-' : 1,
+      '=' : 0
     }
     var p1 = precedences[this.symbol] || 10;
     var p2 = precedences[o2.symbol] || 10;
@@ -162,6 +162,19 @@ var VariableNode = P(SemanticNode, function(_, super_) {
       return [this, FunctionNode('*'), rightNode];
     }
   }
+});
+
+var SummationNode = P(ApplicationNode, function(_, super_) {
+  _.__type__ = "SummationNode";
+  _.init = function(indexVar, from, to, summand) {
+    var operator = FunctionNode('sum', 4);
+    var args = [];
+    this.indexVar = args[0] = indexVar;
+    this.from = args[1] = from;
+    this.to = args[2] = to;
+    this.summand = args[3] = summand;
+    super_.init.call(this, operator, args);
+  };
 });
 
 function tokenizeNodes(siblingNodes) {
@@ -247,13 +260,39 @@ function parseTokenizedTree(semanticNodes) {
   return operandStack;
 }
 
+function gobbleRightTerms(remainingNodes) {
+  //TODO: MERGE WITH TOKENIZE TREE
+  //TODO: MAKE WORK WITH SIN
+  var shouldStopGobbling = function(node) {
+    return (node instanceof PlusMinus) || (node instanceof Equality);
+  };
+
+  var gobbled = [];
+  while (remainingNodes.length > 0 && !shouldStopGobbling(remainingNodes[0])) {
+    currDisplayNode = remainingNodes.shift();
+    currSemanticNodes = currDisplayNode.toSemanticNodes(remainingNodes);
+    gobbled = gobbled.concat(currSemanticNodes);
+  }
+  insertMultipliers(gobbled);
+  return parseTokenizedTree(gobbled);
+}
+
 Node.open(function(_) {
-  _.toSemanticNodes = function() {
+  _.toSemanticNodes = function(remainingNodes) {
     //Tokenize the tree into Semantic Nodes
     var semanticNodes = tokenizeNodes(this.childrenAsArray());
     insertMultipliers(semanticNodes);
     return parseTokenizedTree(semanticNodes);
   };
+  _.toSemanticNode = function (remainingNodes) {
+    var semanticNodes = this.toSemanticNodes(remainingNodes);
+    if (semanticNodes.length != 1) {
+      console.log("Not parseable. Too many semantic nodes returned");
+      return null;
+    } else {
+      return semanticNodes[0];
+    }
+  }
   _.childrenAsArray = function() {
     var children = [];
     for (var currNode = this.ends[L]; currNode; currNode = currNode[R]) {
@@ -261,7 +300,6 @@ Node.open(function(_) {
     }
     return children;
   };
-  _.multipliable = false;
 });
 
 BinaryOperator.open(function(_) {
@@ -282,6 +320,9 @@ BinaryOperator.open(function(_) {
       case '\\times ':
         symbol = '*';
         break;
+      case '=':
+        symbol = '=';
+        break;
     }
     return [InfixNode(symbol)];
   }
@@ -296,7 +337,6 @@ Superscript.open(function (_) {
 });
 
 Bracket.open(function(_) {
-  _.multipliable = true;
 });
 
 //ALSO FUNCTIONS
@@ -313,7 +353,6 @@ Variable.open(function(_) {
       return [VariableNode(this.ctrlSeq)];
     }
   };
-  _.multipliable = true;
 });
 
 Fraction.open(function (_) {
@@ -323,7 +362,6 @@ Fraction.open(function (_) {
     var args = [this.upInto.toSemanticNodes(), this.downInto.toSemanticNodes()];
     return ApplicationNode(operator, args);
   };
-  _.multipliable = true;
 });
 
 Digit.open(function(_) {
@@ -336,8 +374,6 @@ Digit.open(function(_) {
     }
     return [NumberNode(number)];
   };
-  _.multiplyWith = [Fraction, Variable];
-  _.multipliable = true;
 });
 
 SquareRoot.open(function(_) {
@@ -347,7 +383,6 @@ SquareRoot.open(function(_) {
     var arg = this.blocks[0].toSemanticNodes();
     return ApplicationNode(operator, [arg]); 
   };
-  _.multipliable = true;
 });
 
 NthRoot.open(function (_) {
@@ -358,3 +393,37 @@ NthRoot.open(function (_) {
     return ApplicationNode(operator, args);
   }
 });
+
+SummationNotation.open(function(_) {
+  _.toSemanticNodes = function (remainingNodes) {
+    switch (this.ctrlSeq) {
+      default:
+      case '\\sum':
+        return this.sumSemanticNodes(remainingNodes);
+        break;
+      case '\\prod':
+        break;
+      case '\\int':
+        break;
+    };
+  };
+
+  _.sumSemanticNodes = function(remainingNodes) {
+    //Separate the notation "i=3" into boundVar and from
+    var bottom = this.downInto.toSemanticNode();
+    if (!(bottom instanceof ApplicationNode)
+        || bottom.operator.symbol != '=') {
+      console.log('Bottom of the summation is malformed');
+      return SymbolNode('!');
+    } 
+    var to = this.upInto.toSemanticNode();
+    var boundVar = bottom.args[0];
+    var from = bottom.args[1];
+
+    if (remainingNodes.length > 0) {
+      var summand = gobbleRightTerms(remainingNodes);
+    }
+
+    return SummationNode(boundVar, from, to, summand);
+  };
+})
