@@ -107,7 +107,7 @@ $(function() {
     setTimeout(function() {
       var latex = latexMath.latex();
       latexSource.val(latex);
-      var semantics = latexMath.semanticTree();
+      var semantics = latexMath.__controller.debugSemanticTree();
       semanticTree.val(semantics);
 //      location.hash = '#'+latex; //extremely performance-crippling in Chrome for some reason
       htmlSource.text(printTree(latexMath.html()));
