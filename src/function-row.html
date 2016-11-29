@@ -36,11 +36,11 @@ Example:
       is: 'function-row',
       mathquillChanged: function(e) {
         try {
-          this.functor = this.parseFunction(e.detail.mathField.text());
-          console.log("successfully parsed function: " + e.detail.mathField.text())
+          this.functor = this.parseFunction(e.detail.mathField.semanticTree());
+          console.log("successfully parsed function: " + e.detail.mathField.semanticTree())
         }
         catch (error) {
-          console.log("couldn't parse function: " + e.detail.mathField.text())
+          console.log("couldn't parse function: " + e.detail.mathField.semanticTree())
         }
       },
       paperinputChanged: function(e) {
