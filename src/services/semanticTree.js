@@ -80,35 +80,11 @@ var NumberNode = P(SymbolNode, function(_, super_) {
   };
 });
 
-function infixFormatter(symbol) {
-  return function(args) {
-    var output = '(' + args[0].toString();  
-    for (var i = 1; i < args.length; i++) {
-      output += symbol + args[i].toString();
-    }
-    return output + ')';
-  };
-}
-
-function functionFormatter(symbol) {
-  return function(args) {
-    var output = symbol + '(';
-    for (var i = 0; i < args.length; i++) {
-      output += args[i];
-      if (i < args.length-1)
-        output += ',';
-    }
-    output += ')';
-    return output;
-  };
-}
-
-var FunctionNode = P(SymbolNode, function(_, super_) {
-  _.__type__ = "FunctionNode";
-  _.init = function (symbol, rightAssociative, expectedArgs, formatFunc) {
+var OperatorNode = P(SymbolNode, function (_, super_) {
+  _.init = function (symbol, rightAssociative, expectedArgs) {
     this.rightAssociative = rightAssociative || false;
     this.expectedArgs = expectedArgs || 2;
-    this.format = formatFunc || infixFormatter(symbol);
+    this.format = this.formatter(symbol);
     super_.init.call(this, symbol);
   };
   _.comparePrecedence = function(o2) {
@@ -139,6 +115,38 @@ var FunctionNode = P(SymbolNode, function(_, super_) {
   };
 });
 
+var FunctionNode = P(OperatorNode, function(_, super_) {
+  _.__type__ = "FunctionNode";
+  _.init = function (symbol, expectedArgs) {
+    super_.init.call(this, symbol, true, expectedArgs);
+  };
+  _.formatter = function(symbol) {
+    return function(args) {
+      var output = symbol + '(';
+      for (var i = 0; i < args.length; i++) {
+        output += args[i];
+        if (i < args.length-1)
+          output += ',';
+      }
+      output += ')';
+      return output;
+    };
+  };
+});
+
+var InfixNode = P(OperatorNode, function(_, super_) {
+  _.__type__ = "FunctionNode";
+  _.formatter =  function(symbol) {
+    return function(args) {
+      var output = '(' + args[0].toString();  
+      for (var i = 1; i < args.length; i++) {
+        output += symbol + args[i].toString();
+      }
+      return output + ')';
+    }; 
+  };
+});
+
 var VariableNode = P(SemanticNode, function(_, super_) {
   _.__type__ = "VariableNode";
   _.init = function (variableName, variableType) {
@@ -162,13 +170,28 @@ function tokenizeNodes(siblingNodes) {
   while (siblingNodes.length > 0) {
     currNode = siblingNodes.shift();
     var tokenizedNodes = currNode.toSemanticNodes(siblingNodes);
-    //If you're directly adjacent to something you multiply with, insert a mult.
     semanticNodes = semanticNodes.concat(tokenizedNodes);
-    if (siblingNodes[0] && siblingNodes[0].multipliable && currNode.multipliable) {
-      semanticNodes.push(FunctionNode('*'));
-    }
   }
   return semanticNodes;
+}
+
+function insertMultipliers(semanticNodes) {
+  var shouldMultiply = function(node1, node2) {
+    return !(node1 instanceof InfixNode ||
+            node1 instanceof FunctionNode ||
+            node2 instanceof InfixNode);
+  };
+
+  if (semanticNodes.length < 2) {
+    return;
+  }
+  for (var i = 1; i < semanticNodes.length; i++) {
+    var lhs = semanticNodes[i-1];
+    var rhs = semanticNodes[i];
+    if (shouldMultiply(lhs, rhs)) {
+      semanticNodes.splice(i, 0, InfixNode('*'));
+    }
+  }
 }
 
 //Take a set of tokenized nodes and combine them into an AST.
@@ -181,7 +204,7 @@ function parseTokenizedTree(semanticNodes) {
     return stack[stack.length-1];
   };
   var isOperand = function(semanticNode) {
-    return !(semanticNode instanceof FunctionNode);
+    return !(semanticNode instanceof OperatorNode);
   };
   var addNode = function(operator) {
     //Combine the top two operands and the operator into one node,
@@ -228,6 +251,7 @@ Node.open(function(_) {
   _.toSemanticNodes = function() {
     //Tokenize the tree into Semantic Nodes
     var semanticNodes = tokenizeNodes(this.childrenAsArray());
+    insertMultipliers(semanticNodes);
     return parseTokenizedTree(semanticNodes);
   };
   _.childrenAsArray = function() {
@@ -259,13 +283,13 @@ BinaryOperator.open(function(_) {
         symbol = '*';
         break;
     }
-    return [FunctionNode(symbol, rightAssociative, 2)];
+    return [InfixNode(symbol)];
   }
 });
 
 Superscript.open(function (_) {
   _.toSemanticNodes = function() {
-    var operator = FunctionNode('^', true, 2);
+    var operator = InfixNode('^', true, 2);
     var superscript = this.sup.toSemanticNodes();
     return [operator, superscript];
   }
@@ -283,7 +307,7 @@ Variable.open(function(_) {
       while(remainingNodes.length > 0 && remainingNodes[0].isPartOfOperator) {
         symbol += remainingNodes.shift().text();
       }
-      return [FunctionNode(symbol, true, 1, functionFormatter(symbol))];
+      return [FunctionNode(symbol, 1)];
     } 
     else {
       return [VariableNode(this.ctrlSeq)];
@@ -295,7 +319,7 @@ Variable.open(function(_) {
 Fraction.open(function (_) {
   _.toSemanticNodes = function(remainingNodes) {
 
-    var operator = FunctionNode('/');
+    var operator = InfixNode('/');
     var args = [this.upInto.toSemanticNodes(), this.downInto.toSemanticNodes()];
     return ApplicationNode(operator, args);
   };
@@ -305,7 +329,9 @@ Fraction.open(function (_) {
 Digit.open(function(_) {
   _.toSemanticNodes = function (remainingNodes) {
     var number = this.ctrlSeq;
-    while (remainingNodes[0] instanceof Digit) {
+    while (remainingNodes[0] && 
+            (remainingNodes[0] instanceof Digit || 
+            remainingNodes[0].ctrlSeq == '.')) {
       number += remainingNodes.shift().ctrlSeq;
     }
     return [NumberNode(number)];
@@ -317,7 +343,7 @@ Digit.open(function(_) {
 SquareRoot.open(function(_) {
   _.toSemanticNodes = function(_) {
     var symbol = 'sqrt';
-    var operator = FunctionNode(symbol, true, 1, functionFormatter(symbol));
+    var operator = FunctionNode(symbol, 1);
     var arg = this.blocks[0].toSemanticNodes();
     return ApplicationNode(operator, [arg]); 
   };
@@ -327,7 +353,7 @@ SquareRoot.open(function(_) {
 NthRoot.open(function (_) {
   _.toSemanticNodes = function (_) {
     var symbol = 'nthRoot';
-    var operator = FunctionNode(symbol, true, 2, functionFormatter(symbol));
+    var operator = FunctionNode(symbol, 2);
     var args = [this.ends[R].toSemanticNodes(), this.ends[L].toSemanticNodes()];
     return ApplicationNode(operator, args);
   }
