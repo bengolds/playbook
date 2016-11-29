@@ -513,6 +513,7 @@ LatexCmds['≤'] = LatexCmds.le = LatexCmds.leq = bind(Inequality, less, false);
 LatexCmds['≥'] = LatexCmds.ge = LatexCmds.geq = bind(Inequality, greater, false);
 
 var Equality = P(BinaryOperator, function(_, super_) {
+  _.__type__ = 'Equality';
   _.init = function() {
     super_.init.call(this, '=', '=');
   };
