@@ -89,7 +89,33 @@ var FunctionNode = P(SymbolNode, function(_, super_) {
     this.rightAssociative = rightAssociative || false;
     this.expectedArgs = expectedArgs || 2;
     super_.init.call(this, symbol);
-  }
+  };
+  _.comparePrecedence = function(o2) {
+    var precedences = {
+      '^' : 3,
+      '*' : 2,
+      '/' : 2,
+      '+' : 1,
+      '-' : 1
+    }
+    var p1 = precedences[this.symbol];
+    var p2 = precedences[o2.symbol];
+    if (p1 > p2) {
+      return 1;
+    } else if (p1 == p2) {
+      return 0;
+    } else {
+      return -1;
+    }
+  };
+  _.canStack = function(o2) {
+    //return true if o2 can stack on this 
+    var compPrec = this.comparePrecedence(o2);
+    if (!this.rightAssociative) 
+      return compPrec > 0;
+    else 
+      return compPrec >= 0;
+  };
 });
 
 var VariableNode = P(SemanticNode, function(_, super_) {
@@ -109,112 +135,83 @@ var VariableNode = P(SemanticNode, function(_, super_) {
   }
 });
 
-function comparePrecedences(o1, o2) {
-  var precedences = {
-    '^' : 3,
-    '*' : 2,
-    '/' : 2,
-    '+' : 1,
-    '-' : 1
+function tokenizeNodes(siblingNodes) {
+  //Takes display tree siblings and turns them into tokenized semantic nodes
+  var semanticNodes = [];
+  while (siblingNodes.length > 0) {
+    currNode = siblingNodes.shift();
+    var tokenizedNodes = currNode.toSemanticNodes(siblingNodes);
+    semanticNodes = semanticNodes.concat(tokenizedNodes);
   }
-  var p1 = precedences[o1.symbol];
-  var p2 = precedences[o2.symbol];
-  if (p1 > p2) {
-    return 1;
-  } else if (p1 == p2) {
-    return 0;
-  } else {
-    return -1;
+  return semanticNodes;
+}
+
+//Take a set of tokenized nodes and combine them into an AST.
+//Uses the Shunting Yard Algorithm.
+function parseTokenizedTree(semanticNodes) {
+  var operandStack = [];
+  var operatorStack = [];
+
+  var peekBack = function(stack) {
+    return stack[stack.length-1];
+  };
+  var isOperand = function(semanticNode) {
+    return !(semanticNode instanceof FunctionNode);
+  };
+  var addNode = function(operator) {
+    //Combine the top two operands and the operator into one node,
+    //then push it to the top of the stack.
+    var numOperands = operator.expectedArgs;
+    var args = [];
+    if (operandStack.length < numOperands) {
+      console.log("Malformed tree. Not enough args for our symbol!");
+      return SymbolNode("!");
+    }
+    for (var i = 0; i < numOperands; i++) {
+      args.unshift(operandStack.pop());
+    }
+
+    operandStack.push(ApplicationNode(operator, args));
+  };
+
+  for (var i = 0; i < semanticNodes.length; i++) {
+    currSemanticNode = semanticNodes[i];
+    if (isOperand(currSemanticNode)) {
+      operandStack.push(currSemanticNode);
+    } 
+    else {
+      //If we're trying to stack a low-precedence operator on top of a 
+      //high precedence operator, pop operators until we can fit ours.
+      while (operatorStack.length > 0 &&
+            !currSemanticNode.canStack(peekBack(operatorStack))) 
+      { 
+        addNode(operatorStack.pop());
+      }
+      operatorStack.push(currSemanticNode); 
+    }
   }
-}
 
-function canStack(o1, o2) {
-  //return true if o1 can stack on o2
-  var compPrec = comparePrecedences(o1, o2);
-  if (!o1.rightAssociative) 
-    return compPrec > 0;
-  else 
-    return compPrec >= 0;
-}
-
-function addNode(operandStack, operator) {
-  //Combine the top two operands and the operator into one node,
-  //then push it to the top of the stack.
-  var numOperands = operator.expectedArgs;
-  var args = [];
-  if (operandStack.length < numOperands) {
-    console.log("Malformed tree. Not enough args for our symbol!");
-    return SymbolNode("!");
+  while(operatorStack.length > 0) {
+    addNode(operatorStack.pop());
   }
-  for (var i = 0; i < numOperands; i++) {
-    args.unshift(operandStack.pop());
-  }
-
-  operandStack.push(ApplicationNode(operator, args));
-}
-
-function isOperand(semanticNode) {
-  return !(semanticNode instanceof FunctionNode);
-}
-
-function peekBack(stack) {
-  return stack[stack.length-1];
-}
-
-function childrenAsArray(root) {
-  var children = [];
-  for (var currNode = root.ends[L]; currNode; currNode = currNode[R]) {
-    children.push(currNode);
-  }
-  return children;
-}
-
-function preProcessChildren(node) {
-  var children = [];
-  var start = this.ends[L];
+    // console.log(operandStack);
+    // console.log(operatorStack);
+  return operandStack;
 }
 
 Node.open(function(_) {
   _.toSemanticNodes = function() {
-
     //Tokenize the tree into Semantic Nodes
-    var children = childrenAsArray(this);
-    var semanticNodes = [];
-    while (children.length > 0) {
-      currNode = children.shift();
-      var tokenizedNodes = currNode.toSemanticNodes(children);
-      semanticNodes = semanticNodes.concat(tokenizedNodes);
-    }
-    console.log(semanticNodes);
-
-    var operandStack = [];
-    var operatorStack = [];
-
-    for (var i = 0; i < semanticNodes.length; i++) {
-      currSemanticNode = semanticNodes[i];
-      if (isOperand(currSemanticNode)) {
-        operandStack.push(currSemanticNode);
-      } 
-      else {
-        //If we're trying to stack a low-precedence operator on top of a 
-        //high precedence operator, pop operators until we can fit ours.
-        while (operatorStack.length > 0 &&
-              !canStack(currSemanticNode, peekBack(operatorStack))) 
-        { 
-          addNode(operandStack, operatorStack.pop());
-        }
-        operatorStack.push(currSemanticNode); 
-      }
-    }
-
-    while(operatorStack.length > 0) {
-      addNode(operandStack, operatorStack.pop());
-    }
-
-    // console.log(operandStack);
-    // console.log(operatorStack);
-    return operandStack;
+    var semanticNodes = tokenizeNodes(this.childrenAsArray());
+    return parseTokenizedTree(semanticNodes);
   };
+  _.childrenAsArray = function() {
+    var children = [];
+    for (var currNode = this.ends[L]; currNode; currNode = currNode[R]) {
+      children.push(currNode);
+    }
+    return children;
+  }
 });
 
 BinaryOperator.open(function(_) {
