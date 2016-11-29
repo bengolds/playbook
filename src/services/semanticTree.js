@@ -1,5 +1,10 @@
 Controller.open(function(_) {
   _.exportSemanticTree = function() {
+    var semanticTrees = this.root.toSemanticNodes();
+    if (semanticTrees) 
+      return semanticTrees[0].toString();
+  };
+  _.debugSemanticTree = function() {
     var semanticNodes = this.root.toSemanticNodes();
     var output = '[';
     for (var i = 0; i < semanticNodes.length; i++) {
@@ -266,6 +271,10 @@ Superscript.open(function (_) {
   }
 });
 
+Bracket.open(function(_) {
+  _.multipliable = true;
+});
+
 //ALSO FUNCTIONS
 Variable.open(function(_) {
   _.toSemanticNodes = function (remainingNodes) {
@@ -317,9 +326,9 @@ SquareRoot.open(function(_) {
 
 NthRoot.open(function (_) {
   _.toSemanticNodes = function (_) {
-    var symbol = 'nthroot';
-    var operator = FunctionNode('nthroot', true, 2, functionFormatter(symbol));
-    var args = [this.ends[L].toSemanticNodes(), this.ends[R].toSemanticNodes()];
+    var symbol = 'nthRoot';
+    var operator = FunctionNode(symbol, true, 2, functionFormatter(symbol));
+    var args = [this.ends[R].toSemanticNodes(), this.ends[L].toSemanticNodes()];
     return ApplicationNode(operator, args);
   }
 });
