@@ -63,6 +63,7 @@ var SymbolNode = P(SemanticNode, function(_, super_) {
   _.__type__ = "SymbolNode";
   _.init = function (symbol) {
     this.symbol = symbol;
+    super_.init.call(this);
   };
   _.toString = function () {
     return this.symbol;
@@ -100,8 +101,8 @@ var FunctionNode = P(SymbolNode, function(_, super_) {
       '+' : 1,
       '-' : 1
     }
-    var p1 = precedences[this.symbol];
-    var p2 = precedences[o2.symbol];
+    var p1 = precedences[this.symbol] || 10;
+    var p2 = precedences[o2.symbol] || 10;
     if (p1 > p2) {
       return 1;
     } else if (p1 == p2) {
@@ -138,15 +139,6 @@ var VariableNode = P(SemanticNode, function(_, super_) {
 });
 
 function tokenizeNodes(siblingNodes) {
-  var isOneOf = function(object, types) {
-    if (!types)
-      return false;
-    for (var i = 0; i < types.length; i++) {
-      if (object instanceof types[i])
-        return true;
-    }
-    return false;
-  }
   //Takes display tree siblings and turns them into tokenized semantic nodes
   var semanticNodes = [];
   while (siblingNodes.length > 0) {
@@ -154,7 +146,7 @@ function tokenizeNodes(siblingNodes) {
     var tokenizedNodes = currNode.toSemanticNodes(siblingNodes);
     //If you're directly adjacent to something you multiply with, insert a mult.
     semanticNodes = semanticNodes.concat(tokenizedNodes);
-    if (isOneOf(siblingNodes[0], currNode.multiplyWith)) {
+    if (siblingNodes[0] && siblingNodes[0].multipliable && currNode.multipliable) {
       semanticNodes.push(FunctionNode('*'));
     }
   }
@@ -226,7 +218,8 @@ Node.open(function(_) {
       children.push(currNode);
     }
     return children;
-  }
+  };
+  _.multipliable = false;
 });
 
 BinaryOperator.open(function(_) {
@@ -254,9 +247,9 @@ BinaryOperator.open(function(_) {
 
 Superscript.open(function (_) {
   _.toSemanticNodes = function() {
-    var nodes = [FunctionNode('^', true, 2)];
-    nodes = nodes.concat(this.sup.toSemanticNodes());
-    return nodes;
+    var operator = FunctionNode('^', true, 2);
+    var superscript = this.sup.toSemanticNodes();
+    return [operator, superscript];
   }
 });
 
@@ -273,7 +266,7 @@ Variable.open(function(_) {
       return [VariableNode(this.ctrlSeq)];
     }
   };
-  _.multiplyWith = [Fraction, Variable, Digit];
+  _.multipliable = true;
 });
 
 Fraction.open(function (_) {
@@ -283,7 +276,7 @@ Fraction.open(function (_) {
     var args = [this.upInto.toSemanticNodes(), this.downInto.toSemanticNodes()];
     return ApplicationNode(operator, args);
   };
-  _.multiplyWith = [Fraction, Variable, Digit];
+  _.multipliable = true;
 });
 
 Digit.open(function(_) {
@@ -295,4 +288,14 @@ Digit.open(function(_) {
     return [NumberNode(number)];
   };
   _.multiplyWith = [Fraction, Variable];
+  _.multipliable = true;
+});
+
+SquareRoot.open(function(_) {
+  _.toSemanticNodes = function(_) {
+    var operator = FunctionNode('sqrt', true, 1);
+    var arg = this.blocks[0].toSemanticNodes();
+    return ApplicationNode(operator, [arg]); 
+  };
+  _.multipliable = true;
 });
