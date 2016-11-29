@@ -7,6 +7,7 @@ LatexCmds.cong =
 LatexCmds.equiv =
 LatexCmds.oplus =
 LatexCmds.otimes = P(BinaryOperator, function(_, super_) {
+  _.__type__ = 'Otimes';
   _.init = function(latex) {
     super_.init.call(this, '\\'+latex+' ', '&'+latex+';');
   };

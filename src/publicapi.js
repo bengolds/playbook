@@ -260,6 +260,7 @@ var origMathQuill = window.MathQuill;
 window.MathQuill = MathQuill;
 
 function RootBlockMixin(_) {
+  _.__type__ = 'RootMathBlock';
   var names = 'moveOutOf deleteOutOf selectOutOf upOutOf downOutOf'.split(' ');
   for (var i = 0; i < names.length; i += 1) (function(name) {
     _[name] = function(dir) { this.controller.handle(name, dir); };
