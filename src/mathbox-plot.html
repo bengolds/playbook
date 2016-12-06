@@ -75,7 +75,7 @@
         this.data =
         this.view.interval({
           expr: function (emit, x, i, t) {
-            emit(x, Math.sin(x));
+            emit(x, 0);
           },
           width: plotEl.offsetWidth,
           channels: 2
@@ -103,18 +103,21 @@
         this.data.set("expr", function (emit, x, i, t) {
           emit(x, this.func.eval(x));
         }.bind(this));
-        var oldRange = this.view.get('range');
+        if (!this.currRange) {
+          this.currRange = this.view.get('range');
+        }
         var newRange = this._getBounds(this.data, this.view);
-        console.log(newRange);
         this.view.set('range', newRange);
         // var play = this.mathbox.play({
         //   target: 'cartesian',
         //   pace: 1,
         //   script: [
-        //     {props: {range: oldRange} },
+        //     {props: {range: this.view.get('range')} },
         //     {props: {range: newRange} }
         //   ]
         // });
+        // this.currRange = newRange;
+        this.mathbox.inspect();
        }
      },
 
