@@ -78,6 +78,12 @@ var NumberNode = P(SymbolNode, function(_, super_) {
       return null;
     }
   };
+  _.toInt = function () {
+    return parseInt(this.symbol);
+  };
+  _.toFloat = function() {
+    return parseFloat(this.symbol);
+  }
 });
 
 var OperatorNode = P(SymbolNode, function (_, super_) {
@@ -146,7 +152,7 @@ var DifferentiationNode = P(FunctionNode, function(_, super_) {
   _.init = function(boundVar, degree = 1) {
     this.boundVar = boundVar;
     this.degree = degree;
-    super_.init.call(this, 'd', 1, [this.boundVar], false);
+    super_.init.call(this, 'd', 1, [this.boundVar, this.degree], false);
   };
 });
 
@@ -394,10 +400,22 @@ Fraction.open(function (_) {
   };
   _.toSemanticNodes = function(remainingNodes) {
     if (this.isDerivative()) {
-      //TODO. MAKE THIS MORE ROBUST
-      var boundVar = this.downInto.ends[R].toSemanticNode();
+      //TODO: ASSERT THAT BOUNDVAR IS JUST A SYMBOL
       //TODO: SUPPORT df/dx
-      return DifferentiationNode(boundVar.toString());
+      var d = this.downInto.ends[L];
+      var boundVar = d[R].toSemanticNode();
+      var degree = 1;
+      //Check for degree
+      if (this.upInto.ends[R] instanceof Superscript &&
+        this.downInto.ends[R] instanceof Superscript) {
+        //TODO: ASSERT THAT THE SUPERSCRIPT IS THE SAME FOR BOTH
+        //TODO: ASSERT THAT THE SUPERSCRIPT IS JUST A NUMBER
+        var sup = this.downInto.ends[R].sup.toSemanticNode();
+        if (sup instanceof NumberNode) {
+          degree = sup.toInt();
+        }
+      }
+      return DifferentiationNode(boundVar.toString(), degree);
     } else {
       var operator = InfixNode('/');
       var args = [this.upInto.toSemanticNodes(), this.downInto.toSemanticNodes()];
