@@ -3,6 +3,7 @@
  ********************************/
 
 var Digit = P(VanillaSymbol, function(_, super_) {
+  _.__type__ = 'Digit';
   _.createLeftOf = function(cursor) {
     if (cursor.options.autoSubscriptNumerals
         && cursor.parent !== cursor.parent.parent.sub
@@ -19,6 +20,7 @@ var Digit = P(VanillaSymbol, function(_, super_) {
 });
 
 var Variable = P(Symbol, function(_, super_) {
+  _.__type__ = 'Variable';
   _.init = function(ch, html) {
     super_.init.call(this, ch, '<var>'+(html || ch)+'</var>');
   };
@@ -66,6 +68,7 @@ optionProcessors.autoCommands = function(cmds) {
 };
 
 var Letter = P(Variable, function(_, super_) {
+  _.__type__ = 'Letter';
   _.init = function(ch) { return super_.init.call(this, this.letter = ch); };
   _.createLeftOf = function(cursor) {
     super_.createLeftOf.apply(this, arguments);
@@ -216,6 +219,7 @@ optionProcessors.autoOperatorNames = function(cmds) {
   return dict;
 };
 var OperatorName = P(Symbol, function(_, super_) {
+  _.__type__ = 'OperatorName';
   _.init = function(fn) { this.ctrlSeq = fn; };
   _.createLeftOf = function(cursor) {
     var fn = this.ctrlSeq;
@@ -380,6 +384,7 @@ LatexCmds.forall = P(VanillaSymbol, function(_, super_) {
 // symbols that aren't a single MathCommand, but are instead a whole
 // Fragment. Creates the Fragment from a LaTeX string
 var LatexFragment = P(MathCommand, function(_) {
+  _.__type__ = 'LatexFragment';
   _.init = function(latex) { this.latex = latex; };
   _.createLeftOf = function(cursor) {
     var block = latexMathParser.parse(this.latex);
@@ -429,6 +434,7 @@ LatexCmds['½'] = bind(LatexFragment, '\\frac12');
 LatexCmds['¾'] = bind(LatexFragment, '\\frac34');
 
 var PlusMinus = P(BinaryOperator, function(_) {
+  _.__type__ = 'PlusMinus';
   _.init = VanillaSymbol.prototype.init;
 
   _.contactWeld = _.siblingCreated = _.siblingDeleted = function(opts, dir) {
@@ -471,6 +477,7 @@ CharCmds['*'] = LatexCmds.sdot = LatexCmds.cdot =
 //semantically should be &sdot;, but &middot; looks better
 
 var Inequality = P(BinaryOperator, function(_, super_) {
+  _.__type__ = 'Inequality';
   _.init = function(data, strict) {
     this.data = data;
     this.strict = strict;
@@ -506,6 +513,7 @@ LatexCmds['≤'] = LatexCmds.le = LatexCmds.leq = bind(Inequality, less, false);
 LatexCmds['≥'] = LatexCmds.ge = LatexCmds.geq = bind(Inequality, greater, false);
 
 var Equality = P(BinaryOperator, function(_, super_) {
+  _.__type__ = 'Equality';
   _.init = function() {
     super_.init.call(this, '=', '=');
   };

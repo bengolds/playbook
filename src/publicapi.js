@@ -121,6 +121,7 @@ function getInterface(v) {
     _.config = function(opts) { config(this.__options, opts); return this; };
     _.el = function() { return this.__controller.container[0]; };
     _.text = function() { return this.__controller.exportText(); };
+    _.semanticTree = function() { return this.__controller.exportSemanticTree(); };
     _.latex = function(latex) {
       if (arguments.length > 0) {
         this.__controller.renderLatexMath(latex);
@@ -259,6 +260,7 @@ var origMathQuill = window.MathQuill;
 window.MathQuill = MathQuill;
 
 function RootBlockMixin(_) {
+  _.__type__ = 'RootMathBlock';
   var names = 'moveOutOf deleteOutOf selectOutOf upOutOf downOutOf'.split(' ');
   for (var i = 0; i < names.length; i += 1) (function(name) {
     _[name] = function(dir) { this.controller.handle(name, dir); };

@@ -8,6 +8,7 @@
  * Both MathBlock's and MathCommand's descend from it.
  */
 var MathElement = P(Node, function(_, super_) {
+  _.__type__ = 'MathElement';
   _.finalizeInsert = function(options, cursor) { // `cursor` param is only for
       // SupSub::contactWeld, and is deliberately only passed in by writeLatex,
       // see ea7307eb4fac77c149a11ffdf9a831df85247693
@@ -33,6 +34,7 @@ var MathElement = P(Node, function(_, super_) {
  * Descendant commands are organized into blocks.
  */
 var MathCommand = P(MathElement, function(_, super_) {
+  _.__type__ = 'MathCommand';
   _.init = function(ctrlSeq, htmlTemplate, textTemplate) {
     var cmd = this;
     super_.init.call(cmd);
@@ -294,6 +296,7 @@ var MathCommand = P(MathElement, function(_, super_) {
  * Lightweight command without blocks or children.
  */
 var Symbol = P(MathCommand, function(_, super_) {
+  _.__type__ = 'Symbol';
   _.init = function(ctrlSeq, html, text) {
     if (!text) text = ctrlSeq && ctrlSeq.length > 1 ? ctrlSeq.slice(1) : ctrlSeq;
 
@@ -330,11 +333,13 @@ var Symbol = P(MathCommand, function(_, super_) {
   _.isEmpty = function(){ return true; };
 });
 var VanillaSymbol = P(Symbol, function(_, super_) {
+  _.__type__ = 'VanillaSymbol';
   _.init = function(ch, html) {
     super_.init.call(this, ch, '<span>'+(html || ch)+'</span>');
   };
 });
 var BinaryOperator = P(Symbol, function(_, super_) {
+  _.__type__ = 'BinaryOperator';
   _.init = function(ctrlSeq, html, text) {
     super_.init.call(this,
       ctrlSeq, '<span class="mq-binary-operator">'+html+'</span>', text
@@ -348,6 +353,7 @@ var BinaryOperator = P(Symbol, function(_, super_) {
  * ancestor operators.
  */
 var MathBlock = P(MathElement, function(_, super_) {
+  _.__type__ = 'MathBlock';
   _.join = function(methodName) {
     return this.foldChildren('', function(fold, child) {
       return fold + child[methodName]();
