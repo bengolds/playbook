@@ -1,6 +1,8 @@
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="function-plot.html">
 <link rel="import" href="mathquill-input.html">
+<script src="../bower_components/mathjs/dist/math.js"></script>
+<script src="../bower_components/algebrite/dist/algebrite.bundle-for-browser.js"></script>
 <!--
 A comment describing this element
 
@@ -52,7 +54,8 @@ Example:
         }
       },
       parseFunction: function(funcString) {
-        var parsed = math.parse(funcString);
+        var simplified = Algebrite.simplify(funcString).toString();
+        var parsed = math.parse(simplified);
         var symbols = this.getSymbols(parsed);
         var compiled = parsed.compile();
         return {
