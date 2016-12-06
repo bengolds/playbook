@@ -81,9 +81,9 @@ var NumberNode = P(SymbolNode, function(_, super_) {
 });
 
 var OperatorNode = P(SymbolNode, function (_, super_) {
-  _.init = function (symbol, rightAssociative, numExpectedArgs) {
-    this.rightAssociative = rightAssociative || false;
-    this.numExpectedArgs = numExpectedArgs || 2;
+  _.init = function (symbol, rightAssociative = false, numExpectedArgs = 2) {
+    this.rightAssociative = rightAssociative;
+    this.numExpectedArgs = numExpectedArgs;
     this.format = this.formatter(symbol);
     super_.init.call(this, symbol);
   };
@@ -113,14 +113,20 @@ var OperatorNode = P(SymbolNode, function (_, super_) {
 
 var FunctionNode = P(OperatorNode, function(_, super_) {
   _.__type__ = "FunctionNode";
-  _.init = function (symbol, numExpectedArgs, boundArgs) {
-    this.boundArgs = boundArgs || [];
+  _.init = function (symbol, numExpectedArgs, boundArgs = [], boundArgsFirst = true) {
+    this.boundArgs = boundArgs;
+    this.boundArgsFirst = boundArgsFirst;
     super_.init.call(this, symbol, true, numExpectedArgs);
   };
   _.formatter = function(symbol) {
     return function(args) {
       var output = symbol + '(';
-      var allArgs = this.boundArgs.concat(args);
+      var allArgs = [];
+      if (this.boundArgsFirst) {
+        allArgs = this.boundArgs.concat(args);
+      } else {
+        allArgs = args.concat(this.boundArgs); 
+      }
       for (var i = 0; i < allArgs.length; i++) {
         output += allArgs[i];
         if (i < allArgs.length-1)
@@ -135,12 +141,14 @@ var FunctionNode = P(OperatorNode, function(_, super_) {
   }
 });
 
-// var DifferentiationNode = P(FunctionNode, function(_, super_) {
-//   _.__type__ = "DifferentiationNode";
-//   _.init = function() {
-
-//   }
-// })
+var DifferentiationNode = P(FunctionNode, function(_, super_) {
+  _.__type__ = "DifferentiationNode";
+  _.init = function(boundVar, degree = 1) {
+    this.boundVar = boundVar;
+    this.degree = degree;
+    super_.init.call(this, 'd', 1, [this.boundVar], false);
+  };
+});
 
 var InfixNode = P(OperatorNode, function(_, super_) {
   _.__type__ = "FunctionNode";
@@ -168,9 +176,9 @@ var InfixNode = P(OperatorNode, function(_, super_) {
 
 var VariableNode = P(SemanticNode, function(_, super_) {
   _.__type__ = "VariableNode";
-  _.init = function (variableName, variableType) {
+  _.init = function (variableName, variableType = SETS.REAL) {
     this.variableName = variableName;
-    this.variableType = variableType || SETS.REAL;
+    this.variableType = variableType;
     super_.init.call(this);
   };
   _.toString = function() {
@@ -374,6 +382,7 @@ Variable.open(function(_) {
   };
 });
 
+//ALSO DERIVATIVES
 Fraction.open(function (_) {
   _.isDerivative = function() {
     var top = this.upInto;
@@ -388,7 +397,7 @@ Fraction.open(function (_) {
       //TODO. MAKE THIS MORE ROBUST
       var boundVar = this.downInto.ends[R].toSemanticNode();
       //TODO: SUPPORT df/dx
-
+      return DifferentiationNode(boundVar.toString());
     } else {
       var operator = InfixNode('/');
       var args = [this.upInto.toSemanticNodes(), this.downInto.toSemanticNodes()];
