@@ -59,14 +59,40 @@ Controller.open(function(_) {
       // mouseup on page outside field, but even outside page, except iframes: https://github.com/mathquill/mathquill/commit/8c50028afcffcace655d8ae2049f6e02482346c5#commitcomment-6175800
     });
 
+    var self = this;
+    function getClosestApplicationNode(semanticNode) {
+      if (semanticNode instanceof ApplicationNode) {
+        return semanticNode;
+      } else if (semanticNode == null) {
+        return null;
+      }
+      return getClosestApplicationNode(semanticNode.parent);
+    }
     this.container.on('mouseover.mathquill', 'var', function(e) {
-      console.log("mouseover: " + e.target.textContent);
+      var jqTarget = $(e.target);
+      var id = -1;
+      if (jqTarget.attr(mqBlockId))
+        id = jqTarget.attr(mqBlockId);
+      else
+        id = jqTarget.attr(mqCmdId);
+      var semanticTree = self.semanticTreeObject();
+      var semanticNode = semanticTree.findDisplayNode(id);
+      var applicationNode = getClosestApplicationNode(semanticNode);
+      console.log(id);
+      console.log(semanticNode);
+      console.log(applicationNode);
+      var hoveredDisplayNodes = applicationNode.getDisplayNodes();
+      for (var i = 0; i < hoveredDisplayNodes.length; i++) {
+        hoveredDisplayNodes[i].jQ.addClass('hovered');
+      }
+
       function mouseout(e) {
-        console.log("mouseout: " + e.target.textContent);
+        for (var i = 0; i < hoveredDisplayNodes.length; i++) {
+          hoveredDisplayNodes[i].jQ.removeClass('hovered');
+        }
         $(e.target).off('mouseout.mathquill', mouseout);
       }
       $(e.target).on('mouseout.mathquill', mouseout);
-      console.log(e);
     });
   }
 });
