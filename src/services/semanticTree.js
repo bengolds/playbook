@@ -1,8 +1,10 @@
 Controller.open(function(_) {
   _.exportSemanticTree = function() {
-    var semanticNode = this.root.toSemanticNode();
-    return semanticNode.toString();
+    return this.semanticTreeObject().toString();
   };
+  _.semanticTreeObject = function() {
+    return this.root.toSemanticNode();
+  }
   _.debugSemanticTree = function() {
     var semanticNodes = this.root.toSemanticNodes();
     var output = '[';
@@ -31,6 +33,7 @@ var SemanticNode = P(function(_) {
 	_.__type__ = "SemanticNode";	
 	_.init = function() {
 		this.type = this.__type__;
+    this.displayNodes = [];
 	};
   _.toSemanticNodes = function () {
     return [this];
@@ -38,6 +41,43 @@ var SemanticNode = P(function(_) {
 
   _.preprocess = function (rightNode) {
     return null;
+  };
+
+  _.findDisplayNode = function(displayId) {
+    var index = -1;
+    for (var i = 0; i < this.displayNodes.length; i++) {
+      if (displayId == this.displayNodes[i].id)
+        index = i;
+    }
+    if (index != -1) {
+      return this;
+    } else {
+      var children = this.children();
+      for (var i = 0; i < children.length; i++) {
+        var findInChild = children[i].findDisplayNode(displayId);
+        if (findInChild) {
+          return findInChild;
+        }
+      }
+    }
+    return null;
+  };
+  
+  _.children = function() {
+    return [];
+  };
+
+  _.getDisplayNodes = function() {
+    if (this.displayNodes.length > 0) {
+      return this.displayNodes;
+    } else {
+      var childrenDisplayNodes = [];
+      var children = this.children();
+      for (var i = 0; i < children.length; i++) {
+        childrenDisplayNodes = childrenDisplayNodes.concat(children[i].getDisplayNodes());
+      }
+      return childrenDisplayNodes;
+    };
   }
 });
 
@@ -62,6 +102,9 @@ var ApplicationNode = P(SemanticNode, function(_, super_) {
       nodes.parent = parent;
     }
   };
+  _.children = function() {
+    return [this.operator].concat(this.args);
+  }
 });
 
 var SymbolNode = P(SemanticNode, function(_, super_) {
@@ -94,7 +137,7 @@ var NumberNode = P(SymbolNode, function(_, super_) {
   };
   _.toFloat = function() {
     return parseFloat(this.symbol);
-  }
+  };
 });
 
 var OperatorNode = P(SymbolNode, function (_, super_) {
@@ -328,7 +371,9 @@ Node.open(function(_) {
     //Tokenize the tree into Semantic Nodes
     var semanticNodes = tokenizeNodes(this.childrenAsArray());
     insertMultipliers(semanticNodes);
-    return parseTokenizedTree(semanticNodes);
+    var parsedTree = parseTokenizedTree(semanticNodes);
+    this.appendDisplayNodes(parsedTree, [this]);
+    return parsedTree;
   };
   _.toSemanticNode = function (remainingNodes) {
     var semanticNodes = this.toSemanticNodes(remainingNodes);
@@ -338,7 +383,16 @@ Node.open(function(_) {
     } else {
       return semanticNodes[0];
     }
-  }
+  };
+  _.appendDisplayNodes = function (semanticNodes, displayNodes) {
+    if (Array.isArray(semanticNodes)) {
+      for (var i = 0; i < semanticNodes.length; i++) {
+        this.appendDisplayNodes(semanticNodes[i], displayNodes);
+      }
+    } else if (semanticNodes && typeof semanticNodes == 'object') {
+      semanticNodes.displayNodes = semanticNodes.displayNodes.concat(displayNodes);
+    }
+  }; 
   _.childrenAsArray = function() {
     var children = [];
     for (var currNode = this.ends[L]; currNode; currNode = currNode[R]) {
@@ -370,34 +424,41 @@ BinaryOperator.open(function(_) {
         symbol = '=';
         break;
     }
-    return [InfixNode(symbol)];
+    var semanticNode = InfixNode(symbol);
+    this.appendDisplayNodes(semanticNode, [this]);
+    return [semanticNode];
   }
 });
 
 Superscript.open(function (_) {
   _.toSemanticNodes = function() {
     var operator = InfixNode('^', true, 2);
-    var superscript = this.sup.toSemanticNodes();
+    this.appendDisplayNodes(operator, [this]);
+    var superscript = this.sup.toSemanticNode();
     return [operator, superscript];
   }
-});
-
-Bracket.open(function(_) {
 });
 
 //ALSO FUNCTIONS
 Variable.open(function(_) {
   _.toSemanticNodes = function (remainingNodes) {
+    var semanticNode = {};
+    var displayNodes = [this];
+
     if (this.isPartOfOperator) {
       var symbol = this.text();
       while(remainingNodes.length > 0 && remainingNodes[0].isPartOfOperator) {
-        symbol += remainingNodes.shift().text();
+        var nextNode = remainingNodes.shift();
+        symbol += nextNode.text();
+        displayNodes.push(nextNode);
       }
-      return [FunctionNode(symbol, 1)];
+      semanticNode = FunctionNode(symbol, 1);
     } 
     else {
-      return [VariableNode(this.ctrlSeq)];
+      semanticNode = VariableNode(this.ctrlSeq);
     }
+    this.appendDisplayNodes(semanticNode, displayNodes);
+    return [semanticNode];
   };
 });
 
@@ -412,6 +473,7 @@ Fraction.open(function (_) {
     return false;
   };
   _.toSemanticNodes = function(remainingNodes) {
+    var semanticNode = {};
     if (this.isDerivative()) {
       //TODO: ASSERT THAT BOUNDVAR IS JUST A SYMBOL
       //TODO: SUPPORT df/dx
@@ -428,24 +490,31 @@ Fraction.open(function (_) {
           degree = sup.toInt();
         }
       }
-      return DifferentiationNode(boundVar.toString(), degree);
+      semanticNode = DifferentiationNode(boundVar.toString(), degree);
     } else {
       var operator = InfixNode('/');
       var args = [this.upInto.toSemanticNode(), this.downInto.toSemanticNode()];
-      return ApplicationNode(operator, args);
+      semanticNode = ApplicationNode(operator, args);
     }
+    this.appendDisplayNodes(semanticNode, [this]);
+    return [semanticNode];
   };
 });
 
 Digit.open(function(_) {
   _.toSemanticNodes = function (remainingNodes) {
     var number = this.ctrlSeq;
+    var displayNodes = [this];
     while (remainingNodes[0] && 
             (remainingNodes[0] instanceof Digit || 
             remainingNodes[0].ctrlSeq == '.')) {
-      number += remainingNodes.shift().ctrlSeq;
+      var nextNode = remainingNodes.shift();
+      number += nextNode.ctrlSeq;
+      displayNodes.push(nextNode);
     }
-    return [NumberNode(number)];
+    var semanticNode = NumberNode(number);
+    this.appendDisplayNodes(semanticNode, [this]);
+    return [semanticNode];
   };
 });
 
@@ -454,7 +523,9 @@ SquareRoot.open(function(_) {
     var symbol = 'sqrt';
     var operator = FunctionNode(symbol, 1);
     var arg = this.blocks[0].toSemanticNodes();
-    return ApplicationNode(operator, [arg]); 
+    var semanticNode = ApplicationNode(operator, [arg]);
+    this.appendDisplayNodes(semanticNode, [this]);
+    return [semanticNode];
   };
 });
 
@@ -463,7 +534,9 @@ NthRoot.open(function (_) {
     var symbol = 'nthRoot';
     var operator = FunctionNode(symbol, 2);
     var args = [this.ends[R].toSemanticNodes(), this.ends[L].toSemanticNodes()];
-    return ApplicationNode(operator, args);
+    var semanticNode = ApplicationNode(operator, args);
+    this.appendDisplayNodes(semanticNode, [this]);
+    return [semanticNode];
   }
 });
 
@@ -497,6 +570,8 @@ SummationNotation.open(function(_) {
       var summand = gobbleRightTerms(remainingNodes);
     }
 
-    return SummationNode(boundVar, from, to, summand);
+    var semanticNode = SummationNode(boundVar, from, to, summand);
+    this.appendDisplayNodes(semanticNode, [this]);
+    return [semanticNode];
   };
 });
