@@ -81,23 +81,15 @@ var NumberNode = P(SymbolNode, function(_, super_) {
 });
 
 var OperatorNode = P(SymbolNode, function (_, super_) {
-  _.init = function (symbol, rightAssociative, expectedArgs) {
+  _.init = function (symbol, rightAssociative, numExpectedArgs) {
     this.rightAssociative = rightAssociative || false;
-    this.expectedArgs = expectedArgs || 2;
+    this.numExpectedArgs = numExpectedArgs || 2;
     this.format = this.formatter(symbol);
     super_.init.call(this, symbol);
   };
   _.comparePrecedence = function(o2) {
-    var precedences = {
-      '^' : 3,
-      '*' : 2,
-      '/' : 2,
-      '+' : 1,
-      '-' : 1,
-      '=' : 0
-    }
-    var p1 = precedences[this.symbol] || 10;
-    var p2 = precedences[o2.symbol] || 10;
+    var p1 = this.precedence();
+    var p2 = o2.precedence();
     if (p1 > p2) {
       return 1;
     } else if (p1 == p2) {
@@ -105,6 +97,9 @@ var OperatorNode = P(SymbolNode, function (_, super_) {
     } else {
       return -1;
     }
+  };
+  _.precedence = function() {
+    return -1;
   };
   _.canStack = function(o2) {
     //return true if o2 can stack on this 
@@ -118,22 +113,34 @@ var OperatorNode = P(SymbolNode, function (_, super_) {
 
 var FunctionNode = P(OperatorNode, function(_, super_) {
   _.__type__ = "FunctionNode";
-  _.init = function (symbol, expectedArgs) {
-    super_.init.call(this, symbol, true, expectedArgs);
+  _.init = function (symbol, numExpectedArgs, boundArgs) {
+    this.boundArgs = boundArgs || [];
+    super_.init.call(this, symbol, true, numExpectedArgs);
   };
   _.formatter = function(symbol) {
     return function(args) {
       var output = symbol + '(';
-      for (var i = 0; i < args.length; i++) {
-        output += args[i];
-        if (i < args.length-1)
+      var allArgs = this.boundArgs.concat(args);
+      for (var i = 0; i < allArgs.length; i++) {
+        output += allArgs[i];
+        if (i < allArgs.length-1)
           output += ',';
       }
       output += ')';
       return output;
     };
   };
+  _.precedence = function() {
+    return 2;
+  }
 });
+
+// var DifferentiationNode = P(FunctionNode, function(_, super_) {
+//   _.__type__ = "DifferentiationNode";
+//   _.init = function() {
+
+//   }
+// })
 
 var InfixNode = P(OperatorNode, function(_, super_) {
   _.__type__ = "FunctionNode";
@@ -146,6 +153,17 @@ var InfixNode = P(OperatorNode, function(_, super_) {
       return output + ')';
     }; 
   };
+  _.precedence = function() {
+    var precedences = {
+      '^' : 4,
+      '*' : 3,
+      '/' : 3,
+      '+' : 1,
+      '-' : 1,
+      '=' : 0
+    };
+    return precedences[this.symbol] || -1;
+  }
 });
 
 var VariableNode = P(SemanticNode, function(_, super_) {
@@ -223,7 +241,7 @@ function parseTokenizedTree(semanticNodes) {
   var addNode = function(operator) {
     //Combine the top two operands and the operator into one node,
     //then push it to the top of the stack.
-    var numOperands = operator.expectedArgs;
+    var numOperands = operator.numExpectedArgs;
     var args = [];
     if (operandStack.length < numOperands) {
       console.log("Malformed tree. Not enough args for our symbol!");
@@ -357,11 +375,25 @@ Variable.open(function(_) {
 });
 
 Fraction.open(function (_) {
+  _.isDerivative = function() {
+    var top = this.upInto;
+    var bottom = this.downInto;
+    if ((top.ends[L].ctrlSeq == 'd' && bottom.ends[L].ctrlSeq == 'd') 
+        || (top.ends[L].ctrlSeq == '\\partial' && bottom.ends[L].ctrlSeq == '\\partial'))
+      return true;
+    return false;
+  };
   _.toSemanticNodes = function(remainingNodes) {
+    if (this.isDerivative()) {
+      //TODO. MAKE THIS MORE ROBUST
+      var boundVar = this.downInto.ends[R].toSemanticNode();
+      //TODO: SUPPORT df/dx
 
-    var operator = InfixNode('/');
-    var args = [this.upInto.toSemanticNodes(), this.downInto.toSemanticNodes()];
-    return ApplicationNode(operator, args);
+    } else {
+      var operator = InfixNode('/');
+      var args = [this.upInto.toSemanticNodes(), this.downInto.toSemanticNodes()];
+      return ApplicationNode(operator, args);
+    }
   };
 });
 
@@ -427,4 +459,4 @@ SummationNotation.open(function(_) {
 
     return SummationNode(boundVar, from, to, summand);
   };
-})
+});
