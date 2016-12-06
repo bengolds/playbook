@@ -1,5 +1,6 @@
 <link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="function-plot.html">
+<link rel="import" href="mathbox-plot.html">
 <link rel="import" href="mathquill-input.html">
 <script src="../bower_components/mathjs/dist/math.js"></script>
 <script src="../bower_components/algebrite/dist/algebrite.bundle-for-browser.js"></script>
@@ -30,7 +31,7 @@ Example:
     </style>
     <mathquill-input on-edit="mathquillChanged"></mathquill-input>
     <!-- <paper-input label="Function" id="formula" on-keyup="paperinputChanged"></paper-input> -->
-    <function-plot func="[[functor]]"></function-plot>
+    <mathbox-plot func="[[functor]]"></mathbox-plot>
   </template>
 
   <script>
@@ -43,6 +44,7 @@ Example:
         }
         catch (error) {
           console.log("couldn't parse function: " + e.detail.mathField.semanticTree())
+          console.log(error);
         }
       },
       paperinputChanged: function(e) {

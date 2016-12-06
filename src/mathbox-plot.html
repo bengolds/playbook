@@ -1,0 +1,152 @@
+<link rel="import" href="../bower_components/plotly-plot/plotly-plot.html">
+<script src="mathbox/build/mathbox-bundle.js"></script>
+
+<dom-module id="mathbox-plot">
+  <template>
+    <style>
+      :host {
+        display: block;
+        width: 480px;
+        height: 192px;
+      }
+      ::shadow .modebar {
+        display: none;
+      }
+      #mathbox {
+        width: 480px;
+        height: 192px;
+      }
+    </style>
+    <div id='mathbox'></div>
+    
+  </template>
+
+  <script>
+    Polymer({
+      is: 'mathbox-plot',
+
+      properties: {
+        func: {
+          type: Object,
+          observer: "_funcChanged"
+        }
+      },
+
+      attached: function() {
+        var plotEl = this.$.mathbox;
+        var aspectRatio = plotEl.offsetWidth/plotEl.offsetHeight;
+
+        this.mathbox = mathBox({
+          plugins: ['core', 'cursor', 'mathbox'],
+          element: plotEl,
+          camera: {
+            type: 'orthographic',
+            left: -aspectRatio,
+            right: aspectRatio,
+            bottom: -1,
+            top: 1,
+          }
+        });
+        var three = this.mathbox.three;
+        three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
+        var camera = this.mathbox.camera({
+          position: [0,0,1]
+        });
+
+        this.view = this.mathbox.cartesian({
+          range: [[0,aspectRatio], [0, 1]],
+          scale: [aspectRatio, 1],
+        });
+
+        this.view.axis({
+          axis: 1,
+          width: 4
+        })
+        .axis({
+          axis: 2,
+          width: 4
+        })
+        .grid({
+          width: 1,
+          divideX: 20,
+          divideY: 10,
+        });
+
+        this.data =
+        this.view.interval({
+          expr: function (emit, x, i, t) {
+            emit(x, Math.sin(x));
+          },
+          width: plotEl.offsetWidth,
+          channels: 2
+        });
+        var curve = 
+        this.view.line({
+          width: 5,
+          color: '#3090FF',
+          zIndex: 2
+        });
+      },
+
+      _funcChanged: function() {
+        if (typeof this.func.eval != 'undefined') {
+          //ANIMATE THE TRANSITION
+        //  var play = this.mathbox.play({
+        //   target: 'interval',
+        //   pace: 1,
+        //   to: 2,
+        //   script: [
+        //     {props: {expr: this.data.get('expr')}},
+        //     {props: {expr: function(emit, x, i, t) {emit(x, x*x);} }}
+        //   ]
+        // });  
+        this.data.set("expr", function (emit, x, i, t) {
+          emit(x, this.func.eval(x));
+        }.bind(this));
+        var oldRange = this.view.get('range');
+        var newRange = this._getBounds(this.data, this.view);
+        console.log(newRange);
+        this.view.set('range', newRange);
+        // var play = this.mathbox.play({
+        //   target: 'cartesian',
+        //   pace: 1,
+        //   script: [
+        //     {props: {range: oldRange} },
+        //     {props: {range: newRange} }
+        //   ]
+        // });
+       }
+     },
+
+     _getBounds: function(data, view) {
+        var xRange = view.get('range')[0];
+        var numSamples = this.data.get('width');
+        // The range has a weird format; it gets stored as a Vector2.
+        var minX = xRange.x, maxX = xRange.y;
+        var xStep = (maxX-minX)/numSamples;
+        var minY = 0, maxY = 0;
+        var expr = data.get('expr');
+        var emit = function (x, y) {
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+        for (var i = 0; i < numSamples; i++) {
+          var x = minX + i*xStep;
+          expr(emit, x);
+        }
+        if (minY == Number.NEGATIVE_INFINITY) {
+          minY = -10;
+        }
+        if (maxY == Number.POSITIVE_INFINITY) {
+          maxY = 10;
+        }
+        if (minY == maxY) {
+          minY = minY - 5;
+          maxY = maxY + 5;
+        }
+        return [[minX, maxX],[minY, maxY]];
+     }
+
+   });
+ </script>
+</dom-module>
