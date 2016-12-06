@@ -1,6 +1,7 @@
 Controller.open(function(_) {
   _.exportSemanticTree = function() {
-    var semanticTrees = this.root.toSemanticNode();
+    var semanticNode = this.root.toSemanticNode();
+    return semanticNode.toString();
   };
   _.debugSemanticTree = function() {
     var semanticNodes = this.root.toSemanticNodes();
@@ -261,7 +262,7 @@ function parseTokenizedTree(semanticNodes) {
 }
 
 function gobbleRightTerms(remainingNodes) {
-  //TODO: MERGE WITH TOKENIZE TREE
+  //TODO: MERGE WITH TOKENIZE AS TOKENIZE "UNTIL"
   //TODO: MAKE WORK WITH SIN
   var shouldStopGobbling = function(node) {
     return (node instanceof PlusMinus) || (node instanceof Equality);
