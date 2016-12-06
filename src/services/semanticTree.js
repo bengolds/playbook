@@ -46,10 +46,21 @@ var ApplicationNode = P(SemanticNode, function(_, super_) {
   _.init = function (operator, args) {
     this.operator = operator;
     this.args = args;
+    this.setParent(this.operator, this);
+    this.setParent(this.args, this);
     super_.init.call(this);
   };
   _.toString = function () {
     return this.operator.format(this.args);
+  };
+  _.setParent = function(nodes, parent) {
+    if (Array.isArray(nodes)) {
+      for (var i = 0; i < nodes.length; i++) {
+        this.setParent(nodes[i], parent);
+      }
+    } else if (nodes && typeof nodes == 'object') {
+      nodes.parent = parent;
+    }
   };
 });
 
@@ -162,7 +173,9 @@ var InfixNode = P(OperatorNode, function(_, super_) {
     return function(args) {
       var output = '(' + args[0].toString();  
       for (var i = 1; i < args.length; i++) {
-        output += symbol + args[i].toString();
+        if (args[i]) {
+          output += symbol + args[i].toString();
+        }
       }
       return output + ')';
     }; 
@@ -418,7 +431,7 @@ Fraction.open(function (_) {
       return DifferentiationNode(boundVar.toString(), degree);
     } else {
       var operator = InfixNode('/');
-      var args = [this.upInto.toSemanticNodes(), this.downInto.toSemanticNodes()];
+      var args = [this.upInto.toSemanticNode(), this.downInto.toSemanticNode()];
       return ApplicationNode(operator, args);
     }
   };
