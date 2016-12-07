@@ -2,23 +2,10 @@
 <link rel="import" href="function-plot.html">
 <link rel="import" href="mathbox-plot.html">
 <link rel="import" href="mathquill-input.html">
+<link rel="import" href="function-display.html">
 <script src="../bower_components/mathjs/dist/math.js"></script>
 <script src="../bower_components/algebrite/dist/algebrite.bundle-for-browser.js"></script>
-<!--
-A comment describing this element
 
-Example:
-
-    <my-elem></my-elem>
-
-Example:
-
-    <my-elem>
-      <h2>Hello my-elem</h2>
-    </my-elem>
-
-@demo demo/index.html
--->
 
 <dom-module id="function-row">
   <template>
@@ -29,6 +16,7 @@ Example:
         align-items: center;
       }
     </style>
+    <function-display latex="[[latex]]"></function-display>
     <mathquill-input on-edit="mathquillChanged"></mathquill-input>
     <!-- <paper-input label="Function" id="formula" on-keyup="paperinputChanged"></paper-input> -->
     <mathbox-plot func="[[functor]]"></mathbox-plot>
@@ -39,44 +27,54 @@ Example:
       is: 'function-row',
       mathquillChanged: function(e) {
         try {
-          this.functor = this.parseFunction(e.detail.mathField.semanticTree());
-          console.log("successfully parsed function: " + e.detail.mathField.semanticTree())
+          var functionString = e.detail.mathField.semanticTree();
+          var parsedFunction = this._parseFunction(functionString);
+          this.latex = this._getFunctionSignature(parsedFunction);
+          this.functor = this._toFunctor(parsedFunction);
+          console.log("successfully parsed function: " + functionString)
         }
         catch (error) {
           console.log("couldn't parse function: " + e.detail.mathField.semanticTree())
           console.log(error);
         }
       },
-      paperinputChanged: function(e) {
-        try {
-          console.log(this.$.formula.value);
-          this.functor = this.parseFunction(this.$.formula.value);
-        }
-        catch (e) {
-        }
-      },
-      parseFunction: function(funcString) {
+      _parseFunction: function(funcString) {
         var simplified = Algebrite.simplify(funcString).toString();
         var parsed = math.parse(simplified);
-        var symbols = this.getSymbols(parsed);
-        var compiled = parsed.compile();
+        return parsed;
+      },
+      _toFunctor: function(parsedFunction) {
+        var symbols = this._getSymbols(parsedFunction);
+        var compiled = parsedFunction.compile();
         return {
           eval: function(x) {
             var scope = {};
             scope[symbols[0]] = x;
             return compiled.eval(scope);
           }
-        }
+        } 
       },
-      getSymbols: function(rootNode) {
+      _getFunctionSignature: function(parsedFunction) {
+        var symbols = this._getSymbols(parsedFunction);
+        var latex = 'f\\left(';
+        for (var i = 0; i < symbols.length; i++) {
+          latex += symbols[i];
+          if (i != symbols.length -1) {
+            latex += ',';
+          }
+        }
+        latex += '\\right)=';
+        return latex;
+      },
+      _getSymbols: function(parsedFunction) {
        var symbols = [];
-       rootNode.traverse(function (node) {
+       parsedFunction.traverse(function (node) {
         if (node.type == 'SymbolNode' && !symbols.includes(node.name)) {
           symbols.push(node.name);
         }
       });
        return symbols;
-     }
+     },
    });
  </script>
 </dom-module>

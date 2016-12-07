@@ -1,18 +1,3 @@
-<!--
-A comment describing this element
-
-Example:
-
-    <my-elem></my-elem>
-
-Example:
-
-    <my-elem>
-      <h2>Hello my-elem</h2>
-    </my-elem>
-
-@demo demo/index.html
--->
 <link rel="import" href="mathquill/mathquill-import.html">
 <dom-module id="mathquill-input">
   <link rel="import" type="css" href="mathquill/mathquill.css"/>
@@ -21,6 +6,9 @@ Example:
 			:host {
 				display: block;
 			}
+      .hovered {
+        background-color: red;
+      }
 		</style>
     <span id="quill"></span>
 	</template>
