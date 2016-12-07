@@ -66,36 +66,11 @@
   };
 
   _._onMouseOver = function(e) {
-    function getClosestApplicationNode(semanticNode) {
-      if (semanticNode instanceof ApplicationNode) {
-        return semanticNode;
-      } else if (semanticNode == null) {
-        return null;
-      }
-      return getClosestApplicationNode(semanticNode.parent);
-    }
-    var jqTarget = $(e.target);
-    var id = -1;
-    if (jqTarget.attr(mqBlockId)) {
-      id = jqTarget.attr(mqBlockId);
-    } else {
-      id = jqTarget.attr(mqCmdId);
-    }
-    var semanticTree = this.semanticTreeObject();
-    var semanticNode = semanticTree.findDisplayNode(id);
-    var applicationNode = getClosestApplicationNode(semanticNode);
-    console.log(id);
-    console.log(semanticNode);
-    console.log(applicationNode);
-    var hoveredDisplayNodes = applicationNode.getDisplayNodes();
-    for (var i = 0; i < hoveredDisplayNodes.length; i++) {
-      hoveredDisplayNodes[i].jQ.addClass('hovered');
-    }
+    var self = this;
+    self.handle('mouseover', e.target);
 
     function mouseout(e) {
-      for (var i = 0; i < hoveredDisplayNodes.length; i++) {
-        hoveredDisplayNodes[i].jQ.removeClass('hovered');
-      }
+      self.handle('mouseout', e.target);
       $(e.target).off('mouseout.mathquill', mouseout);
     }
     $(e.target).on('mouseout.mathquill', mouseout);

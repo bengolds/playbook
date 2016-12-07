@@ -122,7 +122,8 @@ function getInterface(v) {
     _.config = function(opts) { config(this.__options, opts); return this; };
     _.el = function() { return this.__controller.container[0]; };
     _.text = function() { return this.__controller.exportText(); };
-    _.semanticTree = function() { return this.__controller.exportSemanticTree(); };
+    _.semanticText = function() { return this.__controller.exportSemanticTree(); };
+    _.semanticTree = function() { return this.__controller.semanticTreeObject(); };
     _.latex = function(latex) {
       if (arguments.length > 0) {
         this.__controller.renderLatexMath(latex);

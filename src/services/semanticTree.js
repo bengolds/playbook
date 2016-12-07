@@ -29,7 +29,7 @@ var SETS = {
   CONSTANT: 4
 };
 
-var SemanticNode = P(function(_) {
+SemanticNode = P(function(_) {
 	_.__type__ = "SemanticNode";	
 	_.init = function() {
 		this.type = this.__type__;
@@ -81,7 +81,7 @@ var SemanticNode = P(function(_) {
   }
 });
 
-var ApplicationNode = P(SemanticNode, function(_, super_) {
+ApplicationNode = P(SemanticNode, function(_, super_) {
 	_.__type__ = "ApplicationNode";
   _.init = function (operator, args) {
     this.operator = operator;
@@ -107,7 +107,7 @@ var ApplicationNode = P(SemanticNode, function(_, super_) {
   }
 });
 
-var SymbolNode = P(SemanticNode, function(_, super_) {
+SymbolNode = P(SemanticNode, function(_, super_) {
   _.__type__ = "SymbolNode";
   _.init = function (symbol) {
     this.symbol = symbol;
@@ -118,7 +118,7 @@ var SymbolNode = P(SemanticNode, function(_, super_) {
   };
 });
 
-var NumberNode = P(SymbolNode, function(_, super_) {
+NumberNode = P(SymbolNode, function(_, super_) {
   _.__type__ = "NumberNode";
   _.preprocess = function (rightNode) {
     //If two numbers are next to each other, merge them.
@@ -140,7 +140,7 @@ var NumberNode = P(SymbolNode, function(_, super_) {
   };
 });
 
-var OperatorNode = P(SymbolNode, function (_, super_) {
+OperatorNode = P(SymbolNode, function (_, super_) {
   _.init = function (symbol, rightAssociative = false, numExpectedArgs = 2) {
     this.rightAssociative = rightAssociative;
     this.numExpectedArgs = numExpectedArgs;
@@ -171,7 +171,7 @@ var OperatorNode = P(SymbolNode, function (_, super_) {
   };
 });
 
-var FunctionNode = P(OperatorNode, function(_, super_) {
+FunctionNode = P(OperatorNode, function(_, super_) {
   _.__type__ = "FunctionNode";
   _.init = function (symbol, numExpectedArgs, boundArgs = [], boundArgsFirst = true) {
     this.boundArgs = boundArgs;
@@ -201,7 +201,7 @@ var FunctionNode = P(OperatorNode, function(_, super_) {
   }
 });
 
-var DifferentiationNode = P(FunctionNode, function(_, super_) {
+DifferentiationNode = P(FunctionNode, function(_, super_) {
   _.__type__ = "DifferentiationNode";
   _.init = function(boundVar, degree = 1) {
     this.boundVar = boundVar;
@@ -210,7 +210,7 @@ var DifferentiationNode = P(FunctionNode, function(_, super_) {
   };
 });
 
-var InfixNode = P(OperatorNode, function(_, super_) {
+InfixNode = P(OperatorNode, function(_, super_) {
   _.__type__ = "FunctionNode";
   _.formatter =  function(symbol) {
     return function(args) {
@@ -236,7 +236,7 @@ var InfixNode = P(OperatorNode, function(_, super_) {
   }
 });
 
-var VariableNode = P(SemanticNode, function(_, super_) {
+VariableNode = P(SemanticNode, function(_, super_) {
   _.__type__ = "VariableNode";
   _.init = function (variableName, variableType = SETS.REAL) {
     this.variableName = variableName;
@@ -253,7 +253,7 @@ var VariableNode = P(SemanticNode, function(_, super_) {
   }
 });
 
-var SummationNode = P(ApplicationNode, function(_, super_) {
+SummationNode = P(ApplicationNode, function(_, super_) {
   _.__type__ = "SummationNode";
   _.init = function(indexVar, from, to, summand) {
     var operator = FunctionNode('sum', 4);
