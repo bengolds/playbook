@@ -27,7 +27,7 @@
       is: 'function-row',
       mathquillChanged: function(e) {
         try {
-          var functionString = e.detail.mathField.semanticTree();
+          var functionString = e.detail.mathField.semanticText();
           var parsedFunction = this._parseFunction(functionString);
           this.latex = this._getFunctionSignature(parsedFunction);
           this.functor = this._toFunctor(parsedFunction);

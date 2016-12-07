@@ -1,32 +1,66 @@
 <link rel="import" href="mathquill/mathquill-import.html">
 <dom-module id="mathquill-input">
-  <link rel="import" type="css" href="mathquill/mathquill.css"/>
+	<link rel="import" type="css" href="mathquill/mathquill.css"/>
 	<template>
 		<style>
 			:host {
 				display: block;
 			}
-      .hovered {
-        background-color: red;
-      }
+			.hovered {
+				background-color: red;
+			}
 		</style>
-    <span id="quill"></span>
+		<span id="quill"></span>
 	</template>
 	<script>
 		Polymer({
 			is: 'mathquill-input',
 			ready: function() {
-        this.scopeSubtree(this.$.quill, true);
+				this.scopeSubtree(this.$.quill, true);
 				var MQ = MathQuill.getInterface(2);
-        MQ.MathField(this.$.quill, {
-          handlers: {
-            edit: this.edit.bind(this)
-          }
-        });
+				MQ.MathField(this.$.quill, {
+					handlers: {
+			            edit: this.edit.bind(this),
+			            mouseover: this.onMouseOver.bind(this),
+			            mouseout: this.onMouseOut.bind(this)
+			        }
+			    });
 			},
-      edit: function(mathField) {
-        this.fire('edit', {mathField: mathField});
-      }
+			edit: function(mathField) {
+				this.fire('edit', {mathField: mathField});
+			},
+			onMouseOver: function(mathField, target) {
+				var mqCmdId = 'mathquill-command-id';
+				var mqBlockId = 'mathquill-block-id';
+			    function getClosestApplicationNode(semanticNode) {
+			      if (semanticNode instanceof ApplicationNode) {
+			        return semanticNode;
+			      } else if (semanticNode == null) {
+			        return null;
+			      }
+			      return getClosestApplicationNode(semanticNode.parent);
+			    }
+			    var jqTarget = $(target);
+			    var id = -1;
+			    if (jqTarget.attr(mqBlockId)) {
+			      id = jqTarget.attr(mqBlockId);
+			    } else {
+			      id = jqTarget.attr(mqCmdId);
+			    }
+			    var semanticTree = mathField.semanticTree();
+			    var semanticNode = semanticTree.findDisplayNode(id);
+			    var applicationNode = getClosestApplicationNode(semanticNode);
+			    this.hoveredDisplayNodes = applicationNode.getDisplayNodes();
+			    for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
+			      this.hoveredDisplayNodes[i].jQ.addClass('hovered');
+			    }
+			    console.log(applicationNode.toString());
+			},
+			onMouseOut: function(mathField, target) {
+		      for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
+		        this.hoveredDisplayNodes[i].jQ.removeClass('hovered');
+		      }
+			}
 		});
 	</script>
 </dom-module>
