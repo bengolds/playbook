@@ -1,0 +1,37 @@
+<link rel="import" href="mathquill/mathquill-import.html">
+<dom-module id="function-display">
+  <link rel="import" type="css" href="mathquill/mathquill.css"/>
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+      .hovered {
+        background-color: red;
+      }
+    </style>
+    <span id="quill"></span>
+  </template>
+  <script>
+    Polymer({
+      is: 'function-display',
+
+      properties: {
+        latex: {
+          type: String,
+          observer: "_latexChanged"
+        }
+      },
+
+      ready: function() {
+        this.scopeSubtree(this.$.quill, true);
+        var MQ = MathQuill.getInterface(2);
+        this.mathquill = MQ.StaticMath(this.$.quill);
+      },
+
+      _latexChanged: function() {
+        this.mathquill.latex(this.latex);
+      }
+    });
+  </script>
+</dom-module>
