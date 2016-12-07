@@ -2,16 +2,22 @@
  * Deals with mouse events for clicking, drag-to-select
  *******************************************************/
 
-Controller.open(function(_) {
+ Controller.open(function(_) {
   Options.p.ignoreNextMousedown = noop;
   _.delegateMouseEvents = function() {
-    var ultimateRootjQ = this.root.jQ;
     //drag-to-select event handling
-    this.container.bind('mousedown.mathquill', function(e) {
-      var rootjQ = $(e.target).closest('.mq-root-block');
-      var root = Node.byId[rootjQ.attr(mqBlockId) || ultimateRootjQ.attr(mqBlockId)];
-      var ctrlr = root.controller, cursor = ctrlr.cursor, blink = cursor.blink;
-      var textareaSpan = ctrlr.textareaSpan, textarea = ctrlr.textarea;
+    this.container.bind('mousedown.mathquill', this._onMouseDown.bind(this));
+
+    
+    this.container.on('mouseover.mathquill', this._onMouseOver.bind(this));
+  };
+
+  _._onMouseDown = function(e) {
+    var ultimateRootjQ = this.root.jQ;
+    var rootjQ = $(e.target).closest('.mq-root-block');
+    var root = Node.byId[rootjQ.attr(mqBlockId) || ultimateRootjQ.attr(mqBlockId)];
+    var ctrlr = root.controller, cursor = ctrlr.cursor, blink = cursor.blink;
+    var textareaSpan = ctrlr.textareaSpan, textarea = ctrlr.textarea;
 
       e.preventDefault(); // doesn't work in IE≤8, but it's a one-line fix:
       e.target.unselectable = true; // http://jsbin.com/yagekiji/1
@@ -57,9 +63,9 @@ Controller.open(function(_) {
       $(e.target.ownerDocument).mousemove(docmousemove).mouseup(mouseup);
       // listen on document not just body to not only hear about mousemove and
       // mouseup on page outside field, but even outside page, except iframes: https://github.com/mathquill/mathquill/commit/8c50028afcffcace655d8ae2049f6e02482346c5#commitcomment-6175800
-    });
+  };
 
-    var self = this;
+  _._onMouseOver = function(e) {
     function getClosestApplicationNode(semanticNode) {
       if (semanticNode instanceof ApplicationNode) {
         return semanticNode;
@@ -68,33 +74,32 @@ Controller.open(function(_) {
       }
       return getClosestApplicationNode(semanticNode.parent);
     }
-    this.container.on('mouseover.mathquill', 'var', function(e) {
-      var jqTarget = $(e.target);
-      var id = -1;
-      if (jqTarget.attr(mqBlockId))
-        id = jqTarget.attr(mqBlockId);
-      else
-        id = jqTarget.attr(mqCmdId);
-      var semanticTree = self.semanticTreeObject();
-      var semanticNode = semanticTree.findDisplayNode(id);
-      var applicationNode = getClosestApplicationNode(semanticNode);
-      console.log(id);
-      console.log(semanticNode);
-      console.log(applicationNode);
-      var hoveredDisplayNodes = applicationNode.getDisplayNodes();
-      for (var i = 0; i < hoveredDisplayNodes.length; i++) {
-        hoveredDisplayNodes[i].jQ.addClass('hovered');
-      }
+    var jqTarget = $(e.target);
+    var id = -1;
+    if (jqTarget.attr(mqBlockId)) {
+      id = jqTarget.attr(mqBlockId);
+    } else {
+      id = jqTarget.attr(mqCmdId);
+    }
+    var semanticTree = this.semanticTreeObject();
+    var semanticNode = semanticTree.findDisplayNode(id);
+    var applicationNode = getClosestApplicationNode(semanticNode);
+    console.log(id);
+    console.log(semanticNode);
+    console.log(applicationNode);
+    var hoveredDisplayNodes = applicationNode.getDisplayNodes();
+    for (var i = 0; i < hoveredDisplayNodes.length; i++) {
+      hoveredDisplayNodes[i].jQ.addClass('hovered');
+    }
 
-      function mouseout(e) {
-        for (var i = 0; i < hoveredDisplayNodes.length; i++) {
-          hoveredDisplayNodes[i].jQ.removeClass('hovered');
-        }
-        $(e.target).off('mouseout.mathquill', mouseout);
+    function mouseout(e) {
+      for (var i = 0; i < hoveredDisplayNodes.length; i++) {
+        hoveredDisplayNodes[i].jQ.removeClass('hovered');
       }
-      $(e.target).on('mouseout.mathquill', mouseout);
-    });
-  }
+      $(e.target).off('mouseout.mathquill', mouseout);
+    }
+    $(e.target).on('mouseout.mathquill', mouseout);
+  };
 });
 
 Controller.open(function(_) {
@@ -117,8 +122,9 @@ Controller.open(function(_) {
     cursor.clearSelection().show();
 
     node.seek(pageX, cursor);
-    this.scrollHoriz(); // before .selectFrom when mouse-selecting, so
-                        // always hits no-selection case in scrollHoriz and scrolls slower
+    this.scrollHoriz(); 
+    // before .selectFrom when mouse-selecting, so
+    // always hits no-selection case in scrollHoriz and scrolls slower
     return this;
   };
 });

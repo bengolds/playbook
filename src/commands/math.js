@@ -381,15 +381,15 @@ var MathBlock = P(MathElement, function(_, super_) {
   // editability methods: called by the cursor for editing, cursor movements,
   // and selection of the MathQuill tree, these all take in a direction and
   // the cursor
-  _.moveOutOf = function(dir, cursor, updown) {
+  _.moveOutOf = function(cursor, dir, updown) {
     var updownInto = updown && this.parent[updown+'Into'];
     if (!updownInto && this[dir]) cursor.insAtDirEnd(-dir, this[dir]);
     else cursor.insDirOf(dir, this.parent);
   };
-  _.selectOutOf = function(dir, cursor) {
+  _.selectOutOf = function(cursor, dir) {
     cursor.insDirOf(dir, this.parent);
   };
-  _.deleteOutOf = function(dir, cursor) {
+  _.deleteOutOf = function(cursor, dir) {
     cursor.unwrapGramp();
   };
   _.seek = function(pageX, cursor) {
