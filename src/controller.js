@@ -22,12 +22,13 @@ var Controller = P(function(_) {
     // TODO: stop depending on root.cursor, and rm it
   };
 
-  _.handle = function(name, dir) {
+  // _.handle = function(name, dir, ..extraArgs) {
+  _.handle = function(name, ...extraArgs) {
     var handlers = this.options.handlers;
     if (handlers && handlers.fns[name]) {
       var mq = handlers.APIClasses[this.KIND_OF_MQ](this);
-      if (dir === L || dir === R) handlers.fns[name](dir, mq);
-      else handlers.fns[name](mq);
+      var args = [mq].concat(extraArgs);
+      handlers.fns[name].apply(this, args);
     }
   };
 

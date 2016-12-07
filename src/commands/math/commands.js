@@ -255,7 +255,7 @@ var SupSub = P(MathCommand, function(_, super_) {
     }
     // like 'sub sup'.split(' ').forEach(function(supsub) { ... });
     for (var i = 0; i < 2; i += 1) (function(cmd, supsub, oppositeSupsub, updown) {
-      cmd[supsub].deleteOutOf = function(dir, cursor) {
+      cmd[supsub].deleteOutOf = function(cursor, dir) {
         cursor.insDirOf((this[dir] ? -dir : dir), this.parent);
         if (!this.isEmpty()) {
           var end = this.ends[dir];
@@ -683,7 +683,7 @@ var Bracket = P(P(MathCommand, DelimsMixin), function(_, super_) {
     this.deleteSide(-dir, false, cursor);
   };
   _.finalizeTree = function() {
-    this.ends[L].deleteOutOf = function(dir, cursor) {
+    this.ends[L].deleteOutOf = function(cursor, dir) {
       this.parent.deleteSide(dir, true, cursor);
     };
     // FIXME HACK: after initial creation/insertion, finalizeTree would only be

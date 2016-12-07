@@ -263,7 +263,12 @@ function RootBlockMixin(_) {
   _.__type__ = 'RootMathBlock';
   var names = 'moveOutOf deleteOutOf selectOutOf upOutOf downOutOf'.split(' ');
   for (var i = 0; i < names.length; i += 1) (function(name) {
-    _[name] = function(dir) { this.controller.handle(name, dir); };
+    _[name] = function(cursor, dir) { 
+      if (dir != L && dir != R) {
+        dir = null;
+      }
+      this.controller.handle(name, dir); 
+    };
   }(names[i]));
   _.reflow = function() {
     this.controller.handle('reflow');

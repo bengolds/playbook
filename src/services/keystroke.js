@@ -161,7 +161,7 @@ Controller.open(function(_) {
     // default browser action if so)
     if (cursor.parent === this.root) return;
 
-    cursor.parent.moveOutOf(dir, cursor);
+    cursor.parent.moveOutOf(cursor, dir);
     return this.notify('move');
   };
 
@@ -180,7 +180,7 @@ Controller.open(function(_) {
       cursor.insDirOf(dir, cursor.selection.ends[dir]);
     }
     else if (cursor[dir]) cursor[dir].moveTowards(dir, cursor, updown);
-    else cursor.parent.moveOutOf(dir, cursor, updown);
+    else cursor.parent.moveOutOf(cursor, dir, updown);
 
     return this.notify('move');
   };
@@ -229,7 +229,7 @@ Controller.open(function(_) {
     this.notify('edit'); // deletes selection if present
     if (!hadSelection) {
       if (cursor[dir]) cursor[dir].deleteTowards(dir, cursor);
-      else cursor.parent.deleteOutOf(dir, cursor);
+      else cursor.parent.deleteOutOf(cursor, dir);
     }
 
     if (cursor[L].siblingDeleted) cursor[L].siblingDeleted(cursor.options, R);
@@ -273,7 +273,7 @@ Controller.open(function(_) {
       }
       else node.selectTowards(dir, cursor);
     }
-    else cursor.parent.selectOutOf(dir, cursor);
+    else cursor.parent.selectOutOf(cursor, dir);
 
     cursor.clearSelection();
     cursor.select() || cursor.show();

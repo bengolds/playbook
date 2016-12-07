@@ -79,17 +79,17 @@ var TextBlock = P(Node, function(_, super_) {
   // and selection of the MathQuill tree, these all take in a direction and
   // the cursor
   _.moveTowards = function(dir, cursor) { cursor.insAtDirEnd(-dir, this); };
-  _.moveOutOf = function(dir, cursor) { cursor.insDirOf(dir, this); };
+  _.moveOutOf = function(cursor, dir) { cursor.insDirOf(dir, this); };
   _.unselectInto = _.moveTowards;
 
   // TODO: make these methods part of a shared mixin or something.
   _.selectTowards = MathCommand.prototype.selectTowards;
   _.deleteTowards = MathCommand.prototype.deleteTowards;
 
-  _.selectOutOf = function(dir, cursor) {
+  _.selectOutOf = function(cursor, dir) {
     cursor.insDirOf(dir, this);
   };
-  _.deleteOutOf = function(dir, cursor) {
+  _.deleteOutOf = function(cursor, dir) {
     // backspace and delete at ends of block don't unwrap
     if (this.isEmpty()) cursor.insRightOf(this);
   };
