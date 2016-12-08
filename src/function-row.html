@@ -17,7 +17,9 @@
       }
     </style>
     <function-display latex="[[latex]]"></function-display>
-    <mathquill-input on-edit="mathquillChanged"></mathquill-input>
+    <mathquill-input on-edit="mathquillChanged"
+                      on-element-mouseover="_highlightElement"
+                      on-element-mouseout="_unhighlightElement"></mathquill-input>
     <!-- <paper-input label="Function" id="formula" on-keyup="paperinputChanged"></paper-input> -->
     <mathbox-plot func="[[functor]]"></mathbox-plot>
   </template>
@@ -71,12 +73,18 @@
       _getSymbols: function(parsedFunction) {
        var symbols = [];
        parsedFunction.traverse(function (node) {
-        if (node.type == 'SymbolNode' && !symbols.includes(node.name)) {
-          symbols.push(node.name);
-        }
-      });
+          if (node.type == 'SymbolNode' && !symbols.includes(node.name)) {
+            symbols.push(node.name);
+          }
+        });
        return symbols;
-     },
+      },
+      _highlightElement: function(e) {
+        console.log('_highlightElement');
+      },
+      _unhighlightElement: function(e) {
+        console.log('_unhighlightElement');
+      },
    });
  </script>
 </dom-module>
