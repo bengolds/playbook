@@ -30,7 +30,9 @@
           var functionString = e.detail.mathField.semanticText();
           var parsedFunction = this._parseFunction(functionString);
           this.latex = this._getFunctionSignature(parsedFunction);
-          this.functor = this._toFunctor(parsedFunction);
+          if (this._getSymbols(parsedFunction).length == 1) {
+            this.functor = this._toFunctor(parsedFunction);
+          }
           console.log("successfully parsed function: " + functionString)
         }
         catch (error) {

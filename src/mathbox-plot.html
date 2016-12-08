@@ -86,56 +86,52 @@
           color: '#3090FF',
           zIndex: 2
         });
-      },
 
+        this.cartesianAnim = this.mathbox.play({
+          target: 'cartesian',
+          pace: 1,
+        });
+        this.intervalAnim = this.mathbox.play({
+          target: 'interval',
+          pace: 1,
+        });
+      },
       _funcChanged: function() {
         if (typeof this.func.eval != 'undefined') {
-          //ANIMATE THE TRANSITION
-        //  var play = this.mathbox.play({
-        //   target: 'interval',
-        //   pace: 1,
-        //   to: 2,
-        //   script: [
-        //     {props: {expr: this.data.get('expr')}},
-        //     {props: {expr: function(emit, x, i, t) {emit(x, x*x);} }}
-        //   ]
-        // });  
-        this.data.set("expr", function (emit, x, i, t) {
-          emit(x, this.func.eval(x));
-        }.bind(this));
-        if (!this.currRange) {
-          this.currRange = this.view.get('range');
-        }
-        var newRange = this._getBounds(this.data, this.view);
-        this.view.set('range', newRange);
-        // var play = this.mathbox.play({
-        //   target: 'cartesian',
-        //   pace: 1,
-        //   script: [
-        //     {props: {range: this.view.get('range')} },
-        //     {props: {range: newRange} }
-        //   ]
-        // });
-        // this.currRange = newRange;
-        this.mathbox.inspect();
+          var currFunc = this.func.eval;
+          var currExpr = this.data.get('expr');
+          var newExpr = function (emit, x, i, t) {
+              emit(x, currFunc(x));
+            };
+          this.intervalAnim.set("script", [
+            {props: {expr: currExpr}},
+            {props: {expr: newExpr}},
+          ]);
+
+          var currRange = this.view.get('range');
+          var newRange = this._getBounds(newExpr, this.view);
+          this.cartesianAnim.set("script", [
+            {props: {range: currRange}},
+            {props: {range: newRange}},
+          ]);
        }
      },
 
-     _getBounds: function(data, view) {
+     _getBounds: function(dataExpr, view, numSamples=200) {
         var xRange = view.get('range')[0];
-        var numSamples = this.data.get('width');
         // The range has a weird format; it gets stored as a Vector2.
         var minX = xRange.x, maxX = xRange.y;
         var xStep = (maxX-minX)/numSamples;
         var minY = 0, maxY = 0;
-        var expr = data.get('expr');
         var emit = function (x, y) {
-          minY = Math.min(minY, y);
-          maxY = Math.max(maxY, y);
+          if (!isNaN(y)) {
+            minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y);
+          }
         }
         for (var i = 0; i < numSamples; i++) {
           var x = minX + i*xStep;
-          expr(emit, x);
+          dataExpr(emit, x);
         }
         if (minY == Number.NEGATIVE_INFINITY) {
           minY = -10;
