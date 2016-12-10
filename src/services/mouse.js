@@ -9,7 +9,7 @@
     this.container.bind('mousedown.mathquill', this._onMouseDown.bind(this));
 
     
-    this.container.on('mouseover.mathquill', this._onMouseOver.bind(this));
+    this.container.on('mouseover.mathquill', 'var', this._onMouseOver.bind(this));
   };
 
   _._onMouseDown = function(e) {
