@@ -15,7 +15,6 @@
 		</style>
 		<mathquill-element id="quill" editable="true" 
    on-element-mouseover='onElementMouseOver'
-   on-element-mouseout='onElementMouseOut'
    >
  </mathquill-element>
 </template>
@@ -23,39 +22,45 @@
   Polymer({
    is: 'function-input',
 
-   onElementMouseOver: function(mathField, target) {
- //    this.fire('element-mouseover', {mathField: mathField, target: target});
- //    var mqCmdId = 'mathquill-command-id';
- //    var mqBlockId = 'mathquill-block-id';
- //    function getClosestApplicationNode(semanticNode) {
- //     if (semanticNode instanceof ApplicationNode) {
- //      return semanticNode;
- //    } else if (semanticNode == null) {
- //      return null;
- //    }
- //    return getClosestApplicationNode(semanticNode.parent);
- //  }
- //  var jqTarget = $(target);
- //  var id = -1;
- //  if (jqTarget.attr(mqBlockId)) {
- //   id = jqTarget.attr(mqBlockId);
- // } else {
- //   id = jqTarget.attr(mqCmdId);
- // }
- // var semanticTree = mathField.semanticTree();
- // var semanticNode = semanticTree.findDisplayNode(id);
- // var applicationNode = getClosestApplicationNode(semanticNode);
- // this.hoveredDisplayNodes = applicationNode.getDisplayNodes();
- // for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
- //   this.hoveredDisplayNodes[i].jQ.addClass('hovered');
- // }
-			},
-			onElementMouseOut: function(mathField, target) {
-				// this.fire('element-mouseout', {mathField: mathField, target: target});
-				// for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
-				// 	this.hoveredDisplayNodes[i].jQ.removeClass('hovered');
-				// }
-			}
-		});
+   ready: function() {
+      this.scopeSubtree(this.$.quill, true);
+   },
+
+   onElementMouseOver: function(e, details) {
+    var mqCmdId = 'mathquill-command-id';
+    var mqBlockId = 'mathquill-block-id';
+    var getClosestApplicationNode = (semanticNode) => {
+      if (semanticNode instanceof ApplicationNode) {
+        return semanticNode;
+      } else if (semanticNode == null) {
+        return null;
+      }
+      return getClosestApplicationNode(semanticNode.parent);
+    }
+    var jqTarget = $(details.target);
+    var id = -1;
+    if (jqTarget.attr(mqBlockId)) {
+      id = jqTarget.attr(mqBlockId);
+    } else if (jqTarget.attr(mqCmdId)) {
+      id = jqTarget.attr(mqCmdId);
+    } else {
+      return;
+    }
+    var semanticTree = details.mathField.semanticTree();
+    var semanticNode = semanticTree.findDisplayNode(id);
+    var applicationNode = getClosestApplicationNode(semanticNode);
+    this.hoveredDisplayNodes = applicationNode.getDisplayNodes();
+    for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
+      this.hoveredDisplayNodes[i].jQ.addClass('hovered');
+    }
+	},
+	onElementMouseOut: function(e, details) {
+    if (this.hoveredDisplayNodes != null) {
+  		for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
+  			this.hoveredDisplayNodes[i].jQ.removeClass('hovered');
+  		}
+    }
+	}
+	});
 	</script>
 </dom-module>
