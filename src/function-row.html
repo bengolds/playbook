@@ -1,7 +1,7 @@
-<link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="function-plot.html">
 <link rel="import" href="mathbox-plot.html">
 <link rel="import" href="mathquill-input.html">
+<link rel="import" href="mathquill-element.html">
 <link rel="import" href="function-display.html">
 <script src="../bower_components/mathjs/dist/math.js"></script>
 <script src="../bower_components/algebrite/dist/algebrite.bundle-for-browser.js"></script>
@@ -14,9 +14,9 @@
         display: flex;
         flex-wrap: nowrap;
         align-items: center;
+        height:192px;
       }
     </style>
-    <function-display latex="[[latex]]"></function-display>
     <mathquill-input on-edit="mathquillChanged"
                       on-element-mouseover="_highlightElement"
                       on-element-mouseout="_unhighlightElement"></mathquill-input>
@@ -80,10 +80,8 @@
        return symbols;
       },
       _highlightElement: function(e) {
-        console.log('_highlightElement');
       },
       _unhighlightElement: function(e) {
-        console.log('_unhighlightElement');
       },
    });
  </script>

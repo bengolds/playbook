@@ -4,11 +4,14 @@
 	<template>
 		<style>
 			:host {
-				display: block;
+				flex-grow: 1;
 			}
 			.hovered {
 				background-color: red;
 			}
+      #quill {
+        font-size:200%;
+      }
 		</style>
 		<span id="quill"></span>
 	</template>
@@ -32,37 +35,37 @@
 			},
 			onElementMouseOver: function(mathField, target) {
 				this.fire('element-mouseover', {mathField: mathField, target: target});
-				// var mqCmdId = 'mathquill-command-id';
-				// var mqBlockId = 'mathquill-block-id';
-				// function getClosestApplicationNode(semanticNode) {
-				// 	if (semanticNode instanceof ApplicationNode) {
-				// 		return semanticNode;
-				// 	} else if (semanticNode == null) {
-				// 		return null;
-				// 	}
-				// 	return getClosestApplicationNode(semanticNode.parent);
-				// }
-				// var jqTarget = $(target);
-				// var id = -1;
-				// if (jqTarget.attr(mqBlockId)) {
-				// 	id = jqTarget.attr(mqBlockId);
-				// } else {
-				// 	id = jqTarget.attr(mqCmdId);
-				// }
-				// var semanticTree = mathField.semanticTree();
-				// var semanticNode = semanticTree.findDisplayNode(id);
-				// var applicationNode = getClosestApplicationNode(semanticNode);
-				// this.hoveredDisplayNodes = applicationNode.getDisplayNodes();
-				// for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
-				// 	this.hoveredDisplayNodes[i].jQ.addClass('hovered');
-				// }
+				var mqCmdId = 'mathquill-command-id';
+				var mqBlockId = 'mathquill-block-id';
+				function getClosestApplicationNode(semanticNode) {
+					if (semanticNode instanceof ApplicationNode) {
+						return semanticNode;
+					} else if (semanticNode == null) {
+						return null;
+					}
+					return getClosestApplicationNode(semanticNode.parent);
+				}
+				var jqTarget = $(target);
+				var id = -1;
+				if (jqTarget.attr(mqBlockId)) {
+					id = jqTarget.attr(mqBlockId);
+				} else {
+					id = jqTarget.attr(mqCmdId);
+				}
+				var semanticTree = mathField.semanticTree();
+				var semanticNode = semanticTree.findDisplayNode(id);
+				var applicationNode = getClosestApplicationNode(semanticNode);
+				this.hoveredDisplayNodes = applicationNode.getDisplayNodes();
+				for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
+					this.hoveredDisplayNodes[i].jQ.addClass('hovered');
+				}
 				// console.log(applicationNode.toString());
 			},
 			onElementMouseOut: function(mathField, target) {
 				this.fire('element-mouseout', {mathField: mathField, target: target});
-				// for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
-				// 	this.hoveredDisplayNodes[i].jQ.removeClass('hovered');
-				// }
+				for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
+					this.hoveredDisplayNodes[i].jQ.removeClass('hovered');
+				}
 			}
 		});
 	</script>

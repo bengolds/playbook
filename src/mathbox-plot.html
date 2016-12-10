@@ -13,8 +13,6 @@
         display: none;
       }
       #mathbox {
-        width: 480px;
-        height: 192px;
       }
     </style>
     <div id='mathbox'></div>
@@ -34,7 +32,7 @@
 
       attached: function() {
         var plotEl = this.$.mathbox;
-        var aspectRatio = plotEl.offsetWidth/plotEl.offsetHeight;
+        var aspectRatio = this.offsetWidth/this.offsetHeight;
 
         this.mathbox = mathBox({
           plugins: ['core', 'cursor', 'mathbox'],
@@ -103,10 +101,10 @@
           var newExpr = function (emit, x, i, t) {
               emit(x, currFunc(x));
             };
-          this.intervalAnim.set("script", [
-            {props: {expr: currExpr}},
-            {props: {expr: newExpr}},
-          ]);
+          this.intervalAnim.set("script", {
+            "0.001": {props: {expr: currExpr}},
+            "1": {props: {expr: newExpr}},
+          });
 
           var currRange = this.view.get('range');
           var newRange = this._getBounds(newExpr, this.view);
