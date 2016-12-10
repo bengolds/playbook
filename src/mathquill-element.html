@@ -70,13 +70,17 @@
         } else {
           this.mathquill = this._MQ.StaticMath(mqEl, mergedConfig);
         }
-        var mathquillAPI = ['config','el','text','semanticText','semanticTree',
+        var mathquillAPI = ['el','text','semanticText','semanticTree',
                             'latex','html','reflow','focus','blur','write',
                             'cmd','select','clearSelection','moveToDirEnd',
                             'moveToLeftEnd','moveToRightEnd','keystroke',
                             'typedText','dropEmbedded','clickAt','ignoreNextMousedown'];
         for (let method of mathquillAPI) {
-          this[method] = this.mathquill[method];
+          if (typeof this.mathquill[method] == 'function') {
+            this[method] = this.mathquill[method].bind(this.mathquill);
+          } else {
+            this[method] = null;
+          }
         }
       }
 		});

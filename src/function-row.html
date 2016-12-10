@@ -1,8 +1,6 @@
-<link rel="import" href="function-plot.html">
 <link rel="import" href="mathbox-plot.html">
-<link rel="import" href="mathquill-input.html">
+<link rel="import" href="function-input.html">
 <link rel="import" href="mathquill-element.html">
-<link rel="import" href="function-display.html">
 <script src="../bower_components/mathjs/dist/math.js"></script>
 <script src="../bower_components/algebrite/dist/algebrite.bundle-for-browser.js"></script>
 
@@ -16,11 +14,12 @@
         align-items: center;
         height:192px;
       }
+      #signature {
+        font-size:200%;
+      }
     </style>
-    <mathquill-input on-edit="mathquillChanged"
-                      on-element-mouseover="_highlightElement"
-                      on-element-mouseout="_unhighlightElement"></mathquill-input>
-    <!-- <paper-input label="Function" id="formula" on-keyup="paperinputChanged"></paper-input> -->
+    <mathquill-element id="signature">f\left(x\right)=</mathquill-element>
+    <function-input on-edit="mathquillChanged"></function-input>
     <mathbox-plot func="[[functor]]"></mathbox-plot>
   </template>
 
@@ -31,7 +30,8 @@
         try {
           var functionString = e.detail.mathField.semanticText();
           var parsedFunction = this._parseFunction(functionString);
-          this.latex = this._getFunctionSignature(parsedFunction);
+          var signature = this._getFunctionSignature(parsedFunction)
+          this.$.signature.latex(signature);
           if (this._getSymbols(parsedFunction).length == 1) {
             this.functor = this._toFunctor(parsedFunction);
           }
@@ -78,10 +78,6 @@
           }
         });
        return symbols;
-      },
-      _highlightElement: function(e) {
-      },
-      _unhighlightElement: function(e) {
       },
    });
  </script>
