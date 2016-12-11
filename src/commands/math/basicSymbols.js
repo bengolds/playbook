@@ -260,7 +260,7 @@ LatexCmds.f = P(Letter, function(_, super_) {
 // VanillaSymbol's
 LatexCmds[' '] = LatexCmds.space = bind(VanillaSymbol, '\\ ', '&nbsp;');
 
-LatexCmds["'"] = LatexCmds.prime = bind(VanillaSymbol, "'", '&prime;');
+LatexCmds['\''] = LatexCmds.prime = bind(VanillaSymbol, '\'', '&prime;');
 LatexCmds['″'] = LatexCmds.dprime = bind(VanillaSymbol, '″', '&Prime;');
 
 LatexCmds.backslash = bind(VanillaSymbol,'\\backslash ','\\');
@@ -456,7 +456,7 @@ var PlusMinus = P(BinaryOperator, function(_) {
       }
 
       return 'mq-binary-operator';
-    };
+    }
     
     if (dir === R) return; // ignore if sibling only changed on the right
     this.jQ[0].className = determineOpClassType(this);
@@ -503,9 +503,9 @@ var Inequality = P(BinaryOperator, function(_, super_) {
 });
 
 var less = { ctrlSeq: '\\le ', html: '&le;', text: '≤',
-             ctrlSeqStrict: '<', htmlStrict: '&lt;', textStrict: '<' };
+  ctrlSeqStrict: '<', htmlStrict: '&lt;', textStrict: '<' };
 var greater = { ctrlSeq: '\\ge ', html: '&ge;', text: '≥',
-                ctrlSeqStrict: '>', htmlStrict: '&gt;', textStrict: '>' };
+  ctrlSeqStrict: '>', htmlStrict: '&gt;', textStrict: '>' };
 
 LatexCmds['<'] = LatexCmds.lt = bind(Inequality, less, true);
 LatexCmds['>'] = LatexCmds.gt = bind(Inequality, greater, true);

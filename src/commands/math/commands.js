@@ -45,7 +45,7 @@ else if ('filter' in div_style) { //IE 6, 7, & 8 fallback, see https://github.co
     }
     var innerjQ = jQ.children()
     .css('filter', 'progid:DXImageTransform.Microsoft'
-        + '.Matrix(M11=' + x + ",SizingMethod='auto expand')"
+        + '.Matrix(M11=' + x + ',SizingMethod=\'auto expand\')'
     );
     function calculateMarginRight() {
       jQ.css('marginRight', (innerjQ.width()-1)*(x-1)/x + 'px');
@@ -666,7 +666,7 @@ var Bracket = P(P(MathCommand, DelimsMixin), function(_, super_) {
       }
       else { // else deleting just one of a pair of brackets, become one-sided
         this.sides[side] = { ch: OPP_BRACKS[this.sides[this.side].ch],
-                             ctrlSeq: OPP_BRACKS[this.sides[this.side].ctrlSeq] };
+          ctrlSeq: OPP_BRACKS[this.sides[this.side].ctrlSeq] };
         this.delimjQs.removeClass('mq-ghost')
           .eq(side === L ? 0 : 1).addClass('mq-ghost').html(this.sides[side].ch);
       }
@@ -744,14 +744,14 @@ LatexCmds.left = P(MathCommand, function(_) {
     return optWhitespace.then(regex(/^(?:[([|]|\\\{|\\langle\b|\\lVert\b)/))
       .then(function(ctrlSeq) {
         var open = (ctrlSeq.charAt(0) === '\\' ? ctrlSeq.slice(1) : ctrlSeq);
-	if (ctrlSeq=="\\langle") { open = '&lang;'; ctrlSeq = ctrlSeq + ' '; }
-	if (ctrlSeq=="\\lVert") { open = '&#8741;'; ctrlSeq = ctrlSeq + ' '; }
+        if (ctrlSeq=='\\langle') { open = '&lang;'; ctrlSeq = ctrlSeq + ' '; }
+        if (ctrlSeq=='\\lVert') { open = '&#8741;'; ctrlSeq = ctrlSeq + ' '; }
         return latexMathParser.then(function (block) {
           return string('\\right').skip(optWhitespace)
             .then(regex(/^(?:[\])|]|\\\}|\\rangle\b|\\rVert\b)/)).map(function(end) {
               var close = (end.charAt(0) === '\\' ? end.slice(1) : end);
-	      if (end=="\\rangle") { close = '&rang;'; end = end + ' '; }
-	      if (end=="\\rVert") { close = '&#8741;'; end = end + ' '; }
+	      if (end=='\\rangle') { close = '&rang;'; end = end + ' '; }
+	      if (end=='\\rVert') { close = '&#8741;'; end = end + ' '; }
               var cmd = Bracket(0, open, close, ctrlSeq, end);
               cmd.blocks = [ block ];
               block.adopt(cmd, 0, 0);
@@ -837,9 +837,9 @@ LatexCmds.MathQuillMathField = P(MathCommand, function(_, super_) {
 // and rendering LaTeX like \embed{registeredName} (see test).
 var Embed = LatexCmds.embed = P(Symbol, function(_, super_) {
   _.setOptions = function(options) {
-    function noop () { return ""; }
+    function noop () { return ''; }
     this.text = options.text || noop;
-    this.htmlTemplate = options.htmlString || "";
+    this.htmlTemplate = options.htmlString || '';
     this.latex = options.latex || noop;
     return this;
   };

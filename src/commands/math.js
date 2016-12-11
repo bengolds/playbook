@@ -125,7 +125,7 @@ var MathCommand = P(MathElement, function(_, super_) {
   };
   _.seek = function(pageX, cursor) {
     function getBounds(node) {
-      var bounds = {}
+      var bounds = {};
       bounds[L] = node.jQ.offset().left;
       bounds[R] = bounds[L] + node.jQ.outerWidth();
       return bounds;
@@ -164,7 +164,7 @@ var MathCommand = P(MathElement, function(_, super_) {
         return false;
       }
     });
-  }
+  };
 
   // methods involved in creating and cross-linking with HTML DOM nodes
   /*
