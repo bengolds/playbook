@@ -147,7 +147,7 @@ var TextBlock = P(Node, function(_, super_) {
     }
     else if (cursor.anticursor.parent === this) {
       // mouse-selecting within this TextBlock, re-insert the anticursor
-      var cursorPosition = cursor[L] && cursor[L].text.length;;
+      var cursorPosition = cursor[L] && cursor[L].text.length;
       if (this.anticursorPosition === cursorPosition) {
         cursor.anticursor = Point.copy(cursor);
       }
@@ -237,7 +237,7 @@ var TextPiece = P(Node, function(_, super_) {
   _.moveTowards = function(dir, cursor) {
     prayDirection(dir);
 
-    var ch = endChar(-dir, this.text)
+    var ch = endChar(-dir, this.text);
 
     var from = this[-dir];
     if (from) from.insTextAtDirEnd(ch, dir);
@@ -272,7 +272,7 @@ var TextPiece = P(Node, function(_, super_) {
     prayDirection(dir);
     var anticursor = cursor.anticursor;
 
-    var ch = endChar(-dir, this.text)
+    var ch = endChar(-dir, this.text);
 
     if (anticursor[dir] === this) {
       var newPc = TextPiece(ch).createDir(dir, cursor);

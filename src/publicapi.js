@@ -29,7 +29,7 @@ function insistOnInterVer() {
 function MathQuill(el) {
   insistOnInterVer();
   return MQ1(el);
-};
+}
 MathQuill.prototype = Progenote.p;
 MathQuill.interfaceVersion = function(v) {
   // shim for #459-era interface versioning (ended with #495)
@@ -72,7 +72,7 @@ function getInterface(v) {
     var blockId = $(el).children('.mq-root-block').attr(mqBlockId);
     var ctrlr = blockId && Node.byId[blockId].controller;
     return ctrlr ? APIClasses[ctrlr.KIND_OF_MQ](ctrlr) : null;
-  };
+  }
   var APIClasses = {};
 
   MQ.L = L;
@@ -230,7 +230,7 @@ function getInterface(v) {
       return this;
     };
   });
-  MQ.EditableField = function() { throw "wtf don't call me, I'm 'abstract'"; };
+  MQ.EditableField = function() { throw 'wtf don\'t call me, I\'m \'abstract\''; };
   MQ.EditableField.prototype = APIClasses.EditableField.prototype;
 
   /**

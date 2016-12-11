@@ -59,7 +59,7 @@ var $ = P(jQuery, function(_) {
 });
 
 var Point = P(function(_) {
-  _.__type__ = "Point";
+  _.__type__ = 'Point';
   _.parent = 0;
   _[L] = 0;
   _[R] = 0;
@@ -79,9 +79,9 @@ var Point = P(function(_) {
  * MathQuill virtual-DOM tree-node abstract base class
  */
 var Node = P(function(_) {
-  _.__type__ = "Node";
+  _.__type__ = 'Node';
   _[L] = 0;
-  _[R] = 0
+  _[R] = 0;
   _.parent = 0;
 
   var id = 0;
@@ -206,7 +206,7 @@ var Node = P(function(_) {
     while (proto != null) {
       proto = proto.__proto__;
       if (proto && proto.__type__)
-        output += " < " + proto.__type__;
+        output += ' < ' + proto.__type__;
     }
     return output;
   };
@@ -245,7 +245,7 @@ function prayWellFormed(parent, leftward, rightward) {
  * and have their 'parent' pointers set to the DocumentFragment).
  */
 var Fragment = P(function(_) {
-  _.__type__ = "Fragment";
+  _.__type__ = 'Fragment';
   _.init = function(withDir, oppDir, dir) {
     if (dir === undefined) dir = L;
     prayDirection(dir);
@@ -331,7 +331,7 @@ var Fragment = P(function(_) {
 
     self.disowned = true;
 
-    var rightEnd = self.ends[R]
+    var rightEnd = self.ends[R];
     var parent = leftEnd.parent;
 
     prayWellFormed(parent, leftEnd[L], leftEnd);

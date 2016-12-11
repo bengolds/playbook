@@ -110,7 +110,7 @@ var Cursor = P(Point, function(_) {
     var self = this, offset = self.jQ.removeClass('mq-cursor').offset();
     self.jQ.addClass('mq-cursor');
     return offset;
-  }
+  };
   _.unwrapGramp = function() {
     var gramp = this.parent.parent;
     var greatgramp = gramp.parent;

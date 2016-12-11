@@ -8,7 +8,7 @@ var Parser = P(function(_, super_, Parser) {
 
   function parseError(stream, message) {
     if (stream) {
-      stream = "'"+stream+"'";
+      stream = '\''+stream+'\'';
     }
     else {
       stream = 'EOF';
@@ -136,7 +136,7 @@ var Parser = P(function(_, super_, Parser) {
   // -*- primitive parsers -*- //
   var string = this.string = function(str) {
     var len = str.length;
-    var expected = "expected '"+str+"'";
+    var expected = 'expected \''+str+'\'';
 
     return Parser(function(stream, onSuccess, onFailure) {
       var head = stream.slice(0, len);

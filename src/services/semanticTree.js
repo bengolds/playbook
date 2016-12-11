@@ -4,7 +4,7 @@ Controller.open(function(_) {
   };
   _.semanticTreeObject = function() {
     return this.root.toSemanticNode();
-  }
+  };
   _.debugSemanticTree = function() {
     var semanticNodes = this.root.toSemanticNodes();
     var output = '[';
@@ -13,12 +13,6 @@ Controller.open(function(_) {
     }
     output += ']';
     return output;
-  };
-  _.logSemanticTree = function() {
-    console.log(this.root.toSemanticNodes());
-  };
-  _.logDisplayTree = function() {
-    console.log(this.root);
   };
 });
 
@@ -30,11 +24,11 @@ var SETS = {
 };
 
 SemanticNode = P(function(_) {
-	_.__type__ = "SemanticNode";	
-	_.init = function() {
-		this.type = this.__type__;
+  _.__type__ = 'SemanticNode';	
+  _.init = function() {
+    this.type = this.__type__;
     this.displayNodes = [];
-	};
+  };
   _.toSemanticNodes = function () {
     return [this];
   };
@@ -77,12 +71,12 @@ SemanticNode = P(function(_) {
         childrenDisplayNodes = childrenDisplayNodes.concat(children[i].getDisplayNodes());
       }
       return childrenDisplayNodes;
-    };
-  }
+    }
+  };
 });
 
 ApplicationNode = P(SemanticNode, function(_, super_) {
-	_.__type__ = "ApplicationNode";
+  _.__type__ = 'ApplicationNode';
   _.init = function (operator, args) {
     this.operator = operator;
     this.args = args;
@@ -104,11 +98,11 @@ ApplicationNode = P(SemanticNode, function(_, super_) {
   };
   _.children = function() {
     return [this.operator].concat(this.args);
-  }
+  };
 });
 
 SymbolNode = P(SemanticNode, function(_, super_) {
-  _.__type__ = "SymbolNode";
+  _.__type__ = 'SymbolNode';
   _.init = function (symbol) {
     this.symbol = symbol;
     super_.init.call(this);
@@ -119,7 +113,7 @@ SymbolNode = P(SemanticNode, function(_, super_) {
 });
 
 NumberNode = P(SymbolNode, function(_, super_) {
-  _.__type__ = "NumberNode";
+  _.__type__ = 'NumberNode';
   _.preprocess = function (rightNode) {
     //If two numbers are next to each other, merge them.
     if (rightNode instanceof NumberNode) {
@@ -172,7 +166,7 @@ OperatorNode = P(SymbolNode, function (_, super_) {
 });
 
 FunctionNode = P(OperatorNode, function(_, super_) {
-  _.__type__ = "FunctionNode";
+  _.__type__ = 'FunctionNode';
   _.init = function (symbol, numExpectedArgs, boundArgs = [], boundArgsFirst = true) {
     this.boundArgs = boundArgs;
     this.boundArgsFirst = boundArgsFirst;
@@ -198,11 +192,11 @@ FunctionNode = P(OperatorNode, function(_, super_) {
   };
   _.precedence = function() {
     return 2;
-  }
+  };
 });
 
 DifferentiationNode = P(FunctionNode, function(_, super_) {
-  _.__type__ = "DifferentiationNode";
+  _.__type__ = 'DifferentiationNode';
   _.init = function(boundVar, degree = 1) {
     this.boundVar = boundVar;
     this.degree = degree;
@@ -211,7 +205,7 @@ DifferentiationNode = P(FunctionNode, function(_, super_) {
 });
 
 InfixNode = P(OperatorNode, function(_, super_) {
-  _.__type__ = "FunctionNode";
+  _.__type__ = 'FunctionNode';
   _.formatter =  function(symbol) {
     return function(args) {
       var output = '(' + args[0].toString();  
@@ -233,11 +227,11 @@ InfixNode = P(OperatorNode, function(_, super_) {
       '=' : 0
     };
     return precedences[this.symbol] || -1;
-  }
+  };
 });
 
 VariableNode = P(SemanticNode, function(_, super_) {
-  _.__type__ = "VariableNode";
+  _.__type__ = 'VariableNode';
   _.init = function (variableName, variableType = SETS.REAL) {
     this.variableName = variableName;
     this.variableType = variableType;
@@ -250,11 +244,11 @@ VariableNode = P(SemanticNode, function(_, super_) {
     if (rightNode instanceof VariableNode) {
       return [this, FunctionNode('*'), rightNode];
     }
-  }
+  };
 });
 
 SummationNode = P(ApplicationNode, function(_, super_) {
-  _.__type__ = "SummationNode";
+  _.__type__ = 'SummationNode';
   _.init = function(indexVar, from, to, summand) {
     var operator = FunctionNode('sum', 4);
     var args = [];
@@ -270,7 +264,7 @@ function tokenizeNodes(siblingNodes) {
   //Takes display tree siblings and turns them into tokenized semantic nodes
   var semanticNodes = [];
   while (siblingNodes.length > 0) {
-    currNode = siblingNodes.shift();
+    var currNode = siblingNodes.shift();
     var tokenizedNodes = currNode.toSemanticNodes(siblingNodes);
     semanticNodes = semanticNodes.concat(tokenizedNodes);
   }
@@ -314,8 +308,8 @@ function parseTokenizedTree(semanticNodes) {
     var numOperands = operator.numExpectedArgs;
     var args = [];
     if (operandStack.length < numOperands) {
-      console.log("Malformed tree. Not enough args for our symbol!");
-      return SymbolNode("!");
+      console.log('Malformed tree. Not enough args for our symbol!');
+      return SymbolNode('!');
     }
     for (var i = 0; i < numOperands; i++) {
       args.unshift(operandStack.pop());
@@ -325,7 +319,7 @@ function parseTokenizedTree(semanticNodes) {
   };
 
   for (var i = 0; i < semanticNodes.length; i++) {
-    currSemanticNode = semanticNodes[i];
+    var currSemanticNode = semanticNodes[i];
     if (isOperand(currSemanticNode)) {
       operandStack.push(currSemanticNode);
     } 
@@ -358,8 +352,8 @@ function gobbleRightTerms(remainingNodes) {
 
   var gobbled = [];
   while (remainingNodes.length > 0 && !shouldStopGobbling(remainingNodes[0])) {
-    currDisplayNode = remainingNodes.shift();
-    currSemanticNodes = currDisplayNode.toSemanticNodes(remainingNodes);
+    var currDisplayNode = remainingNodes.shift();
+    var currSemanticNodes = currDisplayNode.toSemanticNodes(remainingNodes);
     gobbled = gobbled.concat(currSemanticNodes);
   }
   insertMultipliers(gobbled);
@@ -378,7 +372,7 @@ Node.open(function(_) {
   _.toSemanticNode = function (remainingNodes) {
     var semanticNodes = this.toSemanticNodes(remainingNodes);
     if (semanticNodes.length != 1) {
-      console.log("Not parseable. Too many semantic nodes returned");
+      console.log('Not parseable. Too many semantic nodes returned');
       return null;
     } else {
       return semanticNodes[0];
@@ -407,27 +401,27 @@ BinaryOperator.open(function(_) {
     var symbol = '!';
     var rightAssociative = false;
     switch (this.ctrlSeq) {
-      case '+':
-        symbol = '+';
-        break;
-      case '-':
-        symbol = '-';
-        break;
-      case '\\div ':
-        symbol = '/';
-        break;
-      case '\\cdot ':
-      case '\\times ':
-        symbol = '*';
-        break;
-      case '=':
-        symbol = '=';
-        break;
+    case '+':
+      symbol = '+';
+      break;
+    case '-':
+      symbol = '-';
+      break;
+    case '\\div ':
+      symbol = '/';
+      break;
+    case '\\cdot ':
+    case '\\times ':
+      symbol = '*';
+      break;
+    case '=':
+      symbol = '=';
+      break;
     }
     var semanticNode = InfixNode(symbol);
     this.appendDisplayNodes(semanticNode, [this]);
     return [semanticNode];
-  }
+  };
 });
 
 Superscript.open(function (_) {
@@ -436,7 +430,7 @@ Superscript.open(function (_) {
     this.appendDisplayNodes(operator, [this]);
     var superscript = this.sup.toSemanticNode();
     return [operator, superscript];
-  }
+  };
 });
 
 //ALSO FUNCTIONS
@@ -537,21 +531,20 @@ NthRoot.open(function (_) {
     var semanticNode = ApplicationNode(operator, args);
     this.appendDisplayNodes(semanticNode, [this]);
     return [semanticNode];
-  }
+  };
 });
 
 SummationNotation.open(function(_) {
   _.toSemanticNodes = function (remainingNodes) {
     switch (this.ctrlSeq) {
-      default:
-      case '\\sum':
-        return this.sumSemanticNodes(remainingNodes);
-        break;
-      case '\\prod':
-        break;
-      case '\\int':
-        break;
-    };
+    default:
+    case '\\sum':
+      return this.sumSemanticNodes(remainingNodes);
+    case '\\prod':
+      break;
+    case '\\int':
+      break;
+    }
   };
 
   _.sumSemanticNodes = function(remainingNodes) {
