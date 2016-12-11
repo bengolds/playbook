@@ -1,5 +1,8 @@
 {
-    "name" : "playbook",
-    "version": "0.0.1",
-    "main": "main.js"
+  "name": "playbook",
+  "version": "0.0.1",
+  "main": "main.js",
+  "devDependencies": {
+    "eslint-plugin-html": "^1.7.0"
+  }
 }

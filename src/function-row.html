@@ -30,15 +30,15 @@
         try {
           var functionString = e.detail.mathField.semanticText();
           var parsedFunction = this._parseFunction(functionString);
-          var signature = this._getFunctionSignature(parsedFunction)
+          var signature = this._getFunctionSignature(parsedFunction);
           this.$.signature.latex(signature);
           if (this._getSymbols(parsedFunction).length == 1) {
             this.functor = this._toFunctor(parsedFunction);
           }
-          console.log("successfully parsed function: " + functionString)
+          console.log('successfully parsed function: ' + functionString);
         }
         catch (error) {
-          console.log("couldn't parse function: " + e.detail.mathField.semanticTree())
+          console.log('couldnt parse function: ' + e.detail.mathField.semanticTree());
           console.log(error);
         }
       },
@@ -56,7 +56,7 @@
             scope[symbols[0]] = x;
             return compiled.eval(scope);
           }
-        } 
+        };
       },
       _getFunctionSignature: function(parsedFunction) {
         var symbols = this._getSymbols(parsedFunction);
@@ -71,14 +71,14 @@
         return latex;
       },
       _getSymbols: function(parsedFunction) {
-       var symbols = [];
-       parsedFunction.traverse(function (node) {
+        var symbols = [];
+        parsedFunction.traverse(function (node) {
           if (node.type == 'SymbolNode' && !symbols.includes(node.name)) {
             symbols.push(node.name);
           }
         });
-       return symbols;
+        return symbols;
       },
-   });
+    });
  </script>
 </dom-module>

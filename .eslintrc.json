@@ -1,0 +1,107 @@
+{
+    "env": {
+        "browser": true,
+        "es6": true,
+        "jquery": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+        "sourceType": "module"
+    },
+    "rules": {
+        "indent": [
+            "error",
+            2
+        ],
+        "linebreak-style": [
+            "error",
+            "unix"
+        ],
+        "quotes": [
+            "error",
+            "single"
+        ],
+        "semi": [
+            "error",
+            "always"
+        ],
+        "no-unused-vars": [
+            "off"
+        ],
+        "no-fallthrough": [
+            "off"
+        ],
+        "no-redeclare": [
+            "off"
+        ]
+    },
+    "globals": {
+        "Polymer": false,
+        "Controller": true,
+        "LatexCmds": true,
+        "Cursor": true,
+        "P": false,
+        "jQuery": true,
+        "MathQuill": true,
+        "MQ1": true,
+        "L": true,
+        "R": true,
+        "saneKeyboardEvents": true,
+        "mqBlockId": true,
+        "mqCmdId": true,
+        "noop": true,
+        "Embed": true,
+        "RootBlockMixin": true,
+        "variadic": true,
+        "send": true,
+        "iterator": true,
+        "bind": true,
+        "pray": true,
+        "CharCmds": true,
+        "prayDirection": true,
+        "optionProcessors": true,
+        "Fragment": true,
+        "MathBlock": true,
+        "Parser": true,
+        "MathCommand": true,
+        "VanillaSymbol": true,
+        "TextBlock": true,
+        "BinaryOperator": true,
+        "Digit": true,
+        "SupSub": true,
+        "Options": true,
+        "Letter": true,
+        "max": false,
+        "min": false,
+        "Bracket": true,
+        "SummationNotation": true,
+        "latexMathParser": true,
+        "Point": true,
+        "Equality": true,
+        "EMBEDS": true,
+        "API": true,
+        "RootMathBlock": true,
+        "RootMathCommand": true,
+        "SemanticNode": true,
+        "ApplicationNode": true,
+        "SymbolNode": true,
+        "NumberNode": true,
+        "OperatorNode": true,
+        "VariableNode": true,
+        "FunctionNode": true,
+        "DifferentiationNode": true,
+        "InfixNode": true,
+        "SummationNode": true,
+        "PlusMinus": true,
+        "Superscript": true,
+        "Variable": true,
+        "Fraction": true,
+        "SquareRoot": true,
+        "NthRoot": true,
+        "forceIERedraw": true,
+        "Algebrite": false,
+        "math": false,
+        "mathBox": false,
+        "THREE": false
+    }
+}

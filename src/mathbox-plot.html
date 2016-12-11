@@ -26,7 +26,7 @@
       properties: {
         func: {
           type: Object,
-          observer: "_funcChanged"
+          observer: '_funcChanged'
         }
       },
 
@@ -99,23 +99,23 @@
           var currFunc = this.func.eval;
           var currExpr = this.data.get('expr');
           var newExpr = function (emit, x, i, t) {
-              emit(x, currFunc(x));
-            };
-          this.intervalAnim.set("script", {
-            "0.001": {props: {expr: currExpr}},
-            "1": {props: {expr: newExpr}},
+            emit(x, currFunc(x));
+          };
+          this.intervalAnim.set('script', {
+            '0.001': {props: {expr: currExpr}},
+            '1': {props: {expr: newExpr}},
           });
 
           var currRange = this.view.get('range');
           var newRange = this._getBounds(newExpr, this.view);
-          this.cartesianAnim.set("script", [
+          this.cartesianAnim.set('script', [
             {props: {range: currRange}},
             {props: {range: newRange}},
           ]);
-       }
-     },
+        }
+      },
 
-     _getBounds: function(dataExpr, view, numSamples=200) {
+      _getBounds: function(dataExpr, view, numSamples=200) {
         var xRange = view.get('range')[0];
         // The range has a weird format; it gets stored as a Vector2.
         var minX = xRange.x, maxX = xRange.y;
@@ -126,7 +126,7 @@
             minY = Math.min(minY, y);
             maxY = Math.max(maxY, y);
           }
-        }
+        };
         for (var i = 0; i < numSamples; i++) {
           var x = minX + i*xStep;
           dataExpr(emit, x);
@@ -142,8 +142,8 @@
           maxY = maxY + 5;
         }
         return [[minX, maxX],[minY, maxY]];
-     }
+      }
 
-   });
+    });
  </script>
 </dom-module>

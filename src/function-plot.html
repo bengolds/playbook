@@ -16,77 +16,77 @@ Example:
 -->
 
 <dom-module id="function-plot">
-	<template>
-		<style>
-			:host {
-				display: block;
-			}
-			::shadow .modebar {
-				display: none;
-			}
-		</style>
-		
-		<plotly-plot id="plot"></plotly-plot> 
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+      ::shadow .modebar {
+        display: none;
+      }
+    </style>
+    
+    <plotly-plot id="plot"></plotly-plot> 
 
-	</template>
+  </template>
 
-	<script>
-		Polymer({
-			is: 'function-plot',
+<script>
+Polymer({
+  is: 'function-plot',
 
-			properties: {
-				func: {
-					type: Object,
-					observer: "_funcChanged"
-				}
-			},
+  properties: {
+    func: {
+      type: Object,
+      observer: '_funcChanged'
+    }
+  },
 
-			ready: function() {
-				var self = this;
-				var plotEl = this.$.plot;
-				plotEl.set('config', {
-					displayModeBar: false,
-				});
-				plotEl.set('layout', {
-					height:100,
-					margin: {
-						l: 0,
-						r: 0,
-						t: 0,
-						b: 0,
-						pad: 0
-					}
+  ready: function() {
+    var self = this;
+    var plotEl = this.$.plot;
+    plotEl.set('config', {
+      displayModeBar: false,
+    });
+    plotEl.set('layout', {
+      height:100,
+      margin: {
+        l: 0,
+        r: 0,
+        t: 0,
+        b: 0,
+        pad: 0
+      }
 
-				});
-			},
+    });
+  },
 
-			_funcChanged: function() {
-				// var newData = this._computePoints(100);
-				// var plotlyplot = this.$.plot;
-				// Plotly.animate(plotlyplot.$.plot, {
-				// 	data: [newData],
-				// 	traces: [0],
-				// 	layout: {}
-				// 	}, {
-				// 		transition: {
-				// 			duration: 500,
-				// 			ease: 'cubic-in-out'
-				// 		}
-				// 	});
-				// TODO: Find better way to get width and calculate sample rate.
-				var numPoints = this.offsetWidth;
-				this.$.plot.set('data.0', this._computePoints(numPoints));
-			},
+  _funcChanged: function() {
+    // var newData = this._computePoints(100);
+    // var plotlyplot = this.$.plot;
+    // Plotly.animate(plotlyplot.$.plot, {
+    //  data: [newData],
+    //  traces: [0],
+    //  layout: {}
+    //  }, {
+    //    transition: {
+    //      duration: 500,
+    //      ease: 'cubic-in-out'
+    //    }
+    //  });
+    // TODO: Find better way to get width and calculate sample rate.
+    var numPoints = this.offsetWidth;
+    this.$.plot.set('data.0', this._computePoints(numPoints));
+  },
 
-			_computePoints: function(numPoints) {
-				data = { "x":[], "y":[]}
-				var scaleFactor = 10/numPoints;
-				for (var i = 0; i < numPoints; i++) {
-					data.x[i] = i;
-					data.y[i] = this.func.eval(i*scaleFactor);
-				}
-				return data;
-			}
-		});
-	</script>
+  _computePoints: function(numPoints) {
+    var data = { 'x':[], 'y':[]};
+    var scaleFactor = 10/numPoints;
+    for (var i = 0; i < numPoints; i++) {
+      data.x[i] = i;
+      data.y[i] = this.func.eval(i*scaleFactor);
+    }
+    return data;
+  }
+});
+</script>
 </dom-module>
