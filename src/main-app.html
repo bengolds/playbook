@@ -1,4 +1,5 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
 <link rel="import" href="../bower_components/algebrite/index.html">
 <link rel="import" href="../bower_components/algebrite/index.html">
 <link rel="import" href="function-row.html">
@@ -6,13 +7,15 @@
 <dom-module id="main-app">
   <template>
     <style>
-      :host {
+      #card {
         display: block;
         max-width:1280px;
         margin:0px auto;
       }
     </style>
+    <paper-card id="card">
     <function-row></function-row>
+    </paper-card>
 
   </template>
 

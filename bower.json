@@ -19,7 +19,8 @@
     "plotly-plot": "ginkgobioworks/plotly-plot#^0.2.0",
     "algebrite": "davidedc/algebrite",
     "paper-input": "^1.1.22",
-    "mathjs": "^3.8.0"
+    "mathjs": "^3.8.0",
+    "paper-card": "PolymerElements/paper-card#^1.1.4"
   },
   "devDependencies": {
     "web-component-tester": "^4.0.0"

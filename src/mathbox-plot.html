@@ -76,7 +76,8 @@
             emit(x, 0);
           },
           width: plotEl.offsetWidth,
-          channels: 2
+          channels: 2,
+          fps: 60
         });
         var curve = 
         this.view.line({
@@ -108,10 +109,10 @@
 
           var currRange = this.view.get('range');
           var newRange = this._getBounds(newExpr, this.view);
-          this.cartesianAnim.set('script', [
-            {props: {range: currRange}},
-            {props: {range: newRange}},
-          ]);
+          this.cartesianAnim.set('script', {
+            '0.001': {props: {range: currRange}},
+            '1': {props: {range: newRange}},
+          });
         }
       },
 
