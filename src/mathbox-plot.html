@@ -1,18 +1,20 @@
-<link rel="import" href="../bower_components/plotly-plot/plotly-plot.html">
 <script src="mathbox/build/mathbox-bundle.js"></script>
-
+<link rel="import" href="../bower_components/iron-resizable-behavior/iron-resizable-behavior.html">
 <dom-module id="mathbox-plot">
   <template>
     <style>
       :host {
-        display: block;
-        width: 480px;
-        height: 192px;
-      }
-      ::shadow .modebar {
-        display: none;
+        height:100%;
+        position:relative;
+        overflow:hidden;
       }
       #mathbox {
+        background-color: red;
+        position:absolute;
+        top:0px;
+        bottom:0px;
+        right:0px;
+        left:0px;
       }
     </style>
     <div id='mathbox'></div>
@@ -30,9 +32,19 @@
         }
       },
 
+      behaviors: [
+        Polymer.IronResizableBehavior
+      ],
+
+      listeners: {
+        'iron-resize': '_resize',
+      },
+
       attached: function() {
         var plotEl = this.$.mathbox;
-        var aspectRatio = this.offsetWidth/this.offsetHeight;
+        this.initialized = true;
+        var width = this.scrollWidth, height = this.scrollHeight;
+        var aspectRatio = width/height;
 
         this.mathbox = mathBox({
           plugins: ['core', 'cursor', 'mathbox'],
@@ -40,9 +52,7 @@
           camera: {
             type: 'orthographic',
             left: -aspectRatio,
-            right: aspectRatio,
-            bottom: -1,
-            top: 1,
+            right: aspectRatio
           }
         });
         var three = this.mathbox.three;
@@ -53,7 +63,6 @@
 
         this.view = this.mathbox.cartesian({
           range: [[0,10], [0, 1]],
-          scale: [aspectRatio, 1],
         });
 
         this.view.axis({
@@ -94,9 +103,10 @@
           target: 'interval',
           pace: 1,
         });
+        this._resize();
       },
       _funcChanged: function() {
-        if (typeof this.func.eval != 'undefined') {
+        if (typeof this.func.eval != 'undefined' && this.data) {
           var currFunc = this.func.eval;
           var currExpr = this.data.get('expr');
           var newExpr = function (emit, x, i, t) {
@@ -114,6 +124,16 @@
             '1': {props: {range: newRange}},
           });
         }
+      },
+      _resize: function() {
+        if (!this.initialized)
+          return;
+        var plotEl = this.$.mathbox;
+        var width = this.scrollWidth, height = this.scrollHeight;
+        var aspectRatio = width/height;
+        this.view.set('scale', [aspectRatio, 1]);
+        this.mathbox.three.camera.left = -aspectRatio;
+        this.mathbox.three.camera.right = aspectRatio;
       },
 
       _getBounds: function(dataExpr, view, numSamples=200) {

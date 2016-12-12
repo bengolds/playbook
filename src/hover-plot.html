@@ -1,0 +1,28 @@
+<link rel="import" href="mathbox-plot.html">
+<dom-module id="hover-plot">
+  <template>
+    <style>
+      :host {
+        position: absolute;
+        width: 480px;
+        height: 192px;
+      }
+    </style>
+    <mathbox-plot func="[[func]]"></mathbox-plot>
+    
+  </template>
+  <script>
+    Polymer({
+      is: 'hover-plot',
+      properties: {
+        func: {
+          type: Object,
+          value: {eval:(x)=>{return x*x;}}
+        }
+      },
+      attached: function() {
+        console.log(this.func);
+      }
+    });
+  </script>
+</dom-module>

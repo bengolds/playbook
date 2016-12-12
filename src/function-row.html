@@ -17,10 +17,13 @@
       #signature {
         font-size:200%;
       }
+      #plot {
+        flex-basis: 480px;
+      }
     </style>
     <mathquill-element id="signature">f\left(x\right)=</mathquill-element>
     <function-input on-edit="mathquillChanged"></function-input>
-    <mathbox-plot func="[[functor]]"></mathbox-plot>
+    <mathbox-plot func="[[functor]]" id="plot"></mathbox-plot>
   </template>
 
   <script>
