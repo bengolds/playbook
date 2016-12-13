@@ -5,6 +5,9 @@
     <style>
       :host {
       }
+      .selected {
+        background-color: red;
+      }
     </style>
     <span id="quill"></span>
   </template>
@@ -18,7 +21,7 @@
         },
         config: {
           type: Object,
-        },
+        }
       },
 
       observers: [

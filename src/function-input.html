@@ -1,5 +1,6 @@
 <link rel="import" href="mathquill/mathquill-import.html">
 <link rel="import" href="hover-plot.html">
+<link rel="import" href="function-parser.html">
 <dom-module id="function-input">
 	<link rel="import" type="css" href="mathquill/mathquill.css"/>
 	<template>
@@ -7,25 +8,39 @@
 			:host {
 				flex-grow: 1;
 			}
-			.hovered {
-				background-color: red;
-			}
 			#quill {
 				font-size:200%;
 			}
+      .hidden {
+        display:none;
+      }
 		</style>
 	<mathquill-element id="quill" editable="true" 
-   on-element-mouseover='onElementMouseOver'>
+   on-edit = 'onEdit'
+   on-element-mouseover='onElementMouseOver'
+   on-element-mouseout= 'onElementMouseOut'>
   </mathquill-element>
-  <hover-plot></hover-plot>
+  <function-parser id='parser'></function-parser>
+  <hover-plot class='hidden' id='hoverplot'></hover-plot>
 
 </template>
 <script>
   Polymer({
     is: 'function-input',
 
+    properties: {
+      input: {
+        type: String,
+        notify: true
+      }
+    },
+
     ready: function() {
       this.scopeSubtree(this.$.quill, true);
+    },
+
+    onEdit: function() {
+      this.input = this.$.quill.semanticText();
     },
 
     onElementMouseOver: function(e, details) {
@@ -53,15 +68,18 @@
       var applicationNode = getClosestApplicationNode(semanticNode);
       this.hoveredDisplayNodes = applicationNode.getDisplayNodes();
       for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
-        this.hoveredDisplayNodes[i].jQ.addClass('hovered');
+        this.hoveredDisplayNodes[i].jQ.addClass('selected');
       }
+      this.$.hoverplot.func = this.$.parser.getFunctor(applicationNode.toString());
+      this.$.hoverplot.classList.remove('hidden');
     },
     onElementMouseOut: function(e, details) {
       if (this.hoveredDisplayNodes != null) {
         for (var i = 0; i < this.hoveredDisplayNodes.length; i++) {
-          this.hoveredDisplayNodes[i].jQ.removeClass('hovered');
+          this.hoveredDisplayNodes[i].jQ.removeClass('selected');
         }
       }
+      this.$.hoverplot.classList.add('hidden');
     },
     createHoverPlot: function(x, y, funcString) {
       // body...

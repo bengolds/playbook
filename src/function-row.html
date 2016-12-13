@@ -1,5 +1,6 @@
 <link rel="import" href="mathbox-plot.html">
 <link rel="import" href="function-input.html">
+<link rel="import" href="function-parser.html">
 <link rel="import" href="mathquill-element.html">
 <script src="../bower_components/mathjs/dist/math.js"></script>
 <script src="../bower_components/algebrite/dist/algebrite.bundle-for-browser.js"></script>
@@ -23,64 +24,21 @@
     </style>
     <mathquill-element id="signature">f\left(x\right)=</mathquill-element>
     <function-input on-edit="mathquillChanged"></function-input>
-    <mathbox-plot func="[[functor]]" id="plot"></mathbox-plot>
+    <mathbox-plot func="[[functor]]" id="plot" animated='true'></mathbox-plot>
+    <function-parser id='parser'></function-parser>
   </template>
 
   <script>
     Polymer({
       is: 'function-row',
       mathquillChanged: function(e) {
-        try {
-          var functionString = e.detail.mathField.semanticText();
-          var parsedFunction = this._parseFunction(functionString);
-          var signature = this._getFunctionSignature(parsedFunction);
-          this.$.signature.latex(signature);
-          if (this._getSymbols(parsedFunction).length == 1) {
-            this.functor = this._toFunctor(parsedFunction);
-          }
-          console.log('successfully parsed function: ' + functionString);
+        var parser = this.$.parser;
+        //TODO: put in try/catch block
+        var functionString = e.detail.mathField.semanticText();
+        if (parser.isParseable(functionString)) {
+          this.functor = parser.getFunctor(functionString);
+          this.$.signature.latex(parser.getSignature(functionString));
         }
-        catch (error) {
-          console.log('couldnt parse function: ' + e.detail.mathField.semanticTree());
-          console.log(error);
-        }
-      },
-      _parseFunction: function(funcString) {
-        var simplified = Algebrite.simplify(funcString).toString();
-        var parsed = math.parse(simplified);
-        return parsed;
-      },
-      _toFunctor: function(parsedFunction) {
-        var symbols = this._getSymbols(parsedFunction);
-        var compiled = parsedFunction.compile();
-        return {
-          eval: function(x) {
-            var scope = {};
-            scope[symbols[0]] = x;
-            return compiled.eval(scope);
-          }
-        };
-      },
-      _getFunctionSignature: function(parsedFunction) {
-        var symbols = this._getSymbols(parsedFunction);
-        var latex = 'f\\left(';
-        for (var i = 0; i < symbols.length; i++) {
-          latex += symbols[i];
-          if (i != symbols.length -1) {
-            latex += ',';
-          }
-        }
-        latex += '\\right)=';
-        return latex;
-      },
-      _getSymbols: function(parsedFunction) {
-        var symbols = [];
-        parsedFunction.traverse(function (node) {
-          if (node.type == 'SymbolNode' && !symbols.includes(node.name)) {
-            symbols.push(node.name);
-          }
-        });
-        return symbols;
       },
     });
  </script>

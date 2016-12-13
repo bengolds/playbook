@@ -31,6 +31,19 @@
           value: {
             eval: (x)=> {return 0;}
           }
+        },
+        width: {
+          type: Number,
+          observer: '_resize',
+          value: 0
+        },
+        height: {
+          type: Number,
+          observer: '_resize',
+          value: 0
+        },
+        animated: {
+          type: Boolean,
         }
       },
 
@@ -46,15 +59,23 @@
         this.initialized = true;
 
         var aspectRatio = this._getAspectRatio();
-        this.mathbox = mathBox({
+        var options = {
           plugins: ['core', 'cursor', 'mathbox'],
           element: this.$.mathbox,
           camera: {
             type: 'orthographic',
             left: -aspectRatio,
             right: aspectRatio
-          }
-        });
+          },
+          size: {}
+        };
+        if (this.width != 0) {
+          options.size.width = this.width;
+        }
+        if (this.height != 0) {
+          options.size.height = this.height;
+        }
+        this.mathbox = mathBox(options);
         this.mathbox.three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
 
         var camera = this.mathbox.camera({
@@ -98,7 +119,7 @@
 
       _funcChanged: function() {
         if (this.initialized) {
-          this._plotFunction(true);
+          this._plotFunction(this.animated);
         }
       },
 
@@ -136,11 +157,19 @@
         this.view.set('scale', [aspectRatio, 1]);
         this.mathbox.three.camera.left = -aspectRatio;
         this.mathbox.three.camera.right = aspectRatio;
-        this.data.set('width', this.scrollWidth);
+        this.data.set('width', this._getWidth());
       },
 
       _getAspectRatio: function() {
-        return this.scrollWidth/this.scrollHeight;
+        return this._getWidth()/this._getHeight();
+      },
+
+      _getWidth: function() {
+        return this.width || this.scrollWidth;
+      },
+
+      _getHeight: function() {
+        return this.height || this.scrollHeight;
       },
 
       _initializeAnimators: function() {
