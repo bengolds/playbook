@@ -1,0 +1,37 @@
+<link rel="import" href="mathquill-element.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/paper-slider/paper-slider.html">
+
+<dom-module id="variable-slider">
+  <template>
+    <style>
+      :host {
+        margin: 16px;
+      }
+      #container {
+        display:flex;
+        height: 64px;
+      }
+      #quill {
+        font-size: 200%;
+        margin-left: 16px;
+      }
+      #slider {
+        flex-shrink: 1;
+      }
+    </style>
+    
+  <paper-card id='container'>
+    <mathquill-element id='quill'>y:</mathquill-element>
+    <paper-slider id='slider' pin='true' value='0.5' min='0' max='1' step='0.01'></paper-slider>
+  </paper-card>
+  </template>
+  <script>
+    Polymer({
+      is: 'variable-slider',
+      getValue: function() {
+        return this.$.slider.immediateValue;
+      }
+    });
+  </script>
+</dom-module>

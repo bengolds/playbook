@@ -17,7 +17,6 @@
 
   <mathquill-element id="quill"
     on-element-mouseover='onElementMouseOver'>
-      f\left(\right)=
   </mathquill-element>
   <var-action-bar id="actionbar" class="hidden"></var-action-bar>
 
@@ -26,14 +25,27 @@
     Polymer({
       is: 'function-signature',
       properties: {
-        text: {
+        functor: {
+          type: Object,
+          observer: '_functorChanged'
+        },
+        symbol: {
           type: String,
-          observer: '_textChanged'
+          value: 'Ɵ'
         }
       },
 
-      _textChanged: function () {
-        this.$.quill.latex(this.text);
+      attached: function () {
+        this._functorChanged();
+      },
+      
+      _functorChanged: function () {
+        let latex = this.symbol + '\\left(';
+        if (this.functor) {
+          latex += this.functor.symbols.join(',');
+        }
+        latex += '\\right)=';
+        this.$.quill.latex(latex);
       },
 
       onElementMouseOver: function (e, details) {

@@ -2,6 +2,7 @@
 <link rel="import" href="function-input.html">
 <link rel="import" href="function-parser.html">
 <link rel="import" href="function-signature.html">
+<link rel="import" href="variable-slider.html">
 
 <dom-module id="function-row">
   <template>
@@ -16,22 +17,18 @@
         flex-basis: 480px;
       }
     </style>
-    <function-signature text="[[signature]]"></function-signature>
-    <function-input on-edit="mathquillChanged"></function-input>
-    <mathbox-plot func="[[functor]]" id="plot" animated='true'></mathbox-plot>
-    <function-parser id='parser'></function-parser>
+    <function-signature functor="[[functor]]" symbol='f'></function-signature>
+    <function-input functor='{{functor}}'></function-input>
+    <variable-slider id='slider' on-immediate-value-change="slideVar"></variable-slider>
+    <mathbox-plot functor="[[functor]]" id="plot" animated='true'></mathbox-plot>
   </template>
 
   <script>
     Polymer({
       is: 'function-row',
-      mathquillChanged: function(e) {
-        var parser = this.$.parser;
-        //TODO: put in try/catch block
-        var functionString = e.detail.mathField.semanticText();
-        if (parser.isParseable(functionString)) {
-          this.signature = parser.getSignature(functionString);
-          this.functor = parser.getFunctor(functionString);
+      slideVar: function(e, detail) {
+        if (this.functor.symbols.length == 2) {
+          this.functor.scope.y = this.$.slider.getValue();
         }
       },
     });

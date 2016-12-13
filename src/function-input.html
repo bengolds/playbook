@@ -29,8 +29,8 @@
     is: 'function-input',
 
     properties: {
-      input: {
-        type: String,
+      functor: {
+        type: Object,
         notify: true
       }
     },
@@ -40,7 +40,12 @@
     },
 
     onEdit: function() {
-      this.input = this.$.quill.semanticText();
+      var parser = this.$.parser;
+      //TODO: put in try/catch block
+      var functionString = this.$.quill.semanticText();
+      if (parser.isParseable(functionString)) {
+        this.functor = parser.getFunctor(functionString);
+      }
     },
 
     onElementMouseOver: function(e, details) {

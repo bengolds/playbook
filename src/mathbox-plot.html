@@ -25,9 +25,9 @@
       is: 'mathbox-plot',
 
       properties: {
-        func: {
+        functor: {
           type: Object,
-          observer: '_funcChanged',
+          observer: '_functorChanged',
           value: {
             eval: (x)=> {return 0;}
           }
@@ -117,14 +117,14 @@
         });
       },
 
-      _funcChanged: function() {
+      _functorChanged: function() {
         if (this.initialized) {
           this._plotFunction(this.animated);
         }
       },
 
       _plotFunction: function(animated = false) {
-        var cachedExpr = this.func.eval;
+        var cachedExpr = this.functor.eval;
         var newExpr = (emit, x, i, t) => {
           emit(x, cachedExpr(x));
         };
