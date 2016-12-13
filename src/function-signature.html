@@ -1,0 +1,67 @@
+<link rel="import" href="mathquill-element.html">
+<link rel="import" href="var-action-bar.html">
+
+<dom-module id="function-signature">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+      #quill {
+        font-size: 200%;
+      }
+      .hidden {
+        display:none;
+      }
+    </style>
+
+  <mathquill-element id="quill"
+    on-element-mouseover='onElementMouseOver'
+    on-element-mouseout= 'onElementMouseOut'>
+      f\left(\right)=
+  </mathquill-element>
+  <var-action-bar id="actionbar" class="hidden"></var-action-bar>
+
+  </template>
+  <script>
+    Polymer({
+      is: 'function-signature',
+      properties: {
+        text: {
+          type: String,
+          observer: '_textChanged'
+        }
+      },
+
+      _textChanged: function () {
+        this.$.quill.latex(this.text);
+      },
+
+      onElementMouseOver: function (e, details) {
+        var mqCmdId = 'mathquill-command-id';
+        var mqBlockId = 'mathquill-block-id';
+        if (details.target.tagName == 'VAR') {
+          this.showHoverBar(details.target);
+          $(this).on('mouseout', this.hideHoverBar);
+        }
+      },
+
+      onElementMouseOut: function (e, details) {
+      },
+
+      showHoverBar: function (target) {
+        this.$.actionbar.classList.remove('hidden');
+        var topY = target.offsetTop+target.offsetHeight;
+        var middleX = target.offsetLeft + target.offsetWidth/2 - this.$.actionbar.offsetWidth/2;
+        this.$.actionbar.style.left = middleX + 'px';
+        this.$.actionbar.style.bottom = topY + 'px';
+      },
+
+      hideHoverBar: function() {
+        this.$.actionbar.classList.add('hidden');
+        $(this).off('mouseout', this.hideHoverBar);
+      }
+
+    });
+  </script>
+</dom-module>

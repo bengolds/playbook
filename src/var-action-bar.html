@@ -1,0 +1,25 @@
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="arrow-box.html">
+
+<dom-module id="var-action-bar">
+  <template>
+    <style>
+      :host {
+        display: block;
+        position: absolute;
+      }
+    </style>
+  <arrow-box>
+    <paper-icon-button icon="favorite"></paper-icon-button>
+    <paper-icon-button icon="menu"></paper-icon-button>
+    <paper-icon-button icon="star"></paper-icon-button>
+  <arrow-box>
+  </template>
+
+  <script>
+    Polymer({
+      is: 'var-action-bar'
+    });
+  </script>
+</dom-module>

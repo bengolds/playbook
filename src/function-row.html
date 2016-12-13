@@ -1,10 +1,7 @@
 <link rel="import" href="mathbox-plot.html">
 <link rel="import" href="function-input.html">
 <link rel="import" href="function-parser.html">
-<link rel="import" href="mathquill-element.html">
-<script src="../bower_components/mathjs/dist/math.js"></script>
-<script src="../bower_components/algebrite/dist/algebrite.bundle-for-browser.js"></script>
-
+<link rel="import" href="function-signature.html">
 
 <dom-module id="function-row">
   <template>
@@ -15,14 +12,11 @@
         align-items: center;
         height:192px;
       }
-      #signature {
-        font-size:200%;
-      }
       #plot {
         flex-basis: 480px;
       }
     </style>
-    <mathquill-element id="signature">f\left(x\right)=</mathquill-element>
+    <function-signature text="[[signature]]"></function-signature>
     <function-input on-edit="mathquillChanged"></function-input>
     <mathbox-plot func="[[functor]]" id="plot" animated='true'></mathbox-plot>
     <function-parser id='parser'></function-parser>
@@ -36,8 +30,8 @@
         //TODO: put in try/catch block
         var functionString = e.detail.mathField.semanticText();
         if (parser.isParseable(functionString)) {
+          this.signature = parser.getSignature(functionString);
           this.functor = parser.getFunctor(functionString);
-          this.$.signature.latex(parser.getSignature(functionString));
         }
       },
     });
