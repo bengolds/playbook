@@ -18,19 +18,19 @@
       }
     </style>
     <function-signature functor="[[functor]]" symbol='f'></function-signature>
-    <function-input functor='{{functor}}'></function-input>
-    <variable-slider id='slider' on-immediate-value-change="slideVar"></variable-slider>
+    <function-input id='input' functor='{{functor}}'></function-input>
+    <variable-slider id='slider' symbol='y' functor='{{functor}}'></variable-slider>
     <mathbox-plot functor="[[functor]]" id="plot" animated='true'></mathbox-plot>
   </template>
 
   <script>
     Polymer({
       is: 'function-row',
-      slideVar: function(e, detail) {
-        if (this.functor.symbols.length == 2) {
-          this.functor.scope.y = this.$.slider.getValue();
+      properties: {
+        functor: {
+          type: Object
         }
-      },
+      }
     });
  </script>
 </dom-module>

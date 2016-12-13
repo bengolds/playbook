@@ -37,6 +37,7 @@
 
     ready: function() {
       this.scopeSubtree(this.$.quill, true);
+      this.functor = this.$.parser.getFunctor('0');
     },
 
     onEdit: function() {

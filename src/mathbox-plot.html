@@ -27,10 +27,7 @@
       properties: {
         functor: {
           type: Object,
-          observer: '_functorChanged',
-          value: {
-            eval: (x)=> {return 0;}
-          }
+          observer: '_functorChanged'
         },
         width: {
           type: Number,
@@ -124,6 +121,9 @@
       },
 
       _plotFunction: function(animated = false) {
+        if (!this.functor) {
+          return;
+        }
         var cachedExpr = this.functor.eval;
         var newExpr = (emit, x, i, t) => {
           emit(x, cachedExpr(x));
@@ -184,20 +184,21 @@
       },
 
       _getBounds: function(dataExpr, range, numSamples=200) {
-        // The range has a weird format; it gets stored as a Vector2.
-        var minX = range[0], maxX = range[1];
-        var xStep = (maxX-minX)/numSamples;
-        var minY = Number.MAX_VALUE, maxY = -minY;
-        var emit = function (x, y) {
-          if (!isNaN(y)) {
-            minY = Math.min(minY, y);
-            maxY = Math.max(maxY, y);
-          }
-        };
-        for (var i = 0; i < numSamples; i++) {
-          var x = minX + i*xStep;
-          dataExpr(emit, x);
+        let minY = 0, maxY = 0;
+        switch (this.functor.unboundVars.length) {
+        case 0:
+          minY = maxY = this.functor.eval();
+          break;
+        case 1:
+          var sampledRange = this._sampleFuncForBounds(this.functor, range, numSamples);
+          minY = sampledRange[0];
+          maxY = sampledRange[1];
+          break;
+        default:
+          throw 'Too many unbound variables to calculate range';
         }
+
+        // Apply some tricks to the resulting values to get a good range
         if (minY == Number.NEGATIVE_INFINITY) {
           minY = -10;
         }
@@ -210,8 +211,53 @@
         }
         minY = Math.min(minY, 0);
         maxY = Math.max(maxY, 0);
-        return [[minX, maxX],[minY, maxY]];
-      }
+        return [range,[minY, maxY]];
+      },
+
+      _sampleFuncForBounds: function(functor, range, numSamples) {
+        let oldBoundVars = Object.assign({}, functor.boundVars);
+        let oldUnboundVars = functor.unboundVars.slice(0);
+        
+        let iterateVars = functor.symbols.slice(0);
+        let iterateRanges = Object.assign({}, functor.boundRanges);
+        if (functor.unboundVars.length == 1) {
+          iterateRanges[functor.unboundVars[0]] = range;
+        }
+        let iterateSteps = {};
+        let numSamplePoints = Math.round(Math.pow(numSamples, 1/iterateVars.length));
+
+        for (let key in iterateRanges) {
+          let currRange = iterateRanges[key];
+          let rangeWidth = currRange[1]-currRange[0];
+          iterateSteps[key] = rangeWidth/numSamplePoints;
+        }
+
+        var minY = Number.MAX_VALUE, maxY = -minY;
+        var checkValue = function (y) {
+          if (!isNaN(y)) {
+            minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y);
+          }
+        };
+
+        let iterate = (dimension) => {
+          let currVar = iterateVars[dimension];
+          let currRange = iterateRanges[currVar];
+          let currStep = iterateSteps[currVar];
+          for (let i = currRange[0]; i < currRange[1]; i+=currStep) {
+            functor.bindVar(currVar, i);
+            if (dimension == iterateVars.length-1) {
+              checkValue(functor.eval());
+            } else {
+              iterate(dimension+1);
+            }
+          }
+        };
+        iterate(0);
+        functor.boundVars = oldBoundVars;
+        functor.unboundVars = oldUnboundVars;
+        return [minY, maxY];
+      },
 
     });
  </script>

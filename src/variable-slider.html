@@ -22,15 +22,48 @@
     </style>
     
   <paper-card id='container'>
-    <mathquill-element id='quill'>y:</mathquill-element>
-    <paper-slider id='slider' pin='true' value='0.5' min='0' max='1' step='0.01'></paper-slider>
+    <mathquill-element id='quill'></mathquill-element>
+    <paper-slider id='slider' pin='true' 
+      on-immediate-value-change='_valueChanged'></paper-slider>
   </paper-card>
   </template>
   <script>
     Polymer({
       is: 'variable-slider',
-      getValue: function() {
-        return this.$.slider.immediateValue;
+      properties: {
+        functor: {
+          type: Object,
+          notify: true,
+          observer: '_functorChanged'
+        },
+        symbol: {
+          type: String,
+        },
+        range: {
+          type: Array,
+          value: [0,1]
+        }
+      },
+
+      attached: function () {
+        this.$.quill.latex(this.symbol+':');
+        let slider = this.$.slider;
+        slider.min = this.range[0];
+        slider.max = this.range[1];
+        slider.step = (slider.max-slider.min)/100.0;
+        slider.value = slider.min + (slider.max-slider.min)/2.0;
+      },
+
+      _valueChanged: function () {
+        var val = this.$.slider.immediateValue;
+        this.functor.bindVar(this.symbol, val);
+        this.functor.bindRange(this.symbol, this.range);
+      },
+
+      _functorChanged: function () {
+        if (this.functor.symbols.includes(this.symbol)) {
+          this._valueChanged();
+        }
       }
     });
   </script>

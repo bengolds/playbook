@@ -49,14 +49,61 @@
         var compiled = parsedFunction.compile();
         var functor = {
           symbols: symbols,
-          scope: {y:0}
+          boundVars: {},
+          boundRanges: {},
+          unboundVars: symbols.slice(0)
         };
+
         functor.eval = (x) => {
-          if (functor.symbols.length > 0) {
-            functor.scope.x = x;
+          var scope = {};
+          if (functor.unboundVars.length == 1) {
+            scope[functor.unboundVars[0]] = x;
+          } 
+          else if (functor.unboundVars.length > 1) {
+            return 0;
           }
-          return compiled.eval(functor.scope);
+
+          Object.assign(scope, functor.boundVars);
+          return compiled.eval(scope);
         };
+
+        functor.bindVar = (symbol, val) => {
+          if (functor.symbols.includes(symbol)) {
+            functor.boundVars[symbol] = val;
+
+            var index = functor.unboundVars.indexOf(symbol);
+            if (index > -1) {
+              functor.unboundVars.splice(index, 1);
+            }
+          }
+          else {
+            throw symbol + ' was not found in the function.';
+          }
+        };
+
+        functor.bindRange = (symbol, range) => {
+          if (functor.symbols.includes(symbol)) {
+            functor.boundRanges[symbol] = range;
+          }
+          else {
+            throw symbol + ' was not found in the function.';
+          }
+        };
+
+        functor.unbindVar = (symbol, val) => {
+          if (functor.symbols.includes(symbol)) {
+            delete functor.boundVars[symbol];
+            delete functor.boundRanges[symbol];
+
+            if (!functor.unboundVars.includes(symbol)) {
+              functor.unboundVars.push(symbol);
+            }
+          } 
+          else {
+            throw symbol + 'was not found in the function.';
+          }
+        };
+
         return functor;
       },
     });
