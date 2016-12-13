@@ -27,7 +27,10 @@
       properties: {
         func: {
           type: Object,
-          observer: '_funcChanged'
+          observer: '_funcChanged',
+          value: {
+            eval: (x)=> {return 0;}
+          }
         }
       },
 
@@ -40,30 +43,44 @@
       },
 
       attached: function() {
-        var plotEl = this.$.mathbox;
         this.initialized = true;
-        var width = this.scrollWidth, height = this.scrollHeight;
-        var aspectRatio = width/height;
 
+        var aspectRatio = this._getAspectRatio();
         this.mathbox = mathBox({
           plugins: ['core', 'cursor', 'mathbox'],
-          element: plotEl,
+          element: this.$.mathbox,
           camera: {
             type: 'orthographic',
             left: -aspectRatio,
             right: aspectRatio
           }
         });
-        var three = this.mathbox.three;
-        three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
+        this.mathbox.three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
+
         var camera = this.mathbox.camera({
           position: [0,0,1]
         });
 
-        this.view = this.mathbox.cartesian({
-          range: [[0,10], [0, 1]],
+        this.view = this.mathbox.cartesian();
+
+        this.data = this.view.interval({
+          channels: 2,
+          fps: 60
         });
 
+        this.curve = this.view.line({
+          width: 5,
+          color: '#3090FF',
+          zIndex: 2
+        });
+
+        this._resize();
+        this._setupGridLines();
+        this._initializeAnimators();
+        this._plotFunction(false);
+      },
+
+      _setupGridLines: function() {
         this.view.axis({
           axis: 1,
           width: 4
@@ -77,23 +94,56 @@
           divideX: 20,
           divideY: 10,
         });
+      },
 
-        this.data =
-        this.view.interval({
-          expr: function (emit, x, i, t) {
-            emit(x, 0);
-          },
-          width: plotEl.offsetWidth,
-          channels: 2,
-          fps: 60
-        });
-        var curve = 
-        this.view.line({
-          width: 5,
-          color: '#3090FF',
-          zIndex: 2
-        });
+      _funcChanged: function() {
+        if (this.initialized) {
+          this._plotFunction(true);
+        }
+      },
 
+      _plotFunction: function(animated = false) {
+        var cachedExpr = this.func.eval;
+        var newExpr = (emit, x, i, t) => {
+          emit(x, cachedExpr(x));
+        };
+        var newRange = this._getBounds(newExpr, [0, 10]);
+
+        if (animated) {
+          var currExpr = this.data.get('expr');
+          this.intervalAnim.set('script', {
+            '0.001': {props: {expr: currExpr}},
+            '1': {props: {expr: newExpr}},
+          });
+
+          var currRange = this.view.get('range');
+          this.cartesianAnim.set('script', {
+            '0.001': {props: {range: currRange}},
+            '1': {props: {range: newRange}},
+          });
+        }
+        else {
+          this.data.set('expr', newExpr);
+          this.view.set('range', newRange);
+        }
+      },
+
+      _resize: function() {
+        if (!this.initialized)
+          return;
+        var plotEl = this.$.mathbox;
+        var aspectRatio = this._getAspectRatio();
+        this.view.set('scale', [aspectRatio, 1]);
+        this.mathbox.three.camera.left = -aspectRatio;
+        this.mathbox.three.camera.right = aspectRatio;
+        this.data.set('width', this.scrollWidth);
+      },
+
+      _getAspectRatio: function() {
+        return this.scrollWidth/this.scrollHeight;
+      },
+
+      _initializeAnimators: function() {
         this.cartesianAnim = this.mathbox.play({
           target: 'cartesian',
           pace: 1,
@@ -102,43 +152,11 @@
           target: 'interval',
           pace: 1,
         });
-        this._resize();
-      },
-      _funcChanged: function() {
-        if (typeof this.func.eval != 'undefined' && this.data) {
-          var currFunc = this.func.eval;
-          var currExpr = this.data.get('expr');
-          var newExpr = function (emit, x, i, t) {
-            emit(x, currFunc(x));
-          };
-          this.intervalAnim.set('script', {
-            '0.001': {props: {expr: currExpr}},
-            '1': {props: {expr: newExpr}},
-          });
-
-          var currRange = this.view.get('range');
-          var newRange = this._getBounds(newExpr, this.view);
-          this.cartesianAnim.set('script', {
-            '0.001': {props: {range: currRange}},
-            '1': {props: {range: newRange}},
-          });
-        }
-      },
-      _resize: function() {
-        if (!this.initialized)
-          return;
-        var plotEl = this.$.mathbox;
-        var width = this.scrollWidth, height = this.scrollHeight;
-        var aspectRatio = width/height;
-        this.view.set('scale', [aspectRatio, 1]);
-        this.mathbox.three.camera.left = -aspectRatio;
-        this.mathbox.three.camera.right = aspectRatio;
       },
 
-      _getBounds: function(dataExpr, view, numSamples=200) {
-        var xRange = view.get('range')[0];
+      _getBounds: function(dataExpr, range, numSamples=200) {
         // The range has a weird format; it gets stored as a Vector2.
-        var minX = xRange.x, maxX = xRange.y;
+        var minX = range[0], maxX = range[1];
         var xStep = (maxX-minX)/numSamples;
         var minY = 0, maxY = 0;
         var emit = function (x, y) {
