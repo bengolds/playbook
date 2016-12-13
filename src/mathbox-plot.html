@@ -187,7 +187,7 @@
         // The range has a weird format; it gets stored as a Vector2.
         var minX = range[0], maxX = range[1];
         var xStep = (maxX-minX)/numSamples;
-        var minY = 0, maxY = 0;
+        var minY = Number.MAX_VALUE, maxY = -minY;
         var emit = function (x, y) {
           if (!isNaN(y)) {
             minY = Math.min(minY, y);
@@ -208,6 +208,8 @@
           minY = minY - 5;
           maxY = maxY + 5;
         }
+        minY = Math.min(minY, 0);
+        maxY = Math.max(maxY, 0);
         return [[minX, maxX],[minY, maxY]];
       }
 
