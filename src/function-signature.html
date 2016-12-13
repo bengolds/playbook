@@ -16,8 +16,7 @@
     </style>
 
   <mathquill-element id="quill"
-    on-element-mouseover='onElementMouseOver'
-    on-element-mouseout= 'onElementMouseOut'>
+    on-element-mouseover='onElementMouseOver'>
       f\left(\right)=
   </mathquill-element>
   <var-action-bar id="actionbar" class="hidden"></var-action-bar>
@@ -40,13 +39,11 @@
       onElementMouseOver: function (e, details) {
         var mqCmdId = 'mathquill-command-id';
         var mqBlockId = 'mathquill-block-id';
-        if (details.target.tagName == 'VAR') {
+        if (details.target.tagName == 'VAR' &&
+            details.target.textContent != this.text[0]) {
           this.showHoverBar(details.target);
           $(this).on('mouseout', this.hideHoverBar);
         }
-      },
-
-      onElementMouseOut: function (e, details) {
       },
 
       showHoverBar: function (target) {
