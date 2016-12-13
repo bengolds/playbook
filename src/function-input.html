@@ -71,6 +71,7 @@
         this.hoveredDisplayNodes[i].jQ.addClass('selected');
       }
       this.$.hoverplot.func = this.$.parser.getFunctor(applicationNode.toString());
+      console.log(applicationNode.toString());
       this.$.hoverplot.classList.remove('hidden');
     },
     onElementMouseOut: function(e, details) {

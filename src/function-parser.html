@@ -15,7 +15,7 @@
       is: 'function-parser',
       getFunctor: function(inputString) {
         var parsedFunction = this._parseFunction(inputString);
-        if (this._getSymbols(parsedFunction).length == 1) {
+        if (this._getSymbols(parsedFunction).length <= 1) {
           return this._wrapAsFunctor(parsedFunction);
         }
       },
@@ -58,7 +58,9 @@
         return {
           eval: function(x) {
             var scope = {};
-            scope[symbols[0]] = x;
+            if (symbols.length > 0) {
+              scope[symbols[0]] = x;
+            }
             return compiled.eval(scope);
           }
         };
