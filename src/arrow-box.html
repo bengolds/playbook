@@ -5,37 +5,38 @@
       :host {
         display: block;
       }
-      .arrow_box {
-        position: relative;
-        background: #ffffff;
-        border: 4px solid #c2e1f5;
+      #mainBox {
+        border-radius: 4px;
+        border: 2px solid #9C9C9C;
+        background: #FFF;
+        position:relative;
       }
-      .arrow_box:after, .arrow_box:before {
-        top: 100%;
+      #tailFill {
+        content: "";
+        position:absolute;
+        bottom: -24px;
         left: 50%;
-        border: solid transparent;
-        content: " ";
-        height: 0;
-        width: 0;
-        position: absolute;
-        pointer-events: none;
+        transform: translate(-50%, 0%);
+        z-index: 2;
+        border: solid 13px transparent;
+        border-top-color: #FFF;
       }
-
-      .arrow_box:after {
-        border-color: rgba(255, 255, 255, 0);
-        border-top-color: #ffffff;
-        border-width: 10px;
-        margin-left: -10px;
+      #tailBorder {
+        content: "";
+        position:absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translate(-50%, 0%);
+        z-index: 1;
+        border: solid 15px transparent;
+        border-top-color: #9C9C9C;
       }
-      .arrow_box:before {
-        border-color: rgba(194, 225, 245, 0);
-        border-top-color: #c2e1f5;
-        border-width: 16px;
-        margin-left: -16px;
-      }
+       
     </style>
-    <div class='arrow_box'>
+    <div id='mainBox'>
       <content></content>
+      <div id='tailFill'></div>
+      <div id='tailBorder'></div>
     </div>
     
   </template>
