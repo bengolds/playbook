@@ -52,7 +52,7 @@
         var mqCmdId = 'mathquill-command-id';
         var mqBlockId = 'mathquill-block-id';
         if (details.target.tagName == 'VAR' &&
-            details.target.textContent != this.text[0]) {
+            details.target.textContent != this.symbol) {
           this.showHoverBar(details.target);
           $(this).on('mouseout', this.hideHoverBar);
         }

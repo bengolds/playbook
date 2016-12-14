@@ -1,6 +1,7 @@
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../bower_components/iron-icons/iron-icons.html">
 <link rel="import" href="arrow-box.html">
+<link rel="import" href="playbook-icons.html">
 
 <dom-module id="var-action-bar">
   <template>
@@ -9,17 +10,28 @@
         display: block;
         position: absolute;
       }
+      paper-icon-button {
+        opacity: .54;
+      }
+      paper-icon-button[active] {
+        opacity: 1;
+        color: #4285F4;
+      }
     </style>
   <arrow-box>
-    <paper-icon-button src='../resources/icons/real.png'></paper-icon-button>
-    <paper-icon-button src='../resources/icons/complex.png'></paper-icon-button>
-    <paper-icon-button src='../resources/icons/pin.png'></paper-icon-button>
+    <paper-icon-button icon='playbook-icons:real' toggles></paper-icon-button>
+    <paper-icon-button icon='playbook-icons:complex' toggles></paper-icon-button>
+    <paper-icon-button icon='playbook-icons:pin'
+      on-click='pinClicked' toggles></paper-icon-button>
   </arrow-box>
   </template>
 
   <script>
     Polymer({
-      is: 'var-action-bar'
+      is: 'var-action-bar',
+      pinClicked: function (e, details) {
+        console.log(e.target.active);
+      }
     });
   </script>
 </dom-module>

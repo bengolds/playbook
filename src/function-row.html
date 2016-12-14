@@ -11,7 +11,7 @@
         display: flex;
         flex-wrap: nowrap;
         align-items: center;
-        height:192px;
+        height: 192px;
       }
       #plot {
         flex-basis: 480px;
@@ -19,7 +19,9 @@
     </style>
     <function-signature functor="[[functor]]" symbol='f'></function-signature>
     <function-input id='input' functor='{{functor}}'></function-input>
-    <variable-slider id='slider' symbol='y' functor='{{functor}}'></variable-slider>
+    <template is="dom-repeat" items="[[_getBoundVarsArray(functor.*)]]">
+      <variable-slider id='slider' symbol='{{item.symbol}}' functor='{{functor}}'></variable-slider>
+    </template>
     <mathbox-plot functor="[[functor]]" id="plot" animated='true'></mathbox-plot>
   </template>
 
@@ -30,6 +32,19 @@
         functor: {
           type: Object
         }
+      },
+
+      _symbols: function (_) {
+        return this.functor.symbols;  
+      },
+
+      _getBoundVarsArray: function (_) {
+        let returnArray = [];
+        for (let key in this.functor.boundVars) {
+          let object = {symbol: key, value:this.functor.boundVars[key]};
+          returnArray.push(object);
+        }
+        return returnArray;
       }
     });
  </script>
