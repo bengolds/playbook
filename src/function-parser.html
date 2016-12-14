@@ -1,5 +1,6 @@
 <script src="../bower_components/mathjs/dist/math.js"></script>
 <script src="../bower_components/algebrite/dist/algebrite.bundle-for-browser.js"></script>
+<link rel="import" href="x-functor.html">
 
 <dom-module id="function-parser">
   <template>
@@ -45,65 +46,9 @@
         return symbols;
       },
       _wrapAsFunctor: function(parsedFunction) {
-        var symbols = this._getSymbols(parsedFunction);
-        var compiled = parsedFunction.compile();
-        var functor = {
-          symbols: symbols,
-          boundVars: {},
-          boundRanges: {},
-          unboundVars: symbols.slice(0)
-        };
-
-        functor.eval = (x) => {
-          var scope = {};
-          if (functor.unboundVars.length == 1) {
-            scope[functor.unboundVars[0]] = x;
-          } 
-          else if (functor.unboundVars.length > 1) {
-            return 0;
-          }
-
-          Object.assign(scope, functor.boundVars);
-          return compiled.eval(scope);
-        };
-
-        functor.bindVar = (symbol, val) => {
-          if (functor.symbols.includes(symbol)) {
-            functor.boundVars[symbol] = val;
-
-            var index = functor.unboundVars.indexOf(symbol);
-            if (index > -1) {
-              functor.unboundVars.splice(index, 1);
-            }
-          }
-          else {
-            throw symbol + ' was not found in the function.';
-          }
-        };
-
-        functor.bindRange = (symbol, range) => {
-          if (functor.symbols.includes(symbol)) {
-            functor.boundRanges[symbol] = range;
-          }
-          else {
-            throw symbol + ' was not found in the function.';
-          }
-        };
-
-        functor.unbindVar = (symbol, val) => {
-          if (functor.symbols.includes(symbol)) {
-            delete functor.boundVars[symbol];
-            delete functor.boundRanges[symbol];
-
-            if (!functor.unboundVars.includes(symbol)) {
-              functor.unboundVars.push(symbol);
-            }
-          } 
-          else {
-            throw symbol + 'was not found in the function.';
-          }
-        };
-
+        let symbols = this._getSymbols(parsedFunction);
+        let compiled = parsedFunction.compile();
+        let functor = new Functor(compiled, symbols);
         return functor;
       },
     });

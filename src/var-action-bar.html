@@ -22,16 +22,37 @@
     <paper-icon-button icon='playbook-icons:real' toggles></paper-icon-button>
     <paper-icon-button icon='playbook-icons:complex' toggles></paper-icon-button>
     <paper-icon-button icon='playbook-icons:pin'
-      on-click='pinClicked' toggles></paper-icon-button>
+      on-click='pinClicked'></paper-icon-button>
   </arrow-box>
   </template>
 
   <script>
     Polymer({
       is: 'var-action-bar',
+      properties: {
+        functor: {
+          type: Object,
+          notify: true
+        },
+        variable: {
+          type: String,
+        }
+      },
+      attached: function () {
+      },
+
       pinClicked: function (e, details) {
-        console.log(e.target.active);
+        if (this.isCurrVarPinned()) {
+          this.functor.unbindVar(this.variable);
+        } 
+        else {
+          this.functor.bindVar(this.variable, 0);
+        }
+      },
+      isCurrVarPinned: function (_) {
+        return (this.variable in this.functor.boundVars);
       }
+
     });
   </script>
 </dom-module>

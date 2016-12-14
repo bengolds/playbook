@@ -124,7 +124,7 @@
         if (!this.functor) {
           return;
         }
-        var cachedExpr = this.functor.eval;
+        var cachedExpr = this.functor.eval.bind(this.functor);
         var newExpr = (emit, x, i, t) => {
           emit(x, cachedExpr(x));
         };

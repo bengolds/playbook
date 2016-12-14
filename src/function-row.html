@@ -17,7 +17,7 @@
         flex-basis: 480px;
       }
     </style>
-    <function-signature functor="[[functor]]" symbol='f'></function-signature>
+    <function-signature functor="{{functor}}" symbol='f'></function-signature>
     <function-input id='input' functor='{{functor}}'></function-input>
     <template is="dom-repeat" items="[[_getBoundVarsArray(functor.*)]]">
       <variable-slider id='slider' symbol='{{item.symbol}}' functor='{{functor}}'></variable-slider>
@@ -33,6 +33,10 @@
           type: Object
         }
       },
+
+      observers: [
+        'testObserver(functor.*)'
+      ],
 
       _symbols: function (_) {
         return this.functor.symbols;  
