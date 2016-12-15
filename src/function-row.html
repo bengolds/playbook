@@ -19,7 +19,7 @@
     </style>
     <function-signature functor="{{functor}}" symbol='f'></function-signature>
     <function-input id='input' functor='{{functor}}'></function-input>
-    <template is="dom-repeat" items="[[_getBoundVarsArray(functor.*)]]">
+    <template is="dom-repeat" items="[[_getBoundVarsArray(functor, functor.*)]]">
       <variable-slider id='slider' symbol='{{item.symbol}}' functor='{{functor}}'></variable-slider>
     </template>
     <mathbox-plot functor="[[functor]]" id="plot" animated='true'></mathbox-plot>
@@ -34,12 +34,35 @@
         }
       },
 
-      observers: [
-        'testObserver(functor.*)'
-      ],
+      listeners: {
+        'functor-pinvar': 'pinVariable',
+        'functor-bindvar': 'bindVariable',
+        'functor-unpinvar': 'unpinVariable',
+      },
 
-      _symbols: function (_) {
-        return this.functor.symbols;  
+      pinVariable: function (_, detail) {
+        let wasUnbound = this.functor.pinVar(detail.variable, detail.value, detail.range);
+        
+        this._forceNotifyPath('functor.boundVars');
+        this._forceNotifyPath('functor.boundRanges');
+        if (wasUnbound) {
+          this._forceNotifyPath('functor.unboundVars');
+        }
+      },
+
+      bindVariable: function (_, detail) {
+        this.functor.bindVar(detail.variable, detail.value);
+        this._forceNotifyPath('functor.boundVars');
+      },
+
+      unpinVariable: function (_, detail) {
+        let wasBound = this.functor.unpinVar(detail.variable);
+
+        if (wasBound) {
+          this._forceNotifyPath('functor.boundVars');
+          this._forceNotifyPath('functor.boundRanges');
+          this._forceNotifyPath('functor.unboundVars');
+        }
       },
 
       _getBoundVarsArray: function (_) {
@@ -49,7 +72,21 @@
           returnArray.push(object);
         }
         return returnArray;
+      },
+
+      _forceNotifyPath: function (path) {
+        var obj = this.get(path);
+        //Override the dirty checking
+        if (Array.isArray(obj)) {
+          obj = obj.slice();
+        } 
+        else if (typeof obj === 'object') {
+          obj = Object.assign({}, obj);
+        }
+        this.set(path, obj);
+        this.notifyPath(path);
       }
+
     });
  </script>
 </dom-module>

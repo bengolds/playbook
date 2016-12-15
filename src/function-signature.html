@@ -35,12 +35,6 @@
           value: 'Ɵ'
         }
       },
-      observers: [
-        'testObserver(functor.*)'
-      ],
-      testObserver: function (_) {
-        console.log("signature observed");
-      },
 
       attached: function () {
         this._functorChanged();
@@ -49,7 +43,8 @@
       _functorChanged: function () {
         let latex = this.symbol + '\\left(';
         if (this.functor) {
-          latex += this.functor.symbols.join(',');
+          let sorted = this.functor.symbols.slice().sort();
+          latex += sorted.join(',');
         }
         latex += '\\right)=';
         this.$.quill.latex(latex);

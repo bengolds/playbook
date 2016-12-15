@@ -45,7 +45,22 @@
       //TODO: put in try/catch block
       var functionString = this.$.quill.semanticText();
       if (parser.isParseable(functionString)) {
-        this.functor = parser.getFunctor(functionString);
+        let newFunctor = parser.getFunctor(functionString);
+        this._matchPinnedVariables(this.functor, newFunctor);
+        this.functor = newFunctor;
+      }
+    },
+
+    _matchPinnedVariables(oldFunctor, newFunctor) {
+      if (!oldFunctor) {
+        return;
+      }
+      for (let pinnedVar in oldFunctor.boundVars) {
+        if (newFunctor.symbols.includes(pinnedVar)) {
+          newFunctor.pinVar(pinnedVar, 
+            oldFunctor.boundVars[pinnedVar],
+            oldFunctor.boundRanges[pinnedVar]);
+        }
       }
     },
 

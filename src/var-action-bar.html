@@ -43,10 +43,16 @@
 
       pinClicked: function (e, details) {
         if (this.isCurrVarPinned()) {
-          this.functor.unbindVar(this.variable);
+          this.fire('functor-unpinvar', {
+            variable: this.variable
+          });
         } 
         else {
-          this.functor.bindVar(this.variable, 0);
+          this.fire('functor-pinvar', {
+            variable: this.variable, 
+            value: 0.5,
+            range: [0,1],
+          });
         }
       },
       isCurrVarPinned: function (_) {

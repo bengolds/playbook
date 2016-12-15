@@ -1,0 +1,86 @@
+<script>
+class Functor {
+  constructor(compiled, symbols) {
+    this.compiled = compiled;
+    this.symbols = symbols.slice();
+    this.unboundVars = symbols.slice();
+    this.boundVars = {};
+    this.boundRanges = {};
+  }
+
+  eval(x) {
+    var scope = {};
+    if (this.unboundVars.length == 1) {
+      scope[this.unboundVars[0]] = x;
+    } 
+    else if (this.unboundVars.length > 1) {
+      return 0;
+    }
+
+    Object.assign(scope, this.boundVars);
+    return this.compiled.eval(scope);
+  }
+
+  hardAssert(fact, message) {
+    if (!fact)
+      throw Error(message);
+  }
+
+  checkIsInFunction(symbol) {
+    this.hardAssert(this.symbols.includes(symbol),
+      symbol + ' was not found in function');
+  }
+
+  isPinned(symbol) {
+    //All three of these should always be co-occurring
+    return (symbol in this.boundVars
+          && symbol in this.boundRanges
+          && !this.unboundVars.includes(symbol));
+  }
+
+  pinVar(symbol, val, range) {
+    this.checkIsInFunction(symbol);
+
+    this.boundVars[symbol] = val;
+    this.boundRanges[symbol] = range;
+
+    var index = this.unboundVars.indexOf(symbol);
+    if (index > -1) {
+      this.unboundVars.splice(index, 1);
+      return true;
+    } 
+    else {
+      return false;
+    }
+  }
+
+  unpinVar(symbol) {
+    this.checkIsInFunction(symbol);
+    delete this.boundVars[symbol];
+    delete this.boundRanges[symbol];
+
+    if (!this.unboundVars.includes(symbol)) {
+      this.unboundVars.push(symbol);
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  bindVar(symbol, val) {
+    this.checkIsInFunction(symbol);
+    this.hardAssert(this.isPinned(symbol), symbol + ' is not pinned');
+
+    this.boundVars[symbol] = val;
+  }
+
+  clone() {
+    var clone = new Functor(this.compiled, this.symbols);
+    clone.boundVars = Object.assign({}, this.boundVars);
+    clone.boundRanges = Object.assign({}, this.boundRanges);
+    clone.unboundVars = this.unboundVars.slice();
+    return clone;
+  }
+}
+</script>
