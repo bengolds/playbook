@@ -19,7 +19,7 @@
     </style>
     <function-signature functor="{{functor}}" symbol='f'></function-signature>
     <function-input id='input' functor='{{functor}}'></function-input>
-    <template is="dom-repeat" items="[[_getBoundVarsArray(functor, functor.*)]]">
+    <template is="dom-repeat" items="[[_getBoundVarsArray(functor, functor.boundVars)]]">
       <variable-slider id='slider' symbol='{{item.symbol}}' functor='{{functor}}'></variable-slider>
     </template>
     <mathbox-plot functor="[[functor]]" id="plot" animated='true'></mathbox-plot>
@@ -41,34 +41,25 @@
       },
 
       pinVariable: function (_, detail) {
-        let wasUnbound = this.functor.pinVar(detail.variable, detail.value, detail.range);
-        
+        this.functor.pinVar(detail.variable, detail.value, detail.range);
         this._forceNotifyPath('functor.boundVars');
-        this._forceNotifyPath('functor.boundRanges');
-        if (wasUnbound) {
-          this._forceNotifyPath('functor.unboundVars');
-        }
       },
 
       bindVariable: function (_, detail) {
         this.functor.bindVar(detail.variable, detail.value);
-        this._forceNotifyPath('functor.boundVars');
+        this._forceNotifyPath('functor.boundVars.' + detail.variable, detail.value);
       },
 
       unpinVariable: function (_, detail) {
-        let wasBound = this.functor.unpinVar(detail.variable);
-
-        if (wasBound) {
-          this._forceNotifyPath('functor.boundVars');
-          this._forceNotifyPath('functor.boundRanges');
-          this._forceNotifyPath('functor.unboundVars');
-        }
+        this.functor.unpinVar(detail.variable);
+        this._forceNotifyPath('functor.boundVars');
       },
 
       _getBoundVarsArray: function (_) {
         let returnArray = [];
         for (let key in this.functor.boundVars) {
-          let object = {symbol: key, value:this.functor.boundVars[key]};
+          // TODO: ADD RANGE HERE
+          let object = {symbol: key, value:this.functor.boundVars[key].value};
           returnArray.push(object);
         }
         return returnArray;

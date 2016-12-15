@@ -58,8 +58,8 @@
       for (let pinnedVar in oldFunctor.boundVars) {
         if (newFunctor.symbols.includes(pinnedVar)) {
           newFunctor.pinVar(pinnedVar, 
-            oldFunctor.boundVars[pinnedVar],
-            oldFunctor.boundRanges[pinnedVar]);
+            oldFunctor[pinnedVar].value, 
+            oldFunctor[pinnedVar].range);
         }
       }
     },

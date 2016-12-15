@@ -27,7 +27,6 @@
       properties: {
         functor: {
           type: Object,
-          observer: '_functorChanged'
         },
         width: {
           type: Number,
@@ -45,7 +44,7 @@
       },
 
       observers: [
-        '_functorChanged(functor.unboundVars)'
+        '_functorChanged(functor, functor.boundVars)'
       ],
 
       behaviors: [
@@ -189,7 +188,7 @@
 
       _getBounds: function(dataExpr, range, numSamples=200) {
         let minY = 0, maxY = 0;
-        switch (this.functor.unboundVars.length) {
+        switch (this.functor.unboundVars().length) {
         case 0:
           minY = maxY = this.functor.eval();
           break;
@@ -199,7 +198,7 @@
           maxY = sampledRange[1];
           break;
         default:
-          return this.range;
+          return this.view.get('range');
         }
 
         // Apply some tricks to the resulting values to get a good range
@@ -221,14 +220,14 @@
       _sampleFuncForBounds: function(functor, range, numSamples) {
         let f = functor.clone();
         
-        if (f.unboundVars.length == 1) {
-          f.pinVar(f.unboundVars[0], 0, range);
+        if (f.unboundVars().length == 1) {
+          f.pinVar(f.unboundVars()[0], 0, range);
         }
 
         let iterateSteps = {};
         let numSamplePoints = Math.round(Math.pow(numSamples, 1/f.symbols.length));
         for (let key in f.boundVars) {
-          let currRange = f.boundRanges[key];
+          let currRange = f.boundVars[key].range;
           let rangeWidth = currRange[1]-currRange[0];
           iterateSteps[key] = rangeWidth/numSamplePoints;
         }
@@ -243,7 +242,7 @@
 
         let iterate = (dimension) => {
           let currVar = f.symbols[dimension];
-          let currRange = f.boundRanges[currVar];
+          let currRange = f.boundVars[currVar].range;
           let currStep = iterateSteps[currVar];
           for (let i = currRange[0]; i < currRange[1]; i+=currStep) {
             f.bindVar(currVar, i);

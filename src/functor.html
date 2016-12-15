@@ -3,21 +3,20 @@ class Functor {
   constructor(compiled, symbols) {
     this.compiled = compiled;
     this.symbols = symbols.slice();
-    this.unboundVars = symbols.slice();
     this.boundVars = {};
-    this.boundRanges = {};
   }
 
   eval(x) {
     var scope = {};
-    if (this.unboundVars.length == 1) {
-      scope[this.unboundVars[0]] = x;
+    var unboundVars = this.unboundVars();
+    if (unboundVars.length == 1) {
+      scope[unboundVars[0]] = x;
     } 
-    else if (this.unboundVars.length > 1) {
+    else if (unboundVars.length > 1) {
       return 0;
     }
 
-    Object.assign(scope, this.boundVars);
+    Object.assign(scope, this.scope());
     return this.compiled.eval(scope);
   }
 
@@ -31,55 +30,55 @@ class Functor {
       symbol + ' was not found in function');
   }
 
-  isPinned(symbol) {
-    //All three of these should always be co-occurring
-    return (symbol in this.boundVars
-          && symbol in this.boundRanges
-          && !this.unboundVars.includes(symbol));
+  unboundVars() {
+    return this.symbols.filter((x) => {
+      return !(x in this.boundVars);
+    });
   }
 
-  pinVar(symbol, val, range) {
+  scope() {
+    let scope = {};
+    for (let key in this.boundVars) {
+      scope[key] = this.boundVars[key].value;
+    }
+    return scope;
+  }
+
+  pinVar(symbol, value, range) {
     this.checkIsInFunction(symbol);
 
-    this.boundVars[symbol] = val;
-    this.boundRanges[symbol] = range;
+    let wasAlreadyPinned = symbol in this.boundVars;
 
-    var index = this.unboundVars.indexOf(symbol);
-    if (index > -1) {
-      this.unboundVars.splice(index, 1);
-      return true;
-    } 
-    else {
-      return false;
-    }
+    this.boundVars[symbol] = {
+      value: value,
+      range: range
+    };
+
+    return !wasAlreadyPinned;
   }
 
   unpinVar(symbol) {
     this.checkIsInFunction(symbol);
-    delete this.boundVars[symbol];
-    delete this.boundRanges[symbol];
 
-    if (!this.unboundVars.includes(symbol)) {
-      this.unboundVars.push(symbol);
-      return true;
-    }
-    else {
-      return false;
-    }
+    let wasAlreadyPinned = symbol in this.boundVars;
+
+    delete this.boundVars[symbol];
+
+    return wasAlreadyPinned;
   }
 
-  bindVar(symbol, val) {
+  bindVar(symbol, value) {
     this.checkIsInFunction(symbol);
-    this.hardAssert(this.isPinned(symbol), symbol + ' is not pinned');
+    this.hardAssert(symbol in this.boundVars, symbol + ' is not pinned');
 
-    this.boundVars[symbol] = val;
+    this.boundVars[symbol].value = value;
   }
 
   clone() {
     var clone = new Functor(this.compiled, this.symbols);
-    clone.boundVars = Object.assign({}, this.boundVars);
-    clone.boundRanges = Object.assign({}, this.boundRanges);
-    clone.unboundVars = this.unboundVars.slice();
+    for (let key in this.boundVars) {
+      clone.boundVars[key] = Object.assign({}, this.boundVars[key]);
+    }
     return clone;
   }
 }
