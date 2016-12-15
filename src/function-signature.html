@@ -18,7 +18,7 @@
   <mathquill-element id="quill"
     on-element-mouseover='onElementMouseOver'>
   </mathquill-element>
-  <var-action-bar id="actionbar" class="hidden"></var-action-bar>
+  <var-action-bar id="actionbar" class="hidden" functor='{{functor}}'></var-action-bar>
 
   </template>
   <script>
@@ -27,12 +27,19 @@
       properties: {
         functor: {
           type: Object,
-          observer: '_functorChanged'
+          observer: '_functorChanged',
+          notify: true
         },
         symbol: {
           type: String,
           value: 'Ɵ'
         }
+      },
+      observers: [
+        'testObserver(functor.*)'
+      ],
+      testObserver: function (_) {
+        console.log("signature observed");
       },
 
       attached: function () {
@@ -52,18 +59,20 @@
         var mqCmdId = 'mathquill-command-id';
         var mqBlockId = 'mathquill-block-id';
         if (details.target.tagName == 'VAR' &&
-            details.target.textContent != this.text[0]) {
+            details.target.textContent != this.symbol) {
           this.showHoverBar(details.target);
           $(this).on('mouseout', this.hideHoverBar);
         }
       },
 
       showHoverBar: function (target) {
-        this.$.actionbar.classList.remove('hidden');
+        let actionbar = this.$.actionbar;
+        actionbar.classList.remove('hidden');
         var topY = target.offsetTop+target.offsetHeight;
-        var middleX = target.offsetLeft + target.offsetWidth/2 - this.$.actionbar.offsetWidth/2;
-        this.$.actionbar.style.left = middleX + 'px';
-        this.$.actionbar.style.bottom = topY + 'px';
+        var middleX = target.offsetLeft + target.offsetWidth/2 - actionbar.offsetWidth/2;
+        actionbar.style.left = middleX + 'px';
+        actionbar.style.bottom = topY + 'px';
+        actionbar.variable = target.textContent;
       },
 
       hideHoverBar: function() {

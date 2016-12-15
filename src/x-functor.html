@@ -1,0 +1,101 @@
+<dom-module id="x-functor">
+  <template>
+    <style>
+      :host {
+        display: none;
+      }
+    </style>
+    
+  </template>
+  <script>
+    Functor = Polymer({
+      is: 'x-functor',
+      properties: {
+        symbols: {
+          type: Array,
+          notify: true
+        },
+        boundVars: {
+          type: Object,
+          notify: true,
+        },
+        boundRanges: {
+          type: Object,
+          notify: true
+        },
+        unboundVars: {
+          type: Array,
+          notify: true
+        },
+        name: {
+          type: String,
+          notify: true,
+        }
+      },
+
+      factoryImpl: function (compiled, symbols) {
+        this.compiled = compiled;
+        this.symbols = symbols.slice(0);
+        this.unboundVars = symbols.splice(0);
+        this.boundVars = {};
+        this.boundRanges = {};
+      },
+
+      eval: function (x) {
+        var scope = {};
+        if (this.unboundVars.length == 1) {
+          scope[this.unboundVars[0]] = x;
+        } 
+        else if (this.unboundVars.length > 1) {
+          return 0;
+        }
+
+        Object.assign(scope, this.boundVars);
+        return this.compiled.eval(scope);
+      },
+
+      bindVar: function (symbol, val) {
+        if (this.symbols.includes(symbol)) {
+          this.boundVars[symbol] = val;
+
+          var index = this.unboundVars.indexOf(symbol);
+          if (index > -1) {
+            this.unboundVars.splice(index, 1);
+            // this.notifyPath('unboundVars');
+          }
+        }
+        else {
+          throw symbol + ' was not found in the function.';
+        }
+      },
+
+      bindRange: function (symbol, range) {
+        if (this.symbols.includes(symbol)) {
+          this.boundRanges[symbol] = range;
+          // this.notifyPath('boundRanges.'+symbol);
+        }
+        else {
+          throw symbol + ' was not found in the function.';
+        }
+      },
+
+      unbindVar: function (symbol, val) {
+        if (this.symbols.includes(symbol)) {
+          delete this.boundVars[symbol];
+          delete this.boundRanges[symbol];
+          this.notifyPath('boundVars.'+symbol);
+          // this.notifyPath('boundRanges.'+symbol);
+
+          if (!this.unboundVars.includes(symbol)) {
+            this.unboundVars.push(symbol);
+            // this.notifyPath('unboundVars');
+          }
+        } 
+        else {
+          throw symbol + 'was not found in the function.';
+        }
+      },
+
+    });
+  </script>
+</dom-module>
