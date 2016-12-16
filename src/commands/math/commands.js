@@ -223,7 +223,7 @@ var SupSub = P(MathCommand, function(_, super_) {
 
       // TODO: factor out a .removeBlock() or something
       if (this.sub.isEmpty()) {
-        this.sub.deleteOutOf(L, cursor.insAtLeftEnd(this.sub));
+        this.sub.deleteOutOf(cursor.insAtLeftEnd(this.sub), L);
         if (this.sup) cursor.insDirOf(-dir, this);
         // Note `-dir` because in e.g. x_1^2| want backspacing (leftward)
         // to delete the 1 but to end up rightward of x^2; with non-negated
