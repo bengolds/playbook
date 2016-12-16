@@ -29,6 +29,19 @@ SemanticNode = P(function(_) {
     this.type = this.__type__;
     this.displayNodes = [];
   };
+  _.is = function (typeName) {
+    var currProto = this.__proto__;
+    var currName = currProto.__type__;
+    while(currName) {
+      if (currName === typeName) {
+        return true;
+      }
+      currProto = currProto.__proto__;
+      currName = currProto.__type__;
+    }
+    return false;
+  };
+
   _.toSemanticNodes = function () {
     return [this];
   };
@@ -79,6 +92,9 @@ ApplicationNode = P(SemanticNode, function(_, super_) {
   _.__type__ = 'ApplicationNode';
   _.init = function (operator, args) {
     this.operator = operator;
+    if (!Array.isArray(args)){
+      args = [args];
+    }
     this.args = args;
     this.setParent(this.operator, this);
     this.setParent(this.args, this);
@@ -196,7 +212,6 @@ FunctionNode = P(OperatorNode, function(_, super_) {
     if (index == siblingNodes.length - 1) {
       throw Error('Nothing to the right of the ' + this.symbol + ' function.');
     }
-    //TODO: To support sin xy (and derivatives) gobble terms here until...
     var right = siblingNodes[index+1];
     var trigFunctions = ['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'sinh','cosh','tanh','sech','csch','coth'];
     if (trigFunctions.includes(this.symbol) && right instanceof ExponentNode) {
@@ -266,7 +281,7 @@ DifferentiationNode = P(FunctionNode, function(_, super_) {
 });
 
 InfixNode = P(OperatorNode, function(_, super_) {
-  _.__type__ = 'FunctionNode';
+  _.__type__ = 'InfixNode';
   _.init = function (symbol, rightAssociative = false) {
     super_.init.call(this, symbol, rightAssociative, 2);
   };
@@ -411,9 +426,10 @@ function parseTokenizedTree(semanticNodes) {
     }
     for (var i = parsed.length-1; i >= 0; i--) {
       var node = parsed[i];
-      if (operatorSet.includes(node.type)) {
-        //Get the index of where we are after applying the action.
-        i = node.apply(parsed);
+      for (var operatorName of operatorSet) {
+        if (node.is(operatorName)) {
+          i = node.apply(parsed);
+        }
       }
     }
   };
@@ -579,13 +595,24 @@ Fraction.open(function (_) {
   };
 });
 
-Digit.open(function(_) {
+VanillaSymbol.open(function(_) {
+  _.isDigit = function () {
+    return !isNaN(parseInt(this.ctrlSeq)) || 
+            this.ctrlSeq == '.';
+  };
+
   _.toSemanticNodes = function (remainingNodes) {
+    if (this.ctrlSeq == '\\ ') {
+      return [];
+    }
+    else if (!this.isDigit()) {
+      throw Error('Not sure what to do with this VanillaSymbol: ' + this.ctrlSeq);
+    }
     var number = this.ctrlSeq;
     var displayNodes = [this];
     while (remainingNodes[0] && 
-            (remainingNodes[0] instanceof Digit || 
-            remainingNodes[0].ctrlSeq == '.')) {
+            remainingNodes[0] instanceof VanillaSymbol && 
+            remainingNodes[0].isDigit()) {
       var nextNode = remainingNodes.shift();
       number += nextNode.ctrlSeq;
       displayNodes.push(nextNode);
