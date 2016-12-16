@@ -350,6 +350,12 @@ function insertMultipliers(semanticNodes) {
     if (shouldMultiply(lhs, rhs)) {
       semanticNodes.splice(i, 0, TimesNode());
     }
+    else if(lhs instanceof MinusNode &&
+            rhs.isArgument &&
+            (!semanticNodes[i-2] || !semanticNodes[i-2].isArgument))
+    {
+      semanticNodes.splice(i-1, 1, NumberNode(-1), TimesNode());
+    } 
   }
 }
 
