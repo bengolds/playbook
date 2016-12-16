@@ -20,9 +20,7 @@
         "quotes": [
             "error",
             "single"
-        ],
-        "semi": [
-            "error",
+        ], "semi": ["error",
             "always"
         ],
         "no-unused-vars": [
@@ -85,6 +83,7 @@
         "ApplicationNode": true,
         "SymbolNode": true,
         "NumberNode": true,
+        "BracketNode": true,
         "OperatorNode": true,
         "VariableNode": true,
         "FunctionNode": true,
