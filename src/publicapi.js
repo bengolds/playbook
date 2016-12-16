@@ -266,9 +266,10 @@ function RootBlockMixin(_) {
   for (var i = 0; i < names.length; i += 1) (function(name) {
     _[name] = function(cursor, dir) { 
       if (dir != L && dir != R) {
-        dir = null;
+        this.controller.handle(name);
+      } else {
+        this.controller.handle(name, dir); 
       }
-      this.controller.handle(name, dir); 
     };
   }(names[i]));
   _.reflow = function() {
