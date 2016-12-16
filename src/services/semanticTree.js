@@ -216,10 +216,22 @@ FunctionNode = P(OperatorNode, function(_, super_) {
       throw Error('Node to the right of the ' + this.symbol + ' is not an argument.');
     }
 
-    var applied = ApplicationNode(this, right);
-    siblingNodes.splice(index, 2, applied);
+    var argumentNodes = [];
+    var rightIndex = index+1;
+    while (siblingNodes[rightIndex] && 
+          !this.applyUntil.includes(siblingNodes[rightIndex].type)) {
+      argumentNodes.push(siblingNodes[rightIndex]);
+      siblingNodes.splice(rightIndex, 1);
+    }
+
+    var rightApplied = parseTokenizedTree(argumentNodes);
+
+    var applied = ApplicationNode(this, rightApplied);
+    siblingNodes.splice(index, 1, applied);
     return index;
   };
+
+  _.applyUntil = ['PlusNode', 'MinusNode'];
 });
 
 DifferentiationNode = P(FunctionNode, function(_, super_) {
@@ -388,23 +400,11 @@ function parseTokenizedTree(semanticNodes) {
     transformMatchingNodes(operatorSet);
   }
 
-  return parsed;
-}
-
-function gobbleRightTerms(remainingNodes) {
-  //TODO: MERGE WITH TOKENIZE AS TOKENIZE "UNTIL"
-  //TODO: MAKE WORK WITH SIN
-  var shouldStopGobbling = function(node) {
-    return (node instanceof PlusMinus) || (node instanceof Equality);
-  };
-
-  var gobbled = [];
-  while (remainingNodes.length > 0 && !shouldStopGobbling(remainingNodes[0])) {
-    var currDisplayNode = remainingNodes.shift();
-    var currSemanticNodes = currDisplayNode.toSemanticNodes(remainingNodes);
-    gobbled = gobbled.concat(currSemanticNodes);
+  if (parsed.length > 1) {
+    throw Error('Your expression doesn\'t compress into one node');
   }
-  return parseTokenizedTree(gobbled);
+
+  return parsed[0];
 }
 
 Node.open(function(_) {
@@ -413,7 +413,7 @@ Node.open(function(_) {
     var semanticNodes = tokenizeNodes(this.childrenAsArray());
     var parsedTree = parseTokenizedTree(semanticNodes);
     this.appendDisplayNodes(parsedTree, [this]);
-    return parsedTree;
+    return [parsedTree];
   };
   _.toSemanticNode = function (remainingNodes) {
     var semanticNodes = this.toSemanticNodes(remainingNodes);
@@ -488,10 +488,14 @@ Variable.open(function(_) {
 
     if (this.isPartOfOperator) {
       var symbol = this.text();
-      while(remainingNodes.length > 0 && remainingNodes[0].isPartOfOperator) {
+      while(remainingNodes.length > 0 &&
+       remainingNodes[0].isPartOfOperator) {
         var nextNode = remainingNodes.shift();
         symbol += nextNode.text();
         displayNodes.push(nextNode);
+        if (nextNode.endOfOperator){
+          break;
+        }
       }
       semanticNode = FunctionNode(symbol, 1);
     } 

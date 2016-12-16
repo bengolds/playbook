@@ -131,6 +131,7 @@ var Letter = P(Variable, function(_, super_) {
             letter.italicize(false);
             var last = letter;
           }
+          last.endOfOperator = true;
 
           var isBuiltIn = BuiltInOpNames.hasOwnProperty(word);
           first.ctrlSeq = (isBuiltIn ? '\\' : '\\operatorname{') + first.ctrlSeq;
