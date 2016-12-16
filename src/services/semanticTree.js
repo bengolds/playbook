@@ -220,7 +220,17 @@ FunctionNode = P(OperatorNode, function(_, super_) {
     var rightIndex = index+1;
     while (siblingNodes[rightIndex] && 
           !this.applyUntil.includes(siblingNodes[rightIndex].type)) {
-      argumentNodes.push(siblingNodes[rightIndex]);
+      //In case we have sin(x)x, we should stop after the first application
+      // and strip the brackets.
+      var currNode = siblingNodes[rightIndex];
+      if (currNode == right && 
+          currNode instanceof ApplicationNode &&
+          currNode.operator instanceof BracketNode) {
+        argumentNodes.push(currNode.args[0]);
+        siblingNodes.splice(rightIndex, 1);
+        break;
+      }
+      argumentNodes.push(currNode);
       siblingNodes.splice(rightIndex, 1);
     }
 
@@ -232,6 +242,18 @@ FunctionNode = P(OperatorNode, function(_, super_) {
   };
 
   _.applyUntil = ['PlusNode', 'MinusNode'];
+});
+
+BracketNode = P(OperatorNode, function(_, super_) {
+  _.__type__ = 'BracketNode';
+  _.init = function() {
+    super_.init.call(this, '()', true, 1);
+  };
+  _.formatter = function(_) {
+    return function(args) {
+      return '(' + args[0] + ')';
+    };
+  };
 });
 
 DifferentiationNode = P(FunctionNode, function(_, super_) {
@@ -440,6 +462,17 @@ Node.open(function(_) {
       children.push(currNode);
     }
     return children;
+  };
+});
+
+Bracket.open(function (_, super_) {
+  _.toSemanticNodes = function (remainingNodes) {
+    var contents = super_.toSemanticNodes.call(this);
+    if (contents.length > 1) {
+      throw Error('Contents of brackets are malformed');
+    }
+    var applied = ApplicationNode(BracketNode(), contents);
+    return [applied];
   };
 });
 
