@@ -1,8 +1,9 @@
 <script src="mathbox/build/mathbox-bundle.js"></script>
 <link rel="import" href="../bower_components/iron-resizable-behavior/iron-resizable-behavior.html">
+<link rel="import" href="../bower_components/iron-icon/iron-icon.html">
 <dom-module id="mathbox-plot">
   <template>
-    <style>
+    <style is="custom-style">
       :host {
         height:100%;
         position:relative;
@@ -14,9 +15,33 @@
         bottom:0px;
         right:0px;
         left:0px;
+        transition: filter .5s;
+      }
+      iron-icon {
+        opacity:0;
+        position:absolute;
+        z-index:1;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%,-50%);
+        --iron-icon-fill-color: #d40000;
+        --iron-icon-stroke-color: rgba(0,0,0,0.1);
+        --iron-icon-width: 64px;
+        --iron-icon-height: 64px;
+        transition: opacity .5s;
+      }
+      :host(.error) iron-icon {
+        opacity:1;
+        display:block;
+      }
+      :host(.error) #mathbox{
+        filter:blur(6px);
       }
     </style>
-    <div id='mathbox'></div>
+    <style is="custom-style">
+    </style>
+    <iron-icon icon='error'></iron-icon>
+    <div id='mathbox' class='blur'></div>
     
   </template>
 

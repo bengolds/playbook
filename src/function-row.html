@@ -38,6 +38,8 @@
         'functor-pinvar': 'pinVariable',
         'functor-bindvar': 'bindVariable',
         'functor-unpinvar': 'unpinVariable',
+        'input-ok': 'inputOk',
+        'input-error': 'inputError',
       },
 
       pinVariable: function (_, detail) {
@@ -53,6 +55,14 @@
       unpinVariable: function (_, detail) {
         this.functor.unpinVar(detail.variable);
         this._forceNotifyPath('functor.boundVars');
+      },
+
+      inputOk: function (_) {
+        this.$.plot.classList.remove('error');
+      },
+
+      inputError: function (_) {
+        this.$.plot.classList.add('error');
       },
 
       _getBoundVarsArray: function (_) {

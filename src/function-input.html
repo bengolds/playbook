@@ -53,16 +53,20 @@
       try {
         var functionString = this.$.quill.semanticText();
         if (functionString == '') {
-          
           return;
         }
         let newFunctor = parser.getFunctor(functionString);
         this._matchPinnedVariables(this.functor, newFunctor);
         this.functor = newFunctor;
         this.$.errorMessage.textContent = '';
+        this.cancelDebouncer('input-error');
+        this.fire('input-ok');
       }
       catch (e) {
-        this.$.errorMessage.textContent = e.message;
+        this.debounce('input-error', (x)=>{
+          this.$.errorMessage.textContent = e.message;
+          this.fire('input-error');
+        }, 500);
       }
     },
 
