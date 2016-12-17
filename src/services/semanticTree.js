@@ -1,6 +1,12 @@
 Controller.open(function(_) {
   _.exportSemanticTree = function() {
-    return this.semanticTreeObject().toString();
+    var tree = this.semanticTreeObject();
+    if (tree) {
+      return tree.toString();
+    }
+    else {
+      return '';
+    }
   };
   _.semanticTreeObject = function() {
     return this.root.toSemanticNode();
@@ -410,23 +416,30 @@ function insertMultipliers(semanticNodes) {
 
 function parseTokenizedTree(semanticNodes) {
   var order = [
-    ['FunctionNode'], 
-    ['ExponentNode'], 
-    ['TimesNode', 'DivideNode'], 
-    ['PlusNode', 'MinusNode'],
-    ['EqualsNode']
+    {ops: ['FunctionNode'],             rightAssociative: true},
+    {ops: ['ExponentNode'],             rightAssociative: true}, 
+    {ops: ['TimesNode', 'DivideNode'],  rightAssociative: false},
+    {ops: ['PlusNode', 'MinusNode'],    rightAssociative: false},
+    {ops: ['EqualsNode'],               rightAssociative: true},
+    
+    
+    
+    
   ];
 
   var parsed = semanticNodes.slice();
 
   var transformMatchingNodes = (operatorSet) => {
-    //TODO: Support forwards vs backwards for associativity?
-    if (operatorSet.includes('TimesNode')) {
+    if (operatorSet.ops.includes('TimesNode')) {
       insertMultipliers(parsed); 
     }
-    for (var i = parsed.length-1; i >= 0; i--) {
+    //Go forwards or backwards through the array.
+    var direction = operatorSet.rightAssociative ? -1 : 1;
+    for (var i = direction > 0 ? 0 : parsed.length - 1;
+                 direction > 0 ? (i < parsed.length) : (i > -1); 
+             i += direction) {
       var node = parsed[i];
-      for (var operatorName of operatorSet) {
+      for (var operatorName of operatorSet.ops) {
         if (node.is(operatorName)) {
           i = node.apply(parsed);
         }

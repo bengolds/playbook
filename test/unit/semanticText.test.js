@@ -26,11 +26,11 @@ suite('Semantic Tree', function() {
     //Test some fractions and spaces
     assertSemanticText('4\\ \\frac{x}{y}', '(4*(x/y))');
     //Test order of operations and associativity
-    assertSemanticText('a+b-cde^{fg}-h-j', '(a+(b-((c*(d*(e^(f*g))))-(h-j))))');
+    assertSemanticText('a+b-cde^{fg}-h-j', '((((a+b)-((c*d)*(e^(f*g))))-h)-j)');
     //Test multipliers being inserted between variables and functions
     assertSemanticText('a\\sin x', '(a*sin(x))');
     //Test sin(a)b(c)
-    assertSemanticText('\\sin\\left(a\\right)b\\left(c\\right)', '(sin(a)*(b*(c)))');
+    assertSemanticText('\\sin\\left(a\\right)b\\left(c\\right)', '((sin(a)*b)*(c))');
     //Test exponentiation associativity
     assertSemanticText('a^{b^{c^d}}', '(a^(b^(c^d)))');
     //Test sin^2(x)
@@ -42,6 +42,8 @@ suite('Semantic Tree', function() {
   });
 
   test('new tests', function() {
+    //Test left associativity
+    assertSemanticText('a-b+c', '((a-b)+c)');
   });
 
 });
