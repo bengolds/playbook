@@ -301,6 +301,7 @@
 
       onPanStart: function (e) {
         this.classList.remove('ungrabbed');
+        this.lastPanX = e.detail.x;
         this.listen(this, 'track', 'onPan');
         this.listen(this, 'up', 'onPanStop');
         for (let value of ['grabbing', '-webkit-grabbing', '-moz-grabbing']) {
@@ -311,11 +312,13 @@
       },
 
       onPan: function (e) {
-        this.translateRange(e.detail.ddx);
+        this.translateRange(e.detail.x - this.lastPanX);
+        this.lastPanX = e.detail.x;
       },
 
       onPanStop: function (e) {
         this.classList.add('ungrabbed');
+        this.lastPanX = null;
         this.unlisten(this, 'track', 'onPan');
         this.unlisten(this, 'up', 'onPanStop');
         document.body.style.cursor = null;
@@ -355,12 +358,14 @@
       },
 
       zoomRange(zoomAmount, centerX, centerY) {
-        let targetXRange = this.xRange.slice();
+        let t = centerX/this._getWidth();
+        let focusPoint = this.xRange[0] + (this.xRange[1]-this.xRange[0])*t;
+
         let scale = .01;
-        let width = targetXRange[1] - targetXRange[0];
-        let center = targetXRange[0] + width/2;
+        let width = this.xRange[1] - this.xRange[0];
         let newWidth = width*(1+scale*zoomAmount);
-        targetXRange = [center -newWidth/2, center+newWidth/2];
+
+        let targetXRange = [focusPoint-t*newWidth, focusPoint+(1-t)*newWidth];
         this._animateRange('xRange', targetXRange, 250, 'easeOutSine');
         let targetYRange = this._computeYRange(targetXRange);
         this._animateRange('yRange', targetYRange, 250, 'easeOutSine');
