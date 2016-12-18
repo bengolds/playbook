@@ -102,6 +102,7 @@
         "Algebrite": false,
         "math": false,
         "mathBox": false,
-        "THREE": false
+        "THREE": false,
+        "Tweenable": false
     }
 }

@@ -1,4 +1,5 @@
 <script src="mathbox/build/mathbox-bundle.js"></script>
+<script src="libs/shifty.min.js"></script>
 <link rel="import" href="../bower_components/iron-resizable-behavior/iron-resizable-behavior.html">
 <link rel="import" href="../bower_components/iron-icon/iron-icon.html">
 <dom-module id="mathbox-plot">
@@ -16,6 +17,11 @@
         right:0px;
         left:0px;
         transition: filter .5s;
+      }
+      :host(.ungrabbed) #mathbox {
+        cursor: grab;
+        cursor: -webkit-grab;
+        cursor: -moz-grab;
       }
       iron-icon {
         opacity:0;
@@ -35,7 +41,7 @@
         display:block;
       }
       :host(.error) #mathbox{
-        filter:blur(6px);
+        filter:blur(10px);
       }
     </style>
     <style is="custom-style">
@@ -65,7 +71,17 @@
         },
         animated: {
           type: Boolean,
-        }
+        },
+        xRange: {
+          type: Array,
+          value: [0, 10],
+          notify: true
+        },
+        yRange: {
+          type: Array,
+          value: [-1, 1],
+          readonly: true
+        },
       },
 
       observers: [
@@ -78,6 +94,8 @@
 
       listeners: {
         'iron-resize': '_resize',
+        'mousedown': 'onMouseDown',
+        'wheel': 'onWheel'
       },
 
       attached: function() {
@@ -92,7 +110,7 @@
             left: -aspectRatio,
             right: aspectRatio
           },
-          size: {}
+          size:{},
         };
         if (this.width != 0) {
           options.size.width = this.width;
@@ -104,10 +122,12 @@
         this.mathbox.three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
 
         var camera = this.mathbox.camera({
+          proxy: true,
           position: [0,0,1]
         });
 
         this.view = this.mathbox.cartesian();
+        this.view.bind('range', this.getRange.bind(this));
 
         this.data = this.view.interval({
           channels: 2,
@@ -124,6 +144,8 @@
         this._setupGridLines();
         this._initializeAnimators();
         this._plotFunction(false);
+
+        this.classList.add('ungrabbed');
       },
 
       _setupGridLines: function() {
@@ -156,7 +178,8 @@
         var newExpr = (emit, x, i, t) => {
           emit(x, cachedExpr(x));
         };
-        var newRange = this._getBounds(newExpr, [0, 10]);
+
+        var newRange = this._computeYRange(this.xRange);
 
         if (animated) {
           var currExpr = this.data.get('expr');
@@ -164,16 +187,11 @@
             '0.001': {props: {expr: currExpr}},
             '1': {props: {expr: newExpr}},
           });
-
-          var currRange = this.view.get('range');
-          this.cartesianAnim.set('script', {
-            '0.001': {props: {range: currRange}},
-            '1': {props: {range: newRange}},
-          });
+          this._animateYRange(newRange, this.intervalAnim.get('pace')*1000);
         }
         else {
           this.data.set('expr', newExpr);
-          this.view.set('range', newRange);
+          this.yRange = newRange;
         }
       },
 
@@ -201,17 +219,14 @@
       },
 
       _initializeAnimators: function() {
-        this.cartesianAnim = this.mathbox.play({
-          target: 'cartesian',
-          pace: 1,
-        });
         this.intervalAnim = this.mathbox.play({
           target: 'interval',
           pace: 1,
         });
+        this.tweenable = new Tweenable();
       },
 
-      _getBounds: function(dataExpr, range, numSamples=200) {
+      _computeYRange: function(range, numSamples=200) {
         let minY = 0, maxY = 0;
         switch (this.functor.unboundVars().length) {
         case 0:
@@ -223,7 +238,7 @@
           maxY = sampledRange[1];
           break;
         default:
-          return this.view.get('range');
+          return this.yRange;
         }
 
         // Apply some tricks to the resulting values to get a good range
@@ -239,7 +254,7 @@
         }
         minY = Math.min(minY, 0);
         maxY = Math.max(maxY, 0);
-        return [range,[minY, maxY]];
+        return [minY, maxY];
       },
 
       _sampleFuncForBounds: function(functor, range, numSamples) {
@@ -281,6 +296,64 @@
         iterate(0);
         return [minY, maxY];
       },
+
+      onMouseDown: function (e) {
+        this.classList.remove('ungrabbed');
+        this.listen(document, 'mousemove', 'onMouseMove');
+        this.listen(document, 'mouseup', 'onMouseUp');
+        for (let value of ['grabbing', '-webkit-grabbing', '-moz-grabbing']) {
+          document.body.style.cursor = value;
+          if (document.body.style.cursor  === value)
+            break;
+        }
+      },
+
+      onMouseMove: function (e) {
+        this.translateRange(e.movementX);
+      },
+
+      onMouseUp: function (e) {
+        this.classList.add('ungrabbed');
+        this.unlisten(document, 'mousemove', 'onMouseMove');
+        this.unlisten(document, 'mouseup', 'onMouseUp');
+        document.body.style.cursor = null;
+        let targetRange = this._computeYRange(this.xRange);
+        this._animateYRange(targetRange);
+      },
+
+      _animateYRange: function (targetRange, duration=250) {
+        if (this.yRangeTweener) {
+          this.yRangeTweener.stop();
+        }
+        this.yRangeTweener = this.tweenable.tween({
+          from: {'yMin': this.yRange[0], yMax: this.yRange[1]},
+          to: {'yMin': targetRange[0], yMax: targetRange[1]},
+          duration: duration,
+          easing: 'easeInOutSine',
+          step: function (state) {
+            this.yRange[0] = state.yMin;
+            this.yRange[1] = state.yMax;
+          }.bind(this)
+        });
+      },
+
+      onWheel: function (e) {
+        let speed = 1;
+      },
+
+      translateRange(dx) {
+        let scale = (this.xRange[0]-this.xRange[1])/this._getWidth();
+        let change = dx * scale;
+        this.xRange = [this.xRange[0]+change, this.xRange[1]+change];
+      },
+
+      zoomRange(delta) {
+
+      },
+
+      getRange(time, delta) {
+        return [this.xRange, this.yRange];
+      }
 
     });
  </script>

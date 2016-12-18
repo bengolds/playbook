@@ -65,6 +65,7 @@
       catch (e) {
         this.debounce('input-error', (x)=>{
           this.$.errorMessage.textContent = e.message;
+          console.log(e.stack);
           this.fire('input-error');
         }, 500);
       }
