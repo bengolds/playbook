@@ -24,6 +24,7 @@
         cursor: -moz-grab;
       }
       iron-icon {
+        display:none;
         opacity:0;
         position:absolute;
         z-index:1;
@@ -94,7 +95,7 @@
 
       listeners: {
         'iron-resize': '_resize',
-        'mousedown': 'onMouseDown',
+        'down': 'onMouseDown',
         'wheel': 'onWheel'
       },
 
@@ -299,8 +300,8 @@
 
       onMouseDown: function (e) {
         this.classList.remove('ungrabbed');
-        this.listen(document, 'mousemove', 'onMouseMove');
-        this.listen(document, 'mouseup', 'onMouseUp');
+        this.listen(this, 'track', 'onMouseMove');
+        this.listen(this, 'up', 'onMouseUp');
         for (let value of ['grabbing', '-webkit-grabbing', '-moz-grabbing']) {
           document.body.style.cursor = value;
           if (document.body.style.cursor  === value)
@@ -309,13 +310,13 @@
       },
 
       onMouseMove: function (e) {
-        this.translateRange(e.movementX);
+        this.translateRange(e.detail.ddx);
       },
 
       onMouseUp: function (e) {
         this.classList.add('ungrabbed');
-        this.unlisten(document, 'mousemove', 'onMouseMove');
-        this.unlisten(document, 'mouseup', 'onMouseUp');
+        this.unlisten(this, 'track', 'onMouseMove');
+        this.unlisten(this, 'up', 'onMouseUp');
         document.body.style.cursor = null;
         let targetRange = this._computeYRange(this.xRange);
         this._animateYRange(targetRange);
@@ -342,9 +343,11 @@
       },
 
       translateRange(dx) {
-        let scale = (this.xRange[0]-this.xRange[1])/this._getWidth();
-        let change = dx * scale;
-        this.xRange = [this.xRange[0]+change, this.xRange[1]+change];
+        if (dx) {
+          let scale = (this.xRange[0]-this.xRange[1])/this._getWidth();
+          let change = dx * scale;
+          this.xRange = [this.xRange[0]+change, this.xRange[1]+change];
+        }
       },
 
       zoomRange(delta) {
