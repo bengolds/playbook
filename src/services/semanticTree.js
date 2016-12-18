@@ -421,10 +421,6 @@ function parseTokenizedTree(semanticNodes) {
     {ops: ['TimesNode', 'DivideNode'],  rightAssociative: false},
     {ops: ['PlusNode', 'MinusNode'],    rightAssociative: false},
     {ops: ['EqualsNode'],               rightAssociative: true},
-    
-    
-    
-    
   ];
 
   var parsed = semanticNodes.slice();
