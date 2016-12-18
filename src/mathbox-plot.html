@@ -95,7 +95,7 @@
 
       listeners: {
         'iron-resize': '_resize',
-        'down': 'onMouseDown',
+        'down': 'onPanStart',
         'wheel': 'onWheel'
       },
 
@@ -188,7 +188,8 @@
             '0.001': {props: {expr: currExpr}},
             '1': {props: {expr: newExpr}},
           });
-          this._animateYRange(newRange, this.intervalAnim.get('pace')*1000);
+          var duration = this.intervalAnim.get('pace')*1000;
+          this._animateRange('yRange', newRange, duration, 'easeInOutSine');
         }
         else {
           this.data.set('expr', newExpr);
@@ -224,7 +225,7 @@
           target: 'interval',
           pace: 1,
         });
-        this.tweenable = new Tweenable();
+        this.tweeners = {};
       },
 
       _computeYRange: function(range, numSamples=200) {
@@ -298,10 +299,10 @@
         return [minY, maxY];
       },
 
-      onMouseDown: function (e) {
+      onPanStart: function (e) {
         this.classList.remove('ungrabbed');
-        this.listen(this, 'track', 'onMouseMove');
-        this.listen(this, 'up', 'onMouseUp');
+        this.listen(this, 'track', 'onPan');
+        this.listen(this, 'up', 'onPanStop');
         for (let value of ['grabbing', '-webkit-grabbing', '-moz-grabbing']) {
           document.body.style.cursor = value;
           if (document.body.style.cursor  === value)
@@ -309,37 +310,40 @@
         }
       },
 
-      onMouseMove: function (e) {
+      onPan: function (e) {
         this.translateRange(e.detail.ddx);
       },
 
-      onMouseUp: function (e) {
+      onPanStop: function (e) {
         this.classList.add('ungrabbed');
-        this.unlisten(this, 'track', 'onMouseMove');
-        this.unlisten(this, 'up', 'onMouseUp');
+        this.unlisten(this, 'track', 'onPan');
+        this.unlisten(this, 'up', 'onPanStop');
         document.body.style.cursor = null;
-        let targetRange = this._computeYRange(this.xRange);
-        this._animateYRange(targetRange);
+        this._animateRange('yRange', this._computeYRange(this.xRange), 250, 'easeOutSine');
       },
 
-      _animateYRange: function (targetRange, duration=250) {
-        if (this.yRangeTweener) {
-          this.yRangeTweener.stop();
+      _animateRange: function (name, targetRange, duration=250, easing='easeInOutSine') {
+        if (!(name in this.tweeners)) {
+          this.tweeners[name] = new Tweenable();
         }
-        this.yRangeTweener = this.tweenable.tween({
-          from: {'yMin': this.yRange[0], yMax: this.yRange[1]},
-          to: {'yMin': targetRange[0], yMax: targetRange[1]},
+        let tweener = this.tweeners[name];
+        if (tweener.isPlaying) {
+          tweener.stop();
+        }
+        let startRange = this.get(name);
+        tweener.tween({
+          from:     {min:  startRange[0], max:  startRange[1]},
+          to:       {min: targetRange[0], max: targetRange[1]},
           duration: duration,
-          easing: 'easeInOutSine',
-          step: function (state) {
-            this.yRange[0] = state.yMin;
-            this.yRange[1] = state.yMax;
-          }.bind(this)
+          easing:   easing,
+          step: (state) => {
+            this.set(name, [state.min, state.max]);
+          }
         });
       },
 
       onWheel: function (e) {
-        let speed = 1;
+        this.zoomRange(e.deltaY, e.offsetX, e.offsetY);
       },
 
       translateRange(dx) {
@@ -350,8 +354,16 @@
         }
       },
 
-      zoomRange(delta) {
-
+      zoomRange(zoomAmount, centerX, centerY) {
+        let targetXRange = this.xRange.slice();
+        let scale = .01;
+        let width = targetXRange[1] - targetXRange[0];
+        let center = targetXRange[0] + width/2;
+        let newWidth = width*(1+scale*zoomAmount);
+        targetXRange = [center -newWidth/2, center+newWidth/2];
+        this._animateRange('xRange', targetXRange, 250, 'easeOutSine');
+        let targetYRange = this._computeYRange(targetXRange);
+        this._animateRange('yRange', targetYRange, 250, 'easeOutSine');
       },
 
       getRange(time, delta) {
