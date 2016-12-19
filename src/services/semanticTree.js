@@ -558,7 +558,7 @@ Variable.open(function(_) {
       semanticNode = FunctionNode(symbol, 1);
     } 
     else {
-      semanticNode = VariableNode(this.ctrlSeq);
+      semanticNode = VariableNode(this.jQ[0].textContent);
     }
     this.appendDisplayNodes(semanticNode, displayNodes);
     return [semanticNode];

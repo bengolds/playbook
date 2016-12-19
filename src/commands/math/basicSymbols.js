@@ -376,7 +376,7 @@ LatexCmds.Sigma =
 LatexCmds.Phi =
 LatexCmds.Psi =
 LatexCmds.Omega =
-LatexCmds.forall = P(VanillaSymbol, function(_, super_) {
+LatexCmds.forall = P(Variable, function(_, super_) {
   _.init = function(latex) {
     super_.init.call(this,'\\'+latex+' ','&'+latex+';');
   };
