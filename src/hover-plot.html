@@ -4,20 +4,17 @@
   <template>
     <style>
       :host {
-        position: absolute;
-        width: 480px;
-        height: 192px;
       }
       mathbox-plot {
         display:block;
         width: 480px;
         height: 192px;
-        z-index: 10;
+        z-index: 2;
       }
     </style>
-    <paper-card>
-      <mathbox-plot functor="[[functor]]" x-range = '[[xRange]]' width='480' height='190'></mathbox-plot>
-    </paper-card>
+    <arrow-box direction='up'>
+      <mathbox-plot functor="[[functor]]" x-range = '{{xRange]]' width='480' height='190'></mathbox-plot>
+    </arrow-box>
     
   </template>
   <script>
@@ -28,11 +25,10 @@
           type: Object,
         },
         xRange: {
-          type: Array
+          type: Array,
+          notify:true
         }
       },
-      attached: function() {
-      }
     });
   </script>
 </dom-module>

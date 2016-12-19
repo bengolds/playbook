@@ -23,19 +23,23 @@
         position: absolute;
         pointer-events: none;
       }
+      #hoverplot {
+      	position:absolute;
+      }
       .hidden {
         display:none;
       }
 		</style>
 	<mathquill-element id="quill" editable="true" 
    on-edit = 'onEdit'
-   on-element-mouseover='onElementMouseOver'
-   on-element-mouseout= 'onElementMouseOut'>
+   on-element-mouseover='onElementMouseOver'>
   </mathquill-element>
   <p id='errorMessage'></p>
   <function-parser id='parser'></function-parser>
-  <hover-plot class='hidden' id='hoverplot' x-range ='[[xRange]]'></hover-plot>
-  <div id='outline' class='hidden'></div>
+  <div id='mouseOutOverlay'>
+    <hover-plot class='hidden' id='hoverplot' x-range ='{{xRange}}'></hover-plot>
+    <div id='outline' class='hidden'></div>
+  </div>
 
 </template>
 <script>
@@ -49,6 +53,7 @@
       },
       xRange: {
         type: Array,
+        notify:true
       }
     },
 
@@ -59,7 +64,7 @@
 
     onEdit: function() {
       var parser = this.$.parser;
-      //TODO: put in try/catch block
+      this.hideHoverItems();
       try {
         var functionString = this.$.quill.semanticText();
         if (functionString == '') {
@@ -126,21 +131,21 @@
       }
       let hoveredDisplayNodes = applicationNode.getDisplayNodes();
 
-      this.drawOutline(hoveredDisplayNodes);
-      this.createHoverPlot(0, 0, applicationNode.toString());
-    },
-
-    onElementMouseOut: function(e, details) {
-      this.removeOutline();
-      this.$.hoverplot.classList.add('hidden');
+      let outlineRect = this.getBoundingBox(hoveredDisplayNodes);
+      this.drawOutline(outlineRect);
+      let xCenter = outlineRect.left + (outlineRect.right-outlineRect.left)/2;
+      this.createHoverPlot(xCenter, outlineRect.bottom, applicationNode.toString());
+      this.listen(this.$$('#mouseOutOverlay'), 'mouseleave', 'hideHoverItems');
     },
 
     createHoverPlot: function(x, y, funcString) {
       this.$.hoverplot.functor = this.$.parser.getFunctor(funcString);
       this.$.hoverplot.classList.remove('hidden');
+      this.$.hoverplot.style.top = y+'px';
+      this.$.hoverplot.style.left = x-this.$.hoverplot.offsetWidth/2+'px';
     },
 
-    drawOutline: function(nodes) {
+    getBoundingBox: function (nodes) {
       let merge = (r1, r2) => {
         return {
           left: Math.min(r1.left, r2.left),
@@ -158,28 +163,40 @@
       };
       for (var i = 0; i < nodes.length; i++) {
         let node = nodes[i].jQ[0];
-        let rect = {
-          left: node.offsetLeft,
-          right: node.offsetLeft+node.offsetWidth,
-          top: node.offsetTop,
-          bottom: node.offsetTop+node.offsetHeight
-        };
+        let rect = this.makeRect(node);
         finalRect = merge(finalRect, rect);
       }
+      return finalRect;
+    },
 
+    makeRect: function (node) {
+      return {
+        left: node.offsetLeft,
+        right: node.offsetLeft + node.offsetWidth,
+        top: node.offsetTop,
+        bottom: node.offsetTop+node.offsetHeight,
+      };
+    },
+
+    drawOutline: function(rect) {
       let outline = this.$.outline;
-      outline.style.top = finalRect.top + 'px';
-      outline.style.left = finalRect.left + 'px';
-      outline.style.width = finalRect.right-finalRect.left + 'px';
-      outline.style.height = finalRect.bottom-finalRect.top + 'px';
+      outline.style.top = rect.top + 'px';
+      outline.style.left = rect.left + 'px';
+      outline.style.width = rect.right-rect.left + 'px';
+      outline.style.height = rect.bottom-rect.top + 'px';
 
       outline.classList.remove('hidden');
     },
 
     removeOutline: function () {
       this.$.outline.classList.add('hidden');
-    }
+    },
 
+    hideHoverItems: function () {
+      this.unlisten(this.$$('#mouseOutOverlay'), 'mouseleave', 'hideHoverItems');
+      this.$.hoverplot.classList.add('hidden'); 
+      this.removeOutline();
+    }
 
   });
 </script>

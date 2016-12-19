@@ -63,8 +63,9 @@
       showHoverBar: function (target) {
         let actionbar = this.$.actionbar;
         actionbar.classList.remove('hidden');
-        var topY = target.offsetTop+target.offsetHeight;
-        var middleX = target.offsetLeft + target.offsetWidth/2 - actionbar.offsetWidth/2;
+        let pushDown = 10;
+        let topY = target.offsetTop+target.offsetHeight-pushDown;
+        let middleX = target.offsetLeft + target.offsetWidth/2 - actionbar.offsetWidth/2;
         actionbar.style.left = middleX + 'px';
         actionbar.style.bottom = topY + 'px';
         actionbar.variable = target.textContent;

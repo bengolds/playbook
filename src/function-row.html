@@ -18,7 +18,7 @@
       }
     </style>
     <function-signature functor='{{functor}}' symbol='f'></function-signature>
-    <function-input id='input' functor='{{functor}}' x-range='[[xRange]]'></function-input>
+    <function-input id='input' functor='{{functor}}' x-range='{{xRange}}'></function-input>
     <template is='dom-repeat' items='[[_getBoundVarsArray(functor, functor.boundVars)]]'>
       <variable-slider id='slider' symbol='{{item.symbol}}' functor='{{functor}}'></variable-slider>
     </template>
