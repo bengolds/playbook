@@ -103,6 +103,7 @@
         "math": false,
         "mathBox": false,
         "THREE": false,
-        "Tweenable": false
+        "Tweenable": false,
+        "Functor": true
     }
 }

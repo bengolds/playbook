@@ -16,7 +16,7 @@
       }
     </style>
     <paper-card>
-      <mathbox-plot func="[[func]]" width='480' height='190'></mathbox-plot>
+      <mathbox-plot functor="[[functor]]" width='480' height='190'></mathbox-plot>
     </paper-card>
     
   </template>
@@ -24,9 +24,8 @@
     Polymer({
       is: 'hover-plot',
       properties: {
-        func: {
+        functor: {
           type: Object,
-          value: {eval:(x)=>{return 0;}}
         }
       },
       attached: function() {

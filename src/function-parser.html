@@ -21,12 +21,9 @@
       isParseable: function(inputString) {
         try {
           var parsed = this._parseFunction(inputString);
-          console.log('successfully parsed function: ' + inputString);
           return true;
         }
         catch(error) {
-          console.log('couldnt parse function: ' + inputString);
-          console.log(error);
           return false;
         }
       },
