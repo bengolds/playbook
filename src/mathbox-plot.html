@@ -45,8 +45,6 @@
         filter:blur(10px);
       }
     </style>
-    <style is="custom-style">
-    </style>
     <iron-icon icon='error'></iron-icon>
     <div id='mathbox' class='blur'></div>
     
@@ -75,8 +73,7 @@
         },
         xRange: {
           type: Array,
-          value: [0, 10],
-          notify: true
+          notify: true,
         },
         yRange: {
           type: Array,
@@ -97,6 +94,10 @@
         'iron-resize': '_resize',
         'down': 'onPanStart',
         'wheel': 'onWheel'
+      },
+
+      observe: function (argument) {
+        console.log(argument);
       },
 
       attached: function() {

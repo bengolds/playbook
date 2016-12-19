@@ -16,7 +16,7 @@
       }
     </style>
     <paper-card>
-      <mathbox-plot functor="[[functor]]" width='480' height='190'></mathbox-plot>
+      <mathbox-plot functor="[[functor]]" x-range = '[[xRange]]' width='480' height='190'></mathbox-plot>
     </paper-card>
     
   </template>
@@ -26,6 +26,9 @@
       properties: {
         functor: {
           type: Object,
+        },
+        xRange: {
+          type: Array
         }
       },
       attached: function() {
