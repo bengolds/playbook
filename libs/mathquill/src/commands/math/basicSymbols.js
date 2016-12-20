@@ -282,32 +282,22 @@ LatexCmds['%'] = bind(NonSymbolaSymbol, '\\%', '%');
 
 //the following are all Greek to me, but this helped a lot: http://www.ams.org/STIX/ion/stixsig03.html
 
-//lowercase Greek letter variables
-LatexCmds.alpha =
-LatexCmds.beta =
-LatexCmds.gamma =
-LatexCmds.delta =
-LatexCmds.zeta =
-LatexCmds.eta =
-LatexCmds.theta =
-LatexCmds.iota =
-LatexCmds.kappa =
-LatexCmds.mu =
-LatexCmds.nu =
-LatexCmds.xi =
-LatexCmds.rho =
-LatexCmds.sigma =
-LatexCmds.tau =
-LatexCmds.chi =
-LatexCmds.psi =
-LatexCmds.omega = P(Variable, function(_, super_) {
-  _.init = function(latex) {
-    super_.init.call(this,'\\'+latex+' ','&'+latex+';');
-  };
-});
+var lowerCaseGreekNames = ['alpha', 'beta', 'gamma', 'delta', 'zeta', 'eta', 'theta', 'iota', 'kappa', 'mu', 'nu', 'xi', 'rho', 'sigma', 'tau', 'chi', 'psi', 'omega'];
+var lowerCaseGreekSymbols = ['α','β','γ','δ','ζ','η','θ','ι','κ','μ','ν','ξ','ρ','σ','τ','χ','ψ','ω'];
+for (var i = 0; i < lowerCaseGreekNames.length; i++) {
+  let name = lowerCaseGreekNames[i];
+  let symbol = lowerCaseGreekSymbols[i];
+  LatexCmds[name] = LatexCmds[symbol] = 
+  P(Variable, function(_, super_) {
+    _.init = function(latex) {
+      super_.init.call(this,'\\'+name+' ','&'+name+';');
+    };
+  });
+}
 
 //why can't anybody FUCKING agree on these
 LatexCmds.phi = //W3C or Unicode?
+LatexCmds['ϕ'] =
   bind(Variable,'\\phi ','&#981;');
 
 LatexCmds.phiv = //Elsevier and 9573-13
@@ -315,6 +305,7 @@ LatexCmds.varphi = //AMS and LaTeX
   bind(Variable,'\\varphi ','&phi;');
 
 LatexCmds.epsilon = //W3C or Unicode?
+LatexCmds['ϵ'] =
   bind(Variable,'\\epsilon ','&#1013;');
 
 LatexCmds.epsiv = //Elsevier and 9573-13
@@ -337,6 +328,7 @@ LatexCmds.thetasym = //W3C/Unicode
 
 LatexCmds.upsilon = //AMS and LaTeX and W3C/Unicode
 LatexCmds.upsi = //Elsevier and 9573-13
+LatexCmds['υ'] =
   bind(Variable,'\\upsilon ','&upsilon;');
 
 //these aren't even mentioned in the HTML character entity references
@@ -355,27 +347,32 @@ LatexCmds.varrho = //AMS and LaTeX
 
 //Greek constants, look best in non-italicized Times New Roman
 LatexCmds.pi = LatexCmds['π'] = bind(NonSymbolaSymbol,'\\pi ','&pi;');
-LatexCmds.lambda = bind(NonSymbolaSymbol,'\\lambda ','&lambda;');
+LatexCmds.lambda = LatexCmds['λ'] = bind(NonSymbolaSymbol,'\\lambda ','&lambda;');
 
 //uppercase greek letters
 
+// var upperCaseGreek = ['Α','Β','Γ','Δ','Ε','Ζ','Η','Θ','Ι','Κ','Λ','Μ','Ν','Ξ','Ο','Π','Ρ','Σ','Τ','ϒ','Φ','Χ','Ψ','Ω'];
 LatexCmds.Upsilon = //LaTeX
 LatexCmds.Upsi = //Elsevier and 9573-13
 LatexCmds.upsih = //W3C/Unicode "upsilon with hook"
 LatexCmds.Upsih = //'cos it makes sense to me
+LatexCmds['ϒ'] =
   bind(Variable,'\\Upsilon ','<var style="font-family: serif">&upsih;</var>'); //Symbola's 'upsilon with a hook' is a capital Y without hooks :(
 
+var upperCaseGreekNames = ['Gamma', 'Delta', 'Theta', 'Lambda', 'Xi', 'Pi', 'Sigma', 'Phi', 'Psi', 'Omega'];
+var upperCaseGreekSymbols = ['Γ','Δ','Θ','Λ','Ξ','Π','Σ','Φ','Ψ','Ω'];
+for (var i = 0; i < lowerCaseGreekNames.length; i++) {
+  let name = upperCaseGreekNames[i];
+  let symbol = upperCaseGreekSymbols[i];
+  LatexCmds[name] = LatexCmds[symbol] = 
+  P(Variable, function(_, super_) {
+    _.init = function(latex) {
+      super_.init.call(this,'\\'+name+' ','&'+name+';');
+    };
+  });
+}
+
 //other symbols with the same LaTeX command and HTML character entity reference
-LatexCmds.Gamma =
-LatexCmds.Delta =
-LatexCmds.Theta =
-LatexCmds.Lambda =
-LatexCmds.Xi =
-LatexCmds.Pi =
-LatexCmds.Sigma =
-LatexCmds.Phi =
-LatexCmds.Psi =
-LatexCmds.Omega =
 LatexCmds.forall = P(Variable, function(_, super_) {
   _.init = function(latex) {
     super_.init.call(this,'\\'+latex+' ','&'+latex+';');
