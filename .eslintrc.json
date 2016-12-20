@@ -65,6 +65,7 @@
         "Parser": true,
         "MathCommand": true,
         "VanillaSymbol": true,
+        "NonSymbolaSymbol": true,
         "TextBlock": true,
         "BinaryOperator": true,
         "Digit": true,

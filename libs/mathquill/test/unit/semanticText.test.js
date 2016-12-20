@@ -39,11 +39,44 @@ suite('Semantic Tree', function() {
     assertSemanticText('\\frac{d}{dx}xy^z+w', '(d((x*(y^z)),x,1)+w)');
     //Test second-order derivatives
     assertSemanticText('\\frac{d^5}{dx^5}x', 'd(x,x,5)');
+    //Test left associativity
+    assertSemanticText('a-b+c', '((a-b)+c)');
+  });
+
+  test('greek alphabet tests', function() {
+    var letterNames = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota', 'kappa', 'lambda', 'mu', 'nu', 'xi', 'omicron', 'pi', 'rho', 'sigma', 'tau', 'upsilon', 'phi', 'chi', 'psi', 'omega'];
+    var upperCaseSymbols = ['Α','Β','Γ','Δ','Ε','Ζ','Η','Θ','Ι','Κ','Λ','Μ','Ν','Ξ','Ο','Π','Ρ','Σ','Τ','ϒ','Φ','Χ','Ψ','Ω'];
+    var lowerCaseSymbols = ['α','β','γ','δ','ϵ','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','ϕ','χ','ψ','ω'];
+
+    for (var i = 0; i < letterNames.length; i++) {
+      var letterName = letterNames[i];
+      if (letterName == 'omicron')
+        continue;
+      var lowerCaseCmd = '\\' + letterName;
+      var upperCaseCmd = '\\' + letterName.charAt(0).toUpperCase() + letterName.slice(1);
+      assertSemanticText(lowerCaseCmd, lowerCaseSymbols[i]);
+      if (letterName == 'alpha' || 
+        letterName == 'beta' || 
+        letterName == 'epsilon' || 
+        letterName == 'zeta' ||
+        letterName == 'eta' ||
+        letterName == 'iota' || 
+        letterName == 'kappa' ||
+        letterName == 'mu' ||
+        letterName == 'nu' ||
+        letterName == 'rho' ||
+        letterName == 'tau' ||
+        letterName == 'chi'
+
+        )
+        continue;
+      assertSemanticText(upperCaseCmd, upperCaseSymbols[i]);
+      assertSemanticText(lowerCaseSymbols[i], lowerCaseSymbols[i]);
+      assertSemanticText(upperCaseSymbols[i], upperCaseSymbols[i]);
+    }
   });
 
   test('new tests', function() {
-    //Test left associativity
-    assertSemanticText('a-b+c', '((a-b)+c)');
   });
 
 });
