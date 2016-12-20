@@ -565,6 +565,15 @@ Variable.open(function(_) {
   };
 });
 
+
+NonSymbolaSymbol.open(function (_) {
+  _.toSemanticNodes = function (remainingNodes) {
+    var semanticNode = VariableNode(this.jQ[0].textContent);
+    this.appendDisplayNodes(semanticNode, [this]);
+    return [semanticNode];
+  };
+});
+
 //ALSO DERIVATIVES
 Fraction.open(function (_) {
   _.isDerivative = function() {
@@ -679,7 +688,7 @@ SummationNotation.open(function(_) {
     var from = bottom.args[1];
 
     if (remainingNodes.length > 0) {
-      var summand = gobbleRightTerms(remainingNodes);
+      // var summand = gobbleRightTerms(remainingNodes);
     }
 
     var semanticNode = SummationNode(boundVar, from, to, summand);

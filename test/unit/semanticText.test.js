@@ -39,11 +39,33 @@ suite('Semantic Tree', function() {
     assertSemanticText('\\frac{d}{dx}xy^z+w', '(d((x*(y^z)),x,1)+w)');
     //Test second-order derivatives
     assertSemanticText('\\frac{d^5}{dx^5}x', 'd(x,x,5)');
+    //Test left associativity
+    assertSemanticText('a-b+c', '((a-b)+c)');
+  });
+
+  test('greek alphabet tests', function() {
+    var letterNames = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota', 'kappa', 'lambda', 'mu', 'nu', 'xi', 'omicron', 'pi', 'rho', 'sigma', 'tau', 'upsilon', 'phi', 'chi', 'psi', 'omega'];
+    var upperCaseSymbols = ['Α','Β','Γ','Δ','Ε','Ζ','Η','Θ','Ι','Κ','Λ','Μ','Ν','Ξ','Ο','Π','Ρ','Σ','Τ','ϒ','Φ','Χ','Ψ','Ω'];
+    var lowerCaseSymbols = ['α','β','γ','δ','ϵ','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','ϕ','χ','ψ','ω'];
+    var skipLowerCase = ['omicron'];
+    var skipUpperCase = ['alpha', 'beta', 'epsilon', 'zeta', 'eta', 'iota', 'kappa', 'mu', 'nu', 'omicron', 'rho', 'tau', 'chi'];
+
+    for (var i = 0; i < letterNames.length; i++) {
+      var letterName = letterNames[i];
+      var lowerCaseCmd = '\\' + letterName;
+      var upperCaseCmd = '\\' + letterName.charAt(0).toUpperCase() + letterName.slice(1);
+      if (!skipLowerCase.includes(letterName)) {
+        assertSemanticText(lowerCaseCmd, lowerCaseSymbols[i]);
+        assertSemanticText(lowerCaseSymbols[i], lowerCaseSymbols[i]);
+      }
+      if (!skipUpperCase.includes(letterName)) {
+        assertSemanticText(upperCaseCmd, upperCaseSymbols[i]);
+        assertSemanticText(upperCaseSymbols[i], upperCaseSymbols[i]);
+      }
+    }
   });
 
   test('new tests', function() {
-    //Test left associativity
-    assertSemanticText('a-b+c', '((a-b)+c)');
   });
 
 });
