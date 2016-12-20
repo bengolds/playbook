@@ -131,6 +131,7 @@ var Letter = P(Variable, function(_, super_) {
             letter.italicize(false);
             var last = letter;
           }
+          last.endOfOperator = true;
 
           var isBuiltIn = BuiltInOpNames.hasOwnProperty(word);
           first.ctrlSeq = (isBuiltIn ? '\\' : '\\operatorname{') + first.ctrlSeq;
@@ -375,7 +376,7 @@ LatexCmds.Sigma =
 LatexCmds.Phi =
 LatexCmds.Psi =
 LatexCmds.Omega =
-LatexCmds.forall = P(VanillaSymbol, function(_, super_) {
+LatexCmds.forall = P(Variable, function(_, super_) {
   _.init = function(latex) {
     super_.init.call(this,'\\'+latex+' ','&'+latex+';');
   };

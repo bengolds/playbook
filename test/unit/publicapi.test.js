@@ -242,13 +242,13 @@ suite('Public API', function() {
               assert.equal(_mq.id, mq.id);
               upCounter += 1;
             },
-            moveOutOf: function(_dir, _mq) {
+            moveOutOf: function(_mq, _dir) {
               assert.equal(arguments.length, 2);
               assert.equal(_mq.id, mq.id);
               dir = _dir;
               moveCounter += 1;
             },
-            deleteOutOf: function(_dir, _mq) {
+            deleteOutOf: function(_mq, _dir) {
               assert.equal(arguments.length, 2);
               assert.equal(_mq.id, mq.id);
               dir = _dir;
