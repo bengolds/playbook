@@ -48,7 +48,6 @@
       },
 
       attached: function () {
-        // this.$.plot.xRange = this.xRange;
       },
 
       pinVariable: function (_, detail) {
@@ -67,11 +66,11 @@
       },
 
       inputOk: function (_) {
-        this.$.plot.classList.remove('error');
+        this.$.plot.inputOk = true;
       },
 
       inputError: function (_) {
-        this.$.plot.classList.add('error');
+        this.$.plot.inputOk = false;
       },
 
       _getBoundVarsArray: function (_) {
