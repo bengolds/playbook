@@ -272,7 +272,7 @@ LatexCmds.$ = bind(VanillaSymbol, '\\$', '$');
 // does not use Symbola font
 var NonSymbolaSymbol = P(Symbol, function(_, super_) {
   _.init = function(ch, html) {
-    super_.init.call(this, ch, '<span class="mq-nonSymbola">'+(html || ch)+'</span>');
+    super_.init.call(this, ch, '<var class="mq-nonSymbola">'+(html || ch)+'</var>');
   };
 });
 
