@@ -1,1 +1,0 @@
-../../../mathquill/build/mathquill.js
