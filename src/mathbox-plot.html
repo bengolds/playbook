@@ -1,4 +1,5 @@
 <script src="../libs/mathbox/build/mathbox-bundle.js"></script>
+<script src="warm-cool-map.js"></script>
 <script src="../bower_components/shifty/dist/shifty.min.js"></script>
 <link rel="import" href="../bower_components/iron-resizable-behavior/iron-resizable-behavior.html">
 <link rel="import" href="../bower_components/iron-icon/iron-icon.html">
@@ -129,7 +130,7 @@
         });
 
         this.tweeners = {};
-        this.currDimensions = 1;
+        this.currDimensions = 0;
         this._setupDataAndDisplay(this.currDimensions);
         this._resize();
         this._setupGridLines();
@@ -180,15 +181,15 @@
       _functorChanged: function() {
         if (this.initialized) {
           let newDimensions = this.functor.unboundVars().length;
-          let dimensionsOk = newDimensions < 2;
+          let dimensionsOk = newDimensions < 3;
           if (this._shouldReinitialize(newDimensions) && dimensionsOk) {
             this._setupDataAndDisplay(newDimensions);
           } 
           if (dimensionsOk) {
             this.dimensionsOk = true;
             this.cancelDebouncer('dimensions-error');
-            this._plotFunction(this.animated);
             this.currDimensions = newDimensions;
+            this._plotFunction(this.animated);
           } 
           else {
             this.debounce('dimensions-error', (_)=> {
@@ -224,6 +225,7 @@
         this.mathbox.remove('#' + dataId);
         this.mathbox.remove('#' + displayId);
         this.mathbox.remove('#' + animId);
+        this.mathbox.remove('#flat');
 
         switch(numDimensions) {
         case 0:
@@ -242,13 +244,53 @@
             zIndex: 2,
             id: displayId
           });
-          this.intervalAnim = this.mathbox.play({
+          this.dataAnim = this.mathbox.play({
             target: '#data',
             pace: 1,
             id: animId
           });
           break;
+        case 2:
+          var dim = 100;
+          var flat = this.view.area({
+            channels: 3,
+            id: 'flat',
+            width: dim,
+            height: dim,
+            expr: (emit, x, y) => {
+              emit(x, y, 0);
+            }
+          });
+          this.data = this.view.area({
+            channels: 4,
+            id: dataId,
+            width: dim,
+            height: dim
+          });
+          this.display = this.view.surface({
+            colors: '#' + dataId,
+            points: '#flat',
+            id: displayId
+          });
+          this.dataAnim = this.mathbox.play({
+            target: '#data',
+            pace: 1,
+            id: animId
+          });
         default:
+        }
+      },
+
+      _getUnboundRanges: function () {
+        switch (this.currDimensions) {
+        case 0:
+          return [];
+        case 1:
+          return [this.xRange];
+        case 2:
+          return [this.xRange, this.yRange];
+        default:
+          return null;
         }
       },
 
@@ -256,25 +298,50 @@
         if (!this.functor) {
           return;
         }
-        var cachedExpr = this.functor.eval.bind(this.functor);
-        var newExpr = (emit, x, i, t) => {
-          emit(x, cachedExpr(x));
-        };
 
-        var newRange = this._computeYRange(this.xRange);
+        let minMax = this._sampleFuncForBounds(this.functor, this._getUnboundRanges());
+
+        let cachedEval = this.functor.eval.bind(this.functor);
+        let newExpr; 
+
+        switch (this.currDimensions) {
+        case 0:
+        case 1:
+          newExpr = (emit, x) => {
+            emit(x, cachedEval(x));
+          };
+          var newRange = this._guessYRange(minMax);
+          break;
+        case 2:
+          //The color range should be symmetric, centered on 0.
+          var largestDisplacement = Math.max(Math.abs(minMax[0]), Math.abs(minMax[1]));
+          var fixedRange = [-largestDisplacement, largestDisplacement];
+          var rangeWidth = fixedRange[1]-fixedRange[0];
+          var colorMap = (val) => {
+            var t = (val-fixedRange[0])/rangeWidth;
+            var i = Math.round(t*warmCoolMap.length);
+            i = Math.min(Math.max(0, i), warmCoolMap.length-1);
+            return warmCoolMap[i];
+          };
+          newExpr = (emit, x, y) => {
+            let val = cachedEval(x, y);
+            emit (...colorMap(val), 255);
+          };
+          break;
+        }
 
         if (animated && this.data.get('expr')) {
           var currExpr = this.data.get('expr');
-          this.intervalAnim.set('script', {
+          this.dataAnim.set('script', {
             '0.001': {props: {expr: currExpr}},
             '1': {props: {expr: newExpr}},
           });
-          var duration = this.intervalAnim.get('pace')*1000;
-          this._animateRange('yRange', newRange, duration, 'easeInOutSine');
+          var duration = this.dataAnim.get('pace')*1000;
+          // this._animateRange('yRange', newRange, duration, 'easeInOutSine');
         }
         else {
           this.data.set('expr', newExpr);
-          this.yRange = newRange;
+          // this.yRange = newRange;
         }
       },
 
@@ -298,16 +365,17 @@
         });
       },
 
-      _computeYRange: function(range, numSamples=200) {
+      //Apply some heuristics to get a good-looking range
+      _guessYRange: function(minMax) {
         let minY = 0, maxY = 0;
-        switch (this.functor.unboundVars().length) {
+        switch (this.currDimensions) {
         case 0:
           minY = maxY = this.functor.eval();
           break;
         case 1:
-          var sampledRange = this._sampleFuncForBounds(this.functor, range, numSamples);
-          minY = sampledRange[0];
-          maxY = sampledRange[1];
+        case 2:
+          minY = minMax[0];
+          maxY = minMax[1];
           break;
         default:
           return this.yRange;
@@ -329,12 +397,16 @@
         return [minY, maxY];
       },
 
-      _sampleFuncForBounds: function(functor, range, numSamples) {
+      _sampleFuncForBounds: function(functor, unboundRanges, numSamples=200) {
         let f = functor.clone();
         
-        if (f.unboundVars().length == 1) {
-          f.pinVar(f.unboundVars()[0], 0, range);
+        let unboundVars = f.unboundVars();
+        for (var i = 0; i < unboundRanges.length; i++) {
+          let range = unboundRanges[i];
+          let unboundVar = unboundVars[i];
+          f.pinVar(unboundVar, 0, range);
         }
+
 
         let iterateSteps = {};
         let numSamplePoints = Math.round(Math.pow(numSamples, 1/f.symbols.length));
@@ -387,6 +459,7 @@
       },
 
       onPanStop: function (e) {
+        //TODO: MAKE WORK WITH 2D
         this.classList.add('ungrabbed');
         this.lastPanX = null;
         this.unlisten(this, 'track', 'onPan');
@@ -408,6 +481,7 @@
       },
 
       zoomRange(zoomAmount, centerX, centerY) {
+        //TODO: MAKE WORK WITH 2D
         let t = centerX/this._getWidth();
         let focusPoint = this.xRange[0] + (this.xRange[1]-this.xRange[0])*t;
 

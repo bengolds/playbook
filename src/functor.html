@@ -6,15 +6,14 @@ class Functor {
     this.boundVars = {};
   }
 
-  eval(x) {
+  eval(...args) {
     var scope = {};
     var unboundVars = this.unboundVars();
-    if (unboundVars.length == 1) {
-      scope[unboundVars[0]] = x;
+    if (unboundVars.length <= args.length) {
+      for (var i = 0; i < unboundVars.length; i++) {
+        scope[unboundVars[i]] = args[i];
+      }
     } 
-    else if (unboundVars.length > 1) {
-      return 0;
-    }
 
     Object.assign(scope, this.scope());
     return this.compiled.eval(scope);

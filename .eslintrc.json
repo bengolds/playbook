@@ -105,6 +105,7 @@
         "mathBox": false,
         "THREE": false,
         "Tweenable": false,
-        "Functor": true
+        "Functor": true,
+        "warmCoolMap": true
     }
 }
