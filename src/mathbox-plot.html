@@ -541,11 +541,7 @@
         let targetXRange = this.scaleRangeAround(this.xRange, tX, 1+zoomAmount);
         this._animateRange('xRange', targetXRange, 250, 'easeOutSine');
 
-        switch (this.currDimensions) {
-        case 0:
-        case 1:
-          break;
-        case 2:
+        if (this.currDimensions == 2) {
           var targetYRange = this.scaleRangeAround(this.yRange, tY, 1+zoomAmount);
           this._animateRange('yRange', targetYRange, 250, 'easeOutSine');
         }
