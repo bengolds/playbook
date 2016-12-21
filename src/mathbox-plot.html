@@ -288,7 +288,7 @@
         case 1:
           return [this.xRange];
         case 2:
-          return [this.xRange, this.yRange];
+          return [this.xRange, this.xRange];
         default:
           return null;
         }
@@ -299,10 +299,11 @@
           return;
         }
 
-        let minMax = this._sampleFuncForBounds(this.functor, this._getUnboundRanges());
+        let minMax = this._sampleFuncForBounds(this.functor, this._getUnboundRanges(), 5000);
 
         let cachedEval = this.functor.eval.bind(this.functor);
         let newExpr; 
+        let newRange;
 
         switch (this.currDimensions) {
         case 0:
@@ -310,14 +311,18 @@
           newExpr = (emit, x) => {
             emit(x, cachedEval(x));
           };
-          var newRange = this._guessYRange(minMax);
+          newRange = this._guessYRange(minMax);
           break;
         case 2:
+          minMax = this._guessYRange(minMax);
           //The color range should be symmetric, centered on 0.
           var largestDisplacement = Math.max(Math.abs(minMax[0]), Math.abs(minMax[1]));
           var fixedRange = [-largestDisplacement, largestDisplacement];
           var rangeWidth = fixedRange[1]-fixedRange[0];
           var colorMap = (val) => {
+            if (typeof val != 'number') {
+              return [0,0,0];
+            }
             var t = (val-fixedRange[0])/rangeWidth;
             var i = Math.round(t*warmCoolMap.length);
             i = Math.min(Math.max(0, i), warmCoolMap.length-1);
@@ -327,6 +332,7 @@
             let val = cachedEval(x, y);
             emit (...colorMap(val), 255);
           };
+          newRange = this.xRange;
           break;
         }
 
@@ -336,12 +342,16 @@
             '0.001': {props: {expr: currExpr}},
             '1': {props: {expr: newExpr}},
           });
-          var duration = this.dataAnim.get('pace')*1000;
-          // this._animateRange('yRange', newRange, duration, 'easeInOutSine');
         }
         else {
           this.data.set('expr', newExpr);
-          // this.yRange = newRange;
+        }
+        if (animated) {
+          var duration = this.dataAnim.get('pace')*1000;
+          this._animateRange('yRange', newRange, duration, 'easeInOutSine');
+
+        } else {
+          this.yRange = newRange;
         }
       },
 
@@ -401,12 +411,14 @@
         let f = functor.clone();
         
         let unboundVars = f.unboundVars();
+        if (unboundVars == 0) {
+          return [f.eval(), f.eval()];
+        }
         for (var i = 0; i < unboundRanges.length; i++) {
           let range = unboundRanges[i];
           let unboundVar = unboundVars[i];
           f.pinVar(unboundVar, 0, range);
         }
-
 
         let iterateSteps = {};
         let numSamplePoints = Math.round(Math.pow(numSamples, 1/f.symbols.length));

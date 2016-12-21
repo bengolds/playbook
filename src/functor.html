@@ -2,7 +2,7 @@
 class Functor {
   constructor(compiled, symbols) {
     this.compiled = compiled;
-    this.symbols = symbols.slice();
+    this.symbols = symbols.slice().sort();
     this.boundVars = {};
   }
 
