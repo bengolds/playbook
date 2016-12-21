@@ -315,7 +315,22 @@
           this._changeExpr(newExpr, animated);
           break;
         case 2:
+          var colorMap = (val) => {
+            if (typeof val != 'number') {
+              return [0,0,0];
+            }
+            var t = (val-this.colorRange[0])/(this.colorRange[1]-this.colorRange[0]);
+            var i = Math.round(t*warmCoolMap.length);
+            i = Math.min(Math.max(0, i), warmCoolMap.length-1);
+            return warmCoolMap[i];
+          };
+          var cachedEval = this.functor.eval.bind(this.functor);
+          var newExpr = (emit, x, y) => {
+            let val = cachedEval(x, y);
+            emit (...colorMap(val), 255);
+          };
           this._resetMinMax(animated);
+          this._changeExpr(newExpr, animated);
           break;
         }
       },
@@ -329,16 +344,21 @@
           tweener.stop();
         }
         let startRange = this.get(name);
-        tweener.tween({
-          from:     {min:  startRange[0], max:  startRange[1]},
-          to:       {min: targetRange[0], max: targetRange[1]},
-          duration: duration,
-          easing:   easing,
-          step: (state) => {
-            this.set(name, [state.min, state.max]);
-          }
-        });
-        this.tweenerTargets[name] = targetRange;
+        if (!startRange) {
+          this.set(name, targetRange);
+        } 
+        else {
+          tweener.tween({
+            from:     {min:  startRange[0], max:  startRange[1]},
+            to:       {min: targetRange[0], max: targetRange[1]},
+            duration: duration,
+            easing:   easing,
+            step: (state) => {
+              this.set(name, [state.min, state.max]);
+            }
+          });
+          this.tweenerTargets[name] = targetRange;
+        }
       },
 
       //Where is the range now, or where will it be after it stops moving?
@@ -447,23 +467,13 @@
           minMax = this._guessYRange(minMax);
           //The color range should be symmetric, centered on 0.
           var largestDisplacement = Math.max(Math.abs(minMax[0]), Math.abs(minMax[1]));
-          var fixedRange = [-largestDisplacement, largestDisplacement];
-          var rangeWidth = fixedRange[1]-fixedRange[0];
-          var colorMap = (val) => {
-            if (typeof val != 'number') {
-              return [0,0,0];
-            }
-            var t = (val-fixedRange[0])/rangeWidth;
-            var i = Math.round(t*warmCoolMap.length);
-            i = Math.min(Math.max(0, i), warmCoolMap.length-1);
-            return warmCoolMap[i];
-          };
-          var cachedEval = this.functor.eval.bind(this.functor);
-          var newExpr = (emit, x, y) => {
-            let val = cachedEval(x, y);
-            emit (...colorMap(val), 255);
-          };
-          this._changeExpr(newExpr, animated);
+          var newColorRange = [-largestDisplacement, largestDisplacement];
+          if (animated) {
+            this._animateRange('colorRange', newColorRange, 250, 'easeOutSine');
+          }
+          else {
+            this.colorRange = newColorRange;
+          }
           break;
         }
       },
