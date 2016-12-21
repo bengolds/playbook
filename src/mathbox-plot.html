@@ -250,6 +250,7 @@
             pace: 1,
             id: animId
           });
+          this._animateRange('xRange', [-5, 5], duration, 'easeInOutSine');
           break;
         case 2:
           var dim = 100;
@@ -432,7 +433,7 @@
         switch(this.currDimensions) {
         case 0:
         case 1:
-          var newRange = this._sampleFuncForBounds(this.functor, [this.xRange]);
+          var newRange = this._sampleFuncForBounds(this.functor, this._getUnboundRanges());
           newRange = this._guessYRange(newRange);
           if (animated) {
             this._animateRange('yRange', newRange, 250, 'easeOutSine');
