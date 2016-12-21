@@ -516,7 +516,9 @@
       },
 
       onWheel: function (e) {
-        this.zoomRange(e.deltaY, e.offsetX, e.offsetY);
+        let zoomScale = .01;
+        let zoomAmount = zoomScale*e.deltaY;
+        this.zoomRange(zoomAmount, e.offsetX, e.offsetY);
       },
 
       translateRange(dx, dy) {
@@ -533,18 +535,29 @@
       },
 
       zoomRange(zoomAmount, centerX, centerY) {
-        let t = centerX/this._getWidth();
-        let focusPoint = this.xRange[0] + (this.xRange[1]-this.xRange[0])*t;
+        let tX = centerX/this._getWidth();
+        let tY = centerY/this._getHeight();
 
-        let scale = .01;
-        let width = this.xRange[1] - this.xRange[0];
-        let newWidth = width*(1+scale*zoomAmount);
-
-        let targetXRange = [focusPoint-t*newWidth, focusPoint+(1-t)*newWidth];
+        let targetXRange = this.scaleRangeAround(this.xRange, tX, 1+zoomAmount);
         this._animateRange('xRange', targetXRange, 250, 'easeOutSine');
-        let targetYRange = this._computeYRange(targetXRange);
-        this._animateRange('yRange', targetYRange, 250, 'easeOutSine');
+
+        switch (this.currDimensions) {
+        case 0:
+        case 1:
+          break;
+        case 2:
+          var targetYRange = this.scaleRangeAround(this.yRange, tY, 1+zoomAmount);
+          this._animateRange('yRange', targetYRange, 250, 'easeOutSine');
+        }
+        this._resetMinMax(true);
       },
+
+      scaleRangeAround(range, t, scale) {
+        let width = range[1] - range[0];
+        let focusPoint = range[0] + width*t;
+        let newWidth = width*scale;
+        return [focusPoint-t*newWidth, focusPoint+(1-t)*newWidth];
+      }
 
     });
  </script>
