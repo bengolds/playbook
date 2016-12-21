@@ -130,11 +130,12 @@
         });
 
         this.tweeners = {};
+        this.tweenerTargets = {};
         this.currDimensions = 0;
         this._setupDataAndDisplay(this.currDimensions);
         this._resize();
         this._setupGridLines();
-        this._plotFunction(false);
+        this._functionChanged(false);
 
         this.classList.add('ungrabbed');
       },
@@ -189,7 +190,7 @@
             this.dimensionsOk = true;
             this.cancelDebouncer('dimensions-error');
             this.currDimensions = newDimensions;
-            this._plotFunction(this.animated);
+            this._functionChanged(this.animated);
           } 
           else {
             this.debounce('dimensions-error', (_)=> {
@@ -277,6 +278,9 @@
             pace: 1,
             id: animId
           });
+          var duration = this.dataAnim.get('pace')*1000;
+          this._animateRange('xRange', [-5, 5], duration, 'easeInOutSine');
+          this._animateRange('yRange', [-5, 5], duration, 'easeInOutSine');
         default:
         }
       },
@@ -286,72 +290,32 @@
         case 0:
           return [];
         case 1:
-          return [this.xRange];
+          return [this._getFinalRange('xRange')];
         case 2:
-          return [this.xRange, this.xRange];
+          return [this._getFinalRange('xRange'), this._getFinalRange('yRange')];
         default:
           return null;
         }
       },
 
-      _plotFunction: function(animated = false) {
+      _functionChanged: function(animated = false) {
         if (!this.functor) {
           return;
         }
 
-        let minMax = this._sampleFuncForBounds(this.functor, this._getUnboundRanges(), 5000);
-
-        let cachedEval = this.functor.eval.bind(this.functor);
-        let newExpr; 
-        let newRange;
-
         switch (this.currDimensions) {
         case 0:
         case 1:
-          newExpr = (emit, x) => {
+          var cachedEval = this.functor.eval.bind(this.functor);
+          var newExpr = (emit, x) => {
             emit(x, cachedEval(x));
           };
-          newRange = this._guessYRange(minMax);
+          this._resetMinMax(animated);
+          this._changeExpr(newExpr, animated);
           break;
         case 2:
-          minMax = this._guessYRange(minMax);
-          //The color range should be symmetric, centered on 0.
-          var largestDisplacement = Math.max(Math.abs(minMax[0]), Math.abs(minMax[1]));
-          var fixedRange = [-largestDisplacement, largestDisplacement];
-          var rangeWidth = fixedRange[1]-fixedRange[0];
-          var colorMap = (val) => {
-            if (typeof val != 'number') {
-              return [0,0,0];
-            }
-            var t = (val-fixedRange[0])/rangeWidth;
-            var i = Math.round(t*warmCoolMap.length);
-            i = Math.min(Math.max(0, i), warmCoolMap.length-1);
-            return warmCoolMap[i];
-          };
-          newExpr = (emit, x, y) => {
-            let val = cachedEval(x, y);
-            emit (...colorMap(val), 255);
-          };
-          newRange = this.xRange;
+          this._resetMinMax(animated);
           break;
-        }
-
-        if (animated && this.data.get('expr')) {
-          var currExpr = this.data.get('expr');
-          this.dataAnim.set('script', {
-            '0.001': {props: {expr: currExpr}},
-            '1': {props: {expr: newExpr}},
-          });
-        }
-        else {
-          this.data.set('expr', newExpr);
-        }
-        if (animated) {
-          var duration = this.dataAnim.get('pace')*1000;
-          this._animateRange('yRange', newRange, duration, 'easeInOutSine');
-
-        } else {
-          this.yRange = newRange;
         }
       },
 
@@ -360,7 +324,7 @@
           this.tweeners[name] = new Tweenable();
         }
         let tweener = this.tweeners[name];
-        if (tweener.isPlaying) {
+        if (tweener.isPlaying()) {
           tweener.stop();
         }
         let startRange = this.get(name);
@@ -373,6 +337,17 @@
             this.set(name, [state.min, state.max]);
           }
         });
+        this.tweenerTargets[name] = targetRange;
+      },
+
+      //Where is the range now, or where will it be after it stops moving?
+      _getFinalRange: function (name) {
+        let tweener = this.tweeners[name];
+        if (tweener && tweener.isPlaying()) {
+          return this.tweenerTargets[name];
+        } else {
+          return this.get(name);
+        }
       },
 
       //Apply some heuristics to get a good-looking range
@@ -453,9 +428,61 @@
         return [minY, maxY];
       },
 
+      _resetMinMax: function(animated) {
+        switch(this.currDimensions) {
+        case 0:
+        case 1:
+          var newRange = this._sampleFuncForBounds(this.functor, [this.xRange]);
+          newRange = this._guessYRange(newRange);
+          if (animated) {
+            this._animateRange('yRange', newRange, 250, 'easeOutSine');
+          }
+          else {
+            this.yRange = newRange;
+          }
+          break;
+        case 2:
+          var minMax = this._sampleFuncForBounds(this.functor, this._getUnboundRanges(), 5000);
+          minMax = this._guessYRange(minMax);
+          //The color range should be symmetric, centered on 0.
+          var largestDisplacement = Math.max(Math.abs(minMax[0]), Math.abs(minMax[1]));
+          var fixedRange = [-largestDisplacement, largestDisplacement];
+          var rangeWidth = fixedRange[1]-fixedRange[0];
+          var colorMap = (val) => {
+            if (typeof val != 'number') {
+              return [0,0,0];
+            }
+            var t = (val-fixedRange[0])/rangeWidth;
+            var i = Math.round(t*warmCoolMap.length);
+            i = Math.min(Math.max(0, i), warmCoolMap.length-1);
+            return warmCoolMap[i];
+          };
+          var cachedEval = this.functor.eval.bind(this.functor);
+          var newExpr = (emit, x, y) => {
+            let val = cachedEval(x, y);
+            emit (...colorMap(val), 255);
+          };
+          this._changeExpr(newExpr, animated);
+          break;
+        }
+      },
+
+      _changeExpr: function (newExpr, animated) {
+        if (animated && this.data.get('expr')) {
+          var currExpr = this.data.get('expr');
+          this.dataAnim.set('script', {
+            '0.001': {props: {expr: currExpr}},
+            '1': {props: {expr: newExpr}},
+          });
+        }
+        else {
+          this.data.set('expr', newExpr);
+        }
+      },
+
       onPanStart: function (e) {
         this.classList.remove('ungrabbed');
-        this.lastPanX = e.detail.x;
+        this.lastPan = {x:e.detail.x, y:e.detail.y};
         this.listen(this, 'track', 'onPan');
         this.listen(this, 'up', 'onPanStop');
         for (let value of ['grabbing', '-webkit-grabbing', '-moz-grabbing']) {
@@ -466,34 +493,45 @@
       },
 
       onPan: function (e) {
-        this.translateRange(e.detail.x - this.lastPanX);
-        this.lastPanX = e.detail.x;
+        switch(this.currDimensions) {
+        case 0:
+        case 1:
+          this.translateRange(e.detail.x - this.lastPan.x);
+          break;
+        case 2:
+          this.translateRange(e.detail.x-this.lastPan.x, e.detail.y-this.lastPan.y);
+          break;
+        }
+        this.lastPan = {x:e.detail.x, y:e.detail.y};
       },
 
       onPanStop: function (e) {
-        //TODO: MAKE WORK WITH 2D
         this.classList.add('ungrabbed');
         this.lastPanX = null;
         this.unlisten(this, 'track', 'onPan');
         this.unlisten(this, 'up', 'onPanStop');
         document.body.style.cursor = null;
-        this._animateRange('yRange', this._computeYRange(this.xRange), 250, 'easeOutSine');
+        this._resetMinMax(true);
       },
 
       onWheel: function (e) {
         this.zoomRange(e.deltaY, e.offsetX, e.offsetY);
       },
 
-      translateRange(dx) {
+      translateRange(dx, dy) {
         if (dx) {
           let scale = (this.xRange[0]-this.xRange[1])/this._getWidth();
           let change = dx * scale;
           this.xRange = [this.xRange[0]+change, this.xRange[1]+change];
         }
+        if (dy) {
+          let scale = (this.yRange[0]-this.yRange[1])/this._getHeight();
+          let change = -dy * scale;
+          this.yRange = [this.yRange[0]+change, this.yRange[1]+change];
+        }
       },
 
       zoomRange(zoomAmount, centerX, centerY) {
-        //TODO: MAKE WORK WITH 2D
         let t = centerX/this._getWidth();
         let focusPoint = this.xRange[0] + (this.xRange[1]-this.xRange[0])*t;
 
