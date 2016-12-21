@@ -22,7 +22,7 @@
     <template is='dom-repeat' items='[[_getBoundVarsArray(functor, functor.boundVars)]]'>
       <variable-slider id='slider' symbol='{{item.symbol}}' functor='{{functor}}'></variable-slider>
     </template>
-    <mathbox-plot id='plot' functor='[[functor]]' animated='true' x-range='{{xRange}}'></mathbox-plot>
+    <mathbox-plot id='plot' functor='[[functor]]' x-range='{{xRange}}'></mathbox-plot>
   </template>
 
   <script>

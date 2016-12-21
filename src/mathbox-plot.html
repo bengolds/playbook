@@ -512,7 +512,7 @@
         this.unlisten(this, 'track', 'onPan');
         this.unlisten(this, 'up', 'onPanStop');
         document.body.style.cursor = null;
-        this._resetMinMax(true);
+        this._resetMinMax(this.animated);
       },
 
       onWheel: function (e) {
@@ -545,7 +545,7 @@
           var targetYRange = this.scaleRangeAround(this.yRange, tY, 1+zoomAmount);
           this._animateRange('yRange', targetYRange, 250, 'easeOutSine');
         }
-        this._resetMinMax(true);
+        this._resetMinMax(this.animated);
       },
 
       scaleRangeAround(range, t, scale) {
