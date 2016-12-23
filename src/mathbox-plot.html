@@ -1,6 +1,6 @@
 <script src="../libs/mathbox/build/mathbox-bundle.js"></script>
 <script src="warm-cool-map.js"></script>
-<script src="../bower_components/shifty/dist/shifty.min.js"></script>
+<link rel="import" href="graphs/graph-import.html">
 <link rel="import" href="../bower_components/iron-resizable-behavior/iron-resizable-behavior.html">
 <link rel="import" href="../bower_components/iron-icon/iron-icon.html">
 <dom-module id="mathbox-plot">
@@ -68,15 +68,23 @@
           value: 0
         },
         animated: Boolean,
-        xRange: {
-          type: Array,
+        syncedParameters: {
+          type: Object,
           notify: true,
+          value: function() {return {
+            xRange: [-5, 5],
+            yRange: [-5, 5],
+          };}
         },
-        yRange: {
-          type: Array,
-          value: [-1, 1],
-          readonly: true
-        },
+        // xRange: {
+        //   type: Array,
+        //   notify: true,
+        // },
+        // yRange: {
+        //   type: Array,
+        //   value: [-1, 1],
+        //   readonly: true
+        // },
         inputOk: Boolean,
         dimensionsOk: Boolean
       },
@@ -125,14 +133,14 @@
         });
 
         this.view = this.mathbox.cartesian();
-        this.view.bind('range', ()=>{
-          return [this.xRange, this.yRange];
-        });
 
+
+        // this.supportedGraphs = [LineGraph, ColorGraph];
+        this.supportedGraphs = [LineGraph];
         this.tweeners = {};
         this.tweenerTargets = {};
         this.currDimensions = 0;
-        this._setupDataAndDisplay(this.currDimensions);
+        this._setupDataAndDisplay();
         this._resize();
         this._setupGridLines();
         this._functionChanged(false);
@@ -181,9 +189,12 @@
 
       _functorChanged: function() {
         if (this.initialized) {
-          let newDimensions = this.functor.unboundVars().length;
-          let dimensionsOk = newDimensions < 3;
+          let newDimensions = this.functor.unboundVars.length;
+          let dimensionsOk = (this._getCompatibleGraphs().length != 0);
           if (this._shouldReinitialize(newDimensions) && dimensionsOk) {
+            if (this.graph) {
+              this.graph.teardown();
+            }
             this._setupDataAndDisplay(newDimensions);
           } 
           if (dimensionsOk) {
@@ -219,71 +230,19 @@
         }
       },
 
-      _setupDataAndDisplay: function(numDimensions) {
-        let dataId = 'data';
-        let displayId = 'display';
-        let animId = 'anim';
-        this.mathbox.remove('#' + dataId);
-        this.mathbox.remove('#' + displayId);
-        this.mathbox.remove('#' + animId);
-        this.mathbox.remove('#flat');
+      _getCompatibleGraphs: function (functor) {
+        let matchingGraphs = this.supportedGraphs.filter((graph) => {
+          return graph.isSupported(this.functor);
+        });
+        return matchingGraphs;
+      },
 
-        switch(numDimensions) {
-        case 0:
-        case 1:
-          this.data = this.view.interval({
-            channels: 2,
-            fps: 60,
-            id: dataId,
-          }, {
-            width: ()=>{return this._getWidth();}
-          }
-          );
-          this.display = this.view.line({
-            width: 5,
-            color: '#3090FF',
-            zIndex: 2,
-            id: displayId
-          });
-          this.dataAnim = this.mathbox.play({
-            target: '#data',
-            pace: 1,
-            id: animId
-          });
-          this._animateRange('xRange', [-5, 5], duration, 'easeInOutSine');
-          break;
-        case 2:
-          var dim = 100;
-          var flat = this.view.area({
-            channels: 3,
-            id: 'flat',
-            width: dim,
-            height: dim,
-            expr: (emit, x, y) => {
-              emit(x, y, 0);
-            }
-          });
-          this.data = this.view.area({
-            channels: 4,
-            id: dataId,
-            width: dim,
-            height: dim
-          });
-          this.display = this.view.surface({
-            colors: '#' + dataId,
-            points: '#flat',
-            id: displayId
-          });
-          this.dataAnim = this.mathbox.play({
-            target: '#data',
-            pace: 1,
-            id: animId
-          });
-          var duration = this.dataAnim.get('pace')*1000;
-          this._animateRange('xRange', [-5, 5], duration, 'easeInOutSine');
-          this._animateRange('yRange', [-5, 5], duration, 'easeInOutSine');
-        default:
-        }
+      _setupDataAndDisplay: function() {
+        if (!this.functor)
+          return;
+        let matchingGraphs = this._getCompatibleGraphs(this.functor);
+        this.graph = new matchingGraphs[0](this.mathbox, this.syncedParameters, this.animated);
+        this.graph.setup();
       },
 
       _getUnboundRanges: function () {
@@ -300,39 +259,10 @@
       },
 
       _functionChanged: function(animated = false) {
-        if (!this.functor) {
+        if (!this.functor || !this.graph) {
           return;
         }
-
-        switch (this.currDimensions) {
-        case 0:
-        case 1:
-          var cachedEval = this.functor.eval.bind(this.functor);
-          var newExpr = (emit, x) => {
-            emit(x, cachedEval(x));
-          };
-          this._resetMinMax(animated);
-          this._changeExpr(newExpr, animated);
-          break;
-        case 2:
-          var colorMap = (val) => {
-            if (typeof val != 'number') {
-              return [0,0,0];
-            }
-            var t = (val-this.colorRange[0])/(this.colorRange[1]-this.colorRange[0]);
-            var i = Math.round(t*warmCoolMap.length);
-            i = Math.min(Math.max(0, i), warmCoolMap.length-1);
-            return warmCoolMap[i];
-          };
-          var cachedEval = this.functor.eval.bind(this.functor);
-          var newExpr = (emit, x, y) => {
-            let val = cachedEval(x, y);
-            emit (...colorMap(val), 255);
-          };
-          this._resetMinMax(animated);
-          this._changeExpr(newExpr, animated);
-          break;
-        }
+        this.graph.showFunction(this.functor);
       },
 
       _animateRange: function (name, targetRange, duration=250, easing='easeInOutSine') {
@@ -372,95 +302,11 @@
       },
 
       //Apply some heuristics to get a good-looking range
-      _guessYRange: function(minMax) {
-        let minY = 0, maxY = 0;
-        switch (this.currDimensions) {
-        case 0:
-          minY = maxY = this.functor.eval();
-          break;
-        case 1:
-        case 2:
-          minY = minMax[0];
-          maxY = minMax[1];
-          break;
-        default:
-          return this.yRange;
-        }
-
-        // Apply some tricks to the resulting values to get a good range
-        if (minY == Number.NEGATIVE_INFINITY) {
-          minY = -10;
-        }
-        if (maxY == Number.POSITIVE_INFINITY) {
-          maxY = 10;
-        }
-        if (minY == maxY) {
-          minY = minY - 5;
-          maxY = maxY + 5;
-        }
-        minY = Math.min(minY, 0);
-        maxY = Math.max(maxY, 0);
-        return [minY, maxY];
-      },
-
-      _sampleFuncForBounds: function(functor, unboundRanges, numSamples=200) {
-        let f = functor.clone();
-        
-        let unboundVars = f.unboundVars();
-        if (unboundVars == 0) {
-          return [f.eval(), f.eval()];
-        }
-        for (var i = 0; i < unboundRanges.length; i++) {
-          let range = unboundRanges[i];
-          let unboundVar = unboundVars[i];
-          f.pinVar(unboundVar, 0, range);
-        }
-
-        let iterateSteps = {};
-        let numSamplePoints = Math.round(Math.pow(numSamples, 1/f.symbols.length));
-        for (let key in f.boundVars) {
-          let currRange = f.boundVars[key].range;
-          let rangeWidth = currRange[1]-currRange[0];
-          iterateSteps[key] = rangeWidth/numSamplePoints;
-        }
-
-        var minY = Number.MAX_VALUE, maxY = -minY;
-        var checkValue = function (y) {
-          if (!isNaN(y)) {
-            minY = Math.min(minY, y);
-            maxY = Math.max(maxY, y);
-          }
-        };
-
-        let iterate = (dimension) => {
-          let currVar = f.symbols[dimension];
-          let currRange = f.boundVars[currVar].range;
-          let currStep = iterateSteps[currVar];
-          for (let i = currRange[0]; i < currRange[1]; i+=currStep) {
-            f.bindVar(currVar, i);
-            if (dimension == f.symbols.length-1) {
-              checkValue(f.eval());
-            } else {
-              iterate(dimension+1);
-            }
-          }
-        };
-        iterate(0);
-        return [minY, maxY];
-      },
-
       _resetMinMax: function(animated) {
         switch(this.currDimensions) {
         case 0:
         case 1:
-          var newRange = this._sampleFuncForBounds(this.functor, this._getUnboundRanges());
-          newRange = this._guessYRange(newRange);
-          if (animated) {
-            this._animateRange('yRange', newRange, 250, 'easeOutSine');
-          }
-          else {
-            this.yRange = newRange;
-          }
+
           break;
         case 2:
           var minMax = this._sampleFuncForBounds(this.functor, this._getUnboundRanges(), 5000);
