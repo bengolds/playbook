@@ -145,7 +145,7 @@
     },
 
     checkForLeaveOutline: function (e) {
-      let rect = this.makeRect(this.$.outline);
+      let rect = this.$.outline.getBoundingClientRect();
       let x = e.clientX, y = e.clientY;
       // If we're down in the hover plot, don't bother
       if (y > rect.bottom) {
@@ -174,13 +174,13 @@
       };
       for (var i = 0; i < nodes.length; i++) {
         let node = nodes[i].jQ[0];
-        let rect = this.makeRect(node);
+        let rect = this.makeOffsetRect(node);
         finalRect = merge(finalRect, rect);
       }
       return finalRect;
     },
 
-    makeRect: function (node) {
+    makeOffsetRect: function (node) {
       return {
         left: node.offsetLeft,
         right: node.offsetLeft + node.offsetWidth,
