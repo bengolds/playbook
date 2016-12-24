@@ -21,6 +21,8 @@ class LineGraph extends Graph {
     ];
   }
 
+  //Setup & Teardown
+
   setup () {
     let view = this.mathbox.select('cartesian'); 
     view.bind('range', ()=>{
@@ -56,12 +58,13 @@ class LineGraph extends Graph {
   }
 
   showFunction(functor) {
+    this.functor = functor;
     let cachedEval = functor.eval.bind(functor);
     let newExpr = (emit, x) => {
       emit(x, cachedEval(x));
     };
     this.changeExpr(newExpr);
-    this.resetBounds(functor);
+    this.resetBounds();
   }
 
   changeExpr(newExpr) {
@@ -77,18 +80,33 @@ class LineGraph extends Graph {
     }
   }
 
-  resetBounds(functor) {
-    var newRange = functor.getMinMax(this.unboundRanges());
+  //Ranges
+
+  resetBounds() {
+    var newRange = this.functor.getMinMax(this.unboundRanges());
     newRange = this.constructor.humanizeBounds(newRange);
-    if (this.animated) {
-      this.animateRange('yRange', newRange, 250, 'easeOutSine');
-    }
-    else {
-      this.yRange = newRange;
-    } 
+    this.setRange('yRange', newRange);
   }
 
   unboundRanges() {
     return [this.getFinal('xRange')];
+  }
+
+  //Mouse events
+
+  onPan(dx, dy) {
+    this.translateRange(dx);
+  }
+
+  onPanStop() {
+    this.resetBounds();
+  }
+
+  onZoom(amount, mouseX, mouseY) {
+    let zoomScale = .001;
+    let zoomAmount = 1 + zoomScale*amount;
+    let t = mouseX/this.width;
+    this.zoomRange('xRange', zoomAmount, t);
+    this.resetBounds();
   }
 }

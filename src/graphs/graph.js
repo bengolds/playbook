@@ -1,5 +1,8 @@
 class Graph {
   constructor(mathbox, syncedParameters) {
+    if (new.target === Graph) {
+      throw new TypeError('Cannot construct Graph instances directly');
+    }
     this.mathbox = mathbox;
     this.syncedParameters = syncedParameters;
     this.setupSyncedParameters(syncedParameters);
@@ -78,6 +81,66 @@ class Graph {
   }
 
   getFinal(name) {
-    return this.tweenerTargets[name] || this[name];
+    if (this.tweenerTargets[name] && this.tweeners[name].isPlaying())
+    {
+      return this.tweenerTargets[name];
+    }
+    else {
+      return this[name];
+    }
   }
+
+  setRange(name, value, animated=this.animated) {
+    if (animated) {
+      this.animateRange(name, value, 250, 'easeOutSine');
+    }
+    else {
+      this[name] = value;
+    } 
+  }
+
+  translateRange(dx, dy) {
+    if (dx) {
+      let scale = (this.xRange[0]-this.xRange[1])/this.width;
+      let change = dx * scale;
+      let newRange = [this.xRange[0]+change, this.xRange[1]+change];
+      this.setRange('xRange', newRange, false);
+    }
+    if (dy) {
+      let scale = (this.yRange[0]-this.yRange[1])/this.height;
+      let change = -dy * scale;
+      let newRange = [this.yRange[0]+change, this.yRange[1]+change];
+      this.setRange('yRange', newRange, false);
+    }
+  }
+
+  zoomRange(name, scale, tFocus) {
+    let range = this.getFinal(name);
+    let width = range[1] - range[0];
+    let focusPoint = range[0] + width*tFocus;
+    let newWidth = width*scale;
+    let newRange = [focusPoint-tFocus*newWidth, focusPoint+(1-tFocus)*newWidth];
+    this.setRange(name, newRange);
+  }
+
+  get width() {
+    return this.mathbox.three.canvas.offsetWidth;
+  }
+
+  get height() {
+    return this.mathbox.three.canvas.offsetHeight;
+  }
+
+  //TO IMPLEMENT:
+  setup() {}
+  teardown() {}
+  showFunction(functor) {}
+  unboundRanges() {}
+  static get supportedDimensions() {return [];}
+  static get syncedParameterNames() {return [];}
+  //Mouse events
+  onPanStart() {}
+  onPan(dx, dy) {}
+  onPanStop() {}
+  onZoom(amount) {}
 }

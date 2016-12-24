@@ -34,7 +34,8 @@
   </mathquill-element>
   <p id='errorMessage'></p>
   <function-parser id='parser'></function-parser>
-  <hover-plot class='hidden' id='hoverplot' x-range ='{{xRange}}'></hover-plot>
+  <hover-plot class='hidden' id='hoverplot' 
+    synced-parameters='{{syncedParameters}}'></hover-plot>
   <div id='outline' class='hidden'></div>
 
 </template>
@@ -47,9 +48,9 @@
         type: Object,
         notify: true
       },
-      xRange: {
-        type: Array,
-        notify:true
+      syncedParameters: {
+        type: Object,
+        notify: true
       }
     },
 

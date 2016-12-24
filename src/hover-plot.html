@@ -13,7 +13,8 @@
       }
     </style>
     <arrow-box direction='up'>
-      <mathbox-plot functor="[[functor]]" x-range = '{{xRange}}' width='480' height='190'></mathbox-plot>
+      <mathbox-plot width='480' height='190' functor="[[functor]]" 
+        synced-parameters='{{syncedParameters}}'></mathbox-plot>
     </arrow-box>
     
   </template>
@@ -24,11 +25,11 @@
         functor: {
           type: Object,
         },
-        xRange: {
-          type: Array,
-          notify:true
+        syncedParameters: {
+          type: Object,
+          notify: true
         }
-      },
+      }
     });
   </script>
 </dom-module>

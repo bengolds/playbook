@@ -76,15 +76,6 @@
             yRange: [-5, 5],
           };}
         },
-        // xRange: {
-        //   type: Array,
-        //   notify: true,
-        // },
-        // yRange: {
-        //   type: Array,
-        //   value: [-1, 1],
-        //   readonly: true
-        // },
         inputOk: Boolean,
         dimensionsOk: Boolean
       },
@@ -140,7 +131,7 @@
         this.tweeners = {};
         this.tweenerTargets = {};
         this.currDimensions = 0;
-        this._setupDataAndDisplay();
+        this._setupDataAndDisplay(LineGraph);
         this._resize();
         this._setupGridLines();
         this._functionChanged(false);
@@ -189,18 +180,19 @@
 
       _functorChanged: function() {
         if (this.initialized) {
-          let newDimensions = this.functor.unboundVars.length;
-          let dimensionsOk = (this._getCompatibleGraphs().length != 0);
-          if (this._shouldReinitialize(newDimensions) && dimensionsOk) {
-            if (this.graph) {
-              this.graph.teardown();
+          let compatibleGraphs = this._getCompatibleGraphs(this.functor);
+          if (compatibleGraphs.length != 0) {
+            if (!this.graph) {
+              this._setupDataAndDisplay(compatibleGraphs[0]);
+            } 
+            else if (compatibleGraphs[0] !== this.graph.constructor) {
+              if (this.graph) {
+                this.graph.teardown();
+              }
+              this._setupDataAndDisplay(compatibleGraphs[0]);
             }
-            this._setupDataAndDisplay(newDimensions);
-          } 
-          if (dimensionsOk) {
             this.dimensionsOk = true;
             this.cancelDebouncer('dimensions-error');
-            this.currDimensions = newDimensions;
             this._functionChanged(this.animated);
           } 
           else {
@@ -220,16 +212,6 @@
         }
       },
 
-      _shouldReinitialize: function(newDimensions) {
-        switch(this.currDimensions) {
-        case 0:
-        case 1:
-          return (newDimensions != 0 && newDimensions != 1);
-        default:
-          return (newDimensions != this.currDimensions);
-        }
-      },
-
       _getCompatibleGraphs: function (functor) {
         let matchingGraphs = this.supportedGraphs.filter((graph) => {
           return graph.isSupported(this.functor);
@@ -237,25 +219,11 @@
         return matchingGraphs;
       },
 
-      _setupDataAndDisplay: function() {
+      _setupDataAndDisplay: function(graphConstructor) {
         if (!this.functor)
           return;
-        let matchingGraphs = this._getCompatibleGraphs(this.functor);
-        this.graph = new matchingGraphs[0](this.mathbox, this.syncedParameters, this.animated);
+        this.graph = new graphConstructor(this.mathbox, this.syncedParameters, this.animated);
         this.graph.setup();
-      },
-
-      _getUnboundRanges: function () {
-        switch (this.currDimensions) {
-        case 0:
-          return [];
-        case 1:
-          return [this._getFinalRange('xRange')];
-        case 2:
-          return [this._getFinalRange('xRange'), this._getFinalRange('yRange')];
-        default:
-          return null;
-        }
       },
 
       _functionChanged: function(animated = false) {
@@ -265,49 +233,9 @@
         this.graph.showFunction(this.functor);
       },
 
-      _animateRange: function (name, targetRange, duration=250, easing='easeInOutSine') {
-        if (!(name in this.tweeners)) {
-          this.tweeners[name] = new Tweenable();
-        }
-        let tweener = this.tweeners[name];
-        if (tweener.isPlaying()) {
-          tweener.stop();
-        }
-        let startRange = this.get(name);
-        if (!startRange) {
-          this.set(name, targetRange);
-        } 
-        else {
-          tweener.tween({
-            from:     {min:  startRange[0], max:  startRange[1]},
-            to:       {min: targetRange[0], max: targetRange[1]},
-            duration: duration,
-            easing:   easing,
-            step: (state) => {
-              this.set(name, [state.min, state.max]);
-            }
-          });
-          this.tweenerTargets[name] = targetRange;
-        }
-      },
-
-      //Where is the range now, or where will it be after it stops moving?
-      _getFinalRange: function (name) {
-        let tweener = this.tweeners[name];
-        if (tweener && tweener.isPlaying()) {
-          return this.tweenerTargets[name];
-        } else {
-          return this.get(name);
-        }
-      },
-
       //Apply some heuristics to get a good-looking range
       _resetMinMax: function(animated) {
         switch(this.currDimensions) {
-        case 0:
-        case 1:
-
-          break;
         case 2:
           var minMax = this._sampleFuncForBounds(this.functor, this._getUnboundRanges(), 5000);
           minMax = this._guessYRange(minMax);
@@ -324,19 +252,6 @@
         }
       },
 
-      _changeExpr: function (newExpr, animated) {
-        if (animated && this.data.get('expr')) {
-          var currExpr = this.data.get('expr');
-          this.dataAnim.set('script', {
-            '0.001': {props: {expr: currExpr}},
-            '1': {props: {expr: newExpr}},
-          });
-        }
-        else {
-          this.data.set('expr', newExpr);
-        }
-      },
-
       onPanStart: function (e) {
         this.classList.remove('ungrabbed');
         this.lastPan = {x:e.detail.x, y:e.detail.y};
@@ -347,69 +262,42 @@
           if (document.body.style.cursor  === value)
             break;
         }
+        this.graph.onPanStart();
       },
 
       onPan: function (e) {
-        switch(this.currDimensions) {
-        case 0:
-        case 1:
-          this.translateRange(e.detail.x - this.lastPan.x);
-          break;
-        case 2:
-          this.translateRange(e.detail.x-this.lastPan.x, e.detail.y-this.lastPan.y);
-          break;
-        }
+        let dx = e.detail.x - this.lastPan.x;
+        let dy = e.detail.y - this.lastPan.y;
+        this.graph.onPan(dx, dy);
         this.lastPan = {x:e.detail.x, y:e.detail.y};
       },
 
       onPanStop: function (e) {
+        this.graph.onPanStop();
         this.classList.add('ungrabbed');
         this.lastPanX = null;
         this.unlisten(this, 'track', 'onPan');
         this.unlisten(this, 'up', 'onPanStop');
         document.body.style.cursor = null;
-        this._resetMinMax(this.animated);
       },
 
       onWheel: function (e) {
-        let zoomScale = .01;
-        let zoomAmount = zoomScale*e.deltaY;
-        this.zoomRange(zoomAmount, e.offsetX, e.offsetY);
+        this.graph.onZoom(e.deltaY, e.offsetX, e.offsetY);
       },
 
-      translateRange(dx, dy) {
-        if (dx) {
-          let scale = (this.xRange[0]-this.xRange[1])/this._getWidth();
-          let change = dx * scale;
-          this.xRange = [this.xRange[0]+change, this.xRange[1]+change];
-        }
-        if (dy) {
-          let scale = (this.yRange[0]-this.yRange[1])/this._getHeight();
-          let change = -dy * scale;
-          this.yRange = [this.yRange[0]+change, this.yRange[1]+change];
-        }
-      },
+      // zoomRange(zoomAmount, centerX, centerY) {
+      //   let tX = centerX/this._getWidth();
+      //   let tY = centerY/this._getHeight();
 
-      zoomRange(zoomAmount, centerX, centerY) {
-        let tX = centerX/this._getWidth();
-        let tY = centerY/this._getHeight();
+      //   let targetXRange = this.scaleRangeAround(this.xRange, tX, 1+zoomAmount);
+      //   this._animateRange('xRange', targetXRange, 250, 'easeOutSine');
 
-        let targetXRange = this.scaleRangeAround(this.xRange, tX, 1+zoomAmount);
-        this._animateRange('xRange', targetXRange, 250, 'easeOutSine');
-
-        if (this.currDimensions == 2) {
-          var targetYRange = this.scaleRangeAround(this.yRange, tY, 1+zoomAmount);
-          this._animateRange('yRange', targetYRange, 250, 'easeOutSine');
-        }
-        this._resetMinMax(this.animated);
-      },
-
-      scaleRangeAround(range, t, scale) {
-        let width = range[1] - range[0];
-        let focusPoint = range[0] + width*t;
-        let newWidth = width*scale;
-        return [focusPoint-t*newWidth, focusPoint+(1-t)*newWidth];
-      }
+      //   if (this.currDimensions == 2) {
+      //     var targetYRange = this.scaleRangeAround(this.yRange, tY, 1+zoomAmount);
+      //     this._animateRange('yRange', targetYRange, 250, 'easeOutSine');
+      //   }
+      //   this._resetMinMax(this.animated);
+      // },
 
     });
  </script>
