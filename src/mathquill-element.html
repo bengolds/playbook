@@ -16,6 +16,7 @@
       properties: {
         editable: {
           type: Boolean,
+          observer: '_editableChanged'
         },
         config: {
           type: Object,
@@ -30,6 +31,12 @@
         this.scopeSubtree(this.$.quill, true);
         this._MQ = MathQuill.getInterface(2);
         this._initializeMathQuill(this.editable, this.config);
+      },
+
+      _editableChanged: function (val) {
+        if (this._MQ) {
+          this._initializeMathQuill(val, this.config);
+        }
       },
 
       _edit: function(mathField) {
@@ -79,6 +86,10 @@
             this[method] = null;
           }
         }
+      },
+      
+      getMathQuill: function () {
+        return this.mathquill;
       }
     });
   </script>

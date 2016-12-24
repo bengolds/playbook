@@ -12,7 +12,7 @@
       }
     </style>
     <paper-card id="card">
-      <template is='dom-repeat' items='[[rows]]'>
+      <template is='dom-repeat' items='{{rows}}'>
         <function-row name='{{item.name}}' synced-parameters='{{syncedParameters}}'></function-row>
       </template>
     </paper-card>

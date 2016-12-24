@@ -33,7 +33,13 @@
         },
         symbol: {
           type: String,
-          value: 'Ɵ'
+          value: 'Ɵ',
+          notify: true
+        },
+        editing: {
+          type: Boolean,
+          observer: '_updateSignature',
+          value: false
         }
       },
 
@@ -47,12 +53,39 @@
 
       onClick: function(e) {
         //TODO: Figure out why this doesn't propagate up.
-        this.symbol = 'voltage';
-        this._updateSignature();
+        if (!this.editing) {
+          this.editing = true;
+          this.oldSymbol = this.symbol;
+          let nameField = this.$.quill.getMathQuill().innerFields[0];
+          nameField.focus();
+          nameField.config({
+            handlers: {
+              edit: this.onNameEdit.bind(this),
+              enter: this.onNameExit.bind(this)
+            }
+          });
+          this.listen(this.$.quill, 'blur', 'onNameExit');
+        }
       },
 
-      _updateSignature: function (argument) {
-        let latex = this.symbol + '\\left(';
+      onNameEdit: function (mathField) {
+        this.symbol = mathField.latex();
+      },
+
+      onNameExit: function (mathField) {
+        if (this.symbol == '') {
+          this.symbol = this.oldSymbol;
+        }
+        this.editing = false;
+      },
+
+      _updateSignature: function () {
+        let latex = '';
+        if (this.editing) {
+          latex = '\\MathQuillMathField{' + this.symbol + '}\\left(';
+        } else {
+          latex = this.symbol + '\\left(';
+        }
         if (this.functor) {
           let sorted = this.functor.symbols.slice().sort();
           latex += sorted.join(',');
