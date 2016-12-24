@@ -5,6 +5,5 @@ Playbook is meant to be a tool for downloading mathematical functions from the w
 
 ##Installation
 ```
-npm install -g polymer-cli
 ./serve.sh
 ```
