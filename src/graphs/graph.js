@@ -1,9 +1,10 @@
 class Graph {
-  constructor(mathbox, syncedParameters) {
+  constructor(mathbox, syncedParameters, animated) {
     if (new.target === Graph) {
       throw new TypeError('Cannot construct Graph instances directly');
     }
     this.mathbox = mathbox;
+    this.animated = animated;
     this.syncedParameters = syncedParameters;
     this.setupSyncedParameters(syncedParameters);
     this.tweeners = {};

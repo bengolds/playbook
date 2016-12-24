@@ -1,8 +1,7 @@
 class LineGraph extends Graph {
 
   constructor (mathbox, syncedParameters, animated) {
-    super(mathbox, syncedParameters);
-    this.animated = animated;
+    super(mathbox, syncedParameters, animated);
     this.dataId = 'data';
     this.displayId = 'display';
     this.animId = 'anim';
@@ -25,6 +24,7 @@ class LineGraph extends Graph {
 
   setup () {
     let view = this.mathbox.select('cartesian'); 
+    view.unbind('range');
     view.bind('range', ()=>{
       return [this.xRange, this.yRange];
     });

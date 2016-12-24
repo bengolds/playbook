@@ -1,5 +1,4 @@
 <script src="../libs/mathbox/build/mathbox-bundle.js"></script>
-<script src="warm-cool-map.js"></script>
 <link rel="import" href="graphs/graph-import.html">
 <link rel="import" href="../bower_components/iron-resizable-behavior/iron-resizable-behavior.html">
 <link rel="import" href="../bower_components/iron-icon/iron-icon.html">
@@ -126,8 +125,7 @@
         this.view = this.mathbox.cartesian();
 
 
-        // this.supportedGraphs = [LineGraph, ColorGraph];
-        this.supportedGraphs = [LineGraph];
+        this.supportedGraphs = [LineGraph, ColorGraph];
         this.tweeners = {};
         this.tweenerTargets = {};
         this.currDimensions = 0;
@@ -233,25 +231,6 @@
         this.graph.showFunction(this.functor);
       },
 
-      //Apply some heuristics to get a good-looking range
-      _resetMinMax: function(animated) {
-        switch(this.currDimensions) {
-        case 2:
-          var minMax = this._sampleFuncForBounds(this.functor, this._getUnboundRanges(), 5000);
-          minMax = this._guessYRange(minMax);
-          //The color range should be symmetric, centered on 0.
-          var largestDisplacement = Math.max(Math.abs(minMax[0]), Math.abs(minMax[1]));
-          var newColorRange = [-largestDisplacement, largestDisplacement];
-          if (animated) {
-            this._animateRange('colorRange', newColorRange, 250, 'easeOutSine');
-          }
-          else {
-            this.colorRange = newColorRange;
-          }
-          break;
-        }
-      },
-
       onPanStart: function (e) {
         this.classList.remove('ungrabbed');
         this.lastPan = {x:e.detail.x, y:e.detail.y};
@@ -284,21 +263,6 @@
       onWheel: function (e) {
         this.graph.onZoom(e.deltaY, e.offsetX, e.offsetY);
       },
-
-      // zoomRange(zoomAmount, centerX, centerY) {
-      //   let tX = centerX/this._getWidth();
-      //   let tY = centerY/this._getHeight();
-
-      //   let targetXRange = this.scaleRangeAround(this.xRange, tX, 1+zoomAmount);
-      //   this._animateRange('xRange', targetXRange, 250, 'easeOutSine');
-
-      //   if (this.currDimensions == 2) {
-      //     var targetYRange = this.scaleRangeAround(this.yRange, tY, 1+zoomAmount);
-      //     this._animateRange('yRange', targetYRange, 250, 'easeOutSine');
-      //   }
-      //   this._resetMinMax(this.animated);
-      // },
-
     });
  </script>
 </dom-module>
