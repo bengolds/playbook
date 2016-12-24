@@ -24,6 +24,10 @@ class LineGraph extends Graph {
 
   setup () {
     let view = this.mathbox.select('cartesian'); 
+    let ranges = view.get('range');
+    this.setRange('xRange', this.vectorToRange(ranges[0]), false);
+    this.setRange('yRange', this.vectorToRange(ranges[1]), false);
+    
     view.unbind('range');
     view.bind('range', ()=>{
       return [this.xRange, this.yRange];
@@ -47,8 +51,7 @@ class LineGraph extends Graph {
       id: this.animId
     });
 
-    // let duration = this.dataAnim.get('pace')*1000;
-    // this.animateRange('xRange', [-5, 5], duration, 'easeInOutSine');
+    this.setRange('xRange', [-5, 5]);
   }
 
   teardown() {

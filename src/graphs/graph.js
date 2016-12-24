@@ -100,6 +100,10 @@ class Graph {
     } 
   }
 
+  vectorToRange(vector) {
+    return [vector.x, vector.y];
+  }
+
   translateRange(dx, dy) {
     if (dx) {
       let scale = (this.xRange[0]-this.xRange[1])/this.width;

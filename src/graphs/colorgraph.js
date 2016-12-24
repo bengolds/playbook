@@ -24,6 +24,10 @@ class ColorGraph extends Graph {
   setup () {
     let dim = 100;
     let view = this.mathbox.select('cartesian'); 
+    let ranges = view.get('range');
+    this.setRange('xRange', this.vectorToRange(ranges[0]), false);
+    this.setRange('yRange', this.vectorToRange(ranges[1]), false);
+
     view.unbind('range');
     view.bind('range', ()=>{
       return [this.xRange, this.yRange];
@@ -54,10 +58,9 @@ class ColorGraph extends Graph {
       pace: 1,
       id: this.animId
     });
-    // TODO: Fix this
-    // var duration = this.dataAnim.get('pace')*1000;
-    // this._animateRange('xRange', [-5, 5], duration, 'easeInOutSine');
-    // this._animateRange('yRange', [-5, 5], duration, 'easeInOutSine');
+
+    this.setRange('xRange', [-5, 5]);
+    this.setRange('yRange', [-5, 5]);
   }
 
   teardown() {
