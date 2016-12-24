@@ -17,7 +17,8 @@
         flex-basis: 480px;
       }
     </style>
-    <function-signature functor='{{functor}}' symbol='f'></function-signature>
+    <button on-click='removeRow'>X</button>
+    <function-signature functor='{{functor}}' symbol='{{name}}'></function-signature>
     <function-input id='input' functor='{{functor}}' 
       synced-parameters='{{syncedParameters}}'></function-input>
     <template is='dom-repeat' items='[[_getBoundVarsArray(functor, functor.boundVars)]]'>
@@ -31,16 +32,16 @@
     Polymer({
       is: 'function-row',
       properties: {
+        name: {
+          type: String,
+          value: 'f'
+        },
         functor: {
           type: Object
         },
         syncedParameters: {
           type: Object,
           notify: true,
-          value: function() {return {
-            xRange: [-5, 5],
-            yRange: [-5, 5],
-          };}
         },
       },
 
@@ -68,6 +69,10 @@
       unpinVariable: function (_, detail) {
         this.functor.unpinVar(detail.variable);
         this._forceNotifyPath('functor.boundVars');
+      },
+
+      removeRow: function() {
+        this.fire('remove-row', this.name);
       },
 
       inputOk: function (_) {

@@ -16,7 +16,8 @@
     </style>
 
   <mathquill-element id="quill"
-    on-element-mouseover='onElementMouseOver'>
+    on-element-mouseover='onElementMouseOver'
+    on-click='onClick'>
   </mathquill-element>
   <var-action-bar id="actionbar" class="hidden" functor='{{functor}}'></var-action-bar>
 
@@ -37,10 +38,20 @@
       },
 
       attached: function () {
-        this._functorChanged();
+        this._updateSignature();
       },
       
       _functorChanged: function () {
+        this._updateSignature();
+      },
+
+      onClick: function(e) {
+        //TODO: Figure out why this doesn't propagate up.
+        this.symbol = 'voltage';
+        this._updateSignature();
+      },
+
+      _updateSignature: function (argument) {
         let latex = this.symbol + '\\left(';
         if (this.functor) {
           let sorted = this.functor.symbols.slice().sort();
@@ -51,6 +62,10 @@
       },
 
       onElementMouseOver: function (e, details) {
+        //TODO: When hovering over the function name, change
+        //to an input box
+        
+        // this.$.quill.editable = true;
         var mqCmdId = 'mathquill-command-id';
         var mqBlockId = 'mathquill-block-id';
         if (details.target.tagName == 'VAR' &&

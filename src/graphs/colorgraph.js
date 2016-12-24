@@ -59,7 +59,6 @@ class ColorGraph extends Graph {
       id: this.animId
     });
 
-    this.setRange('xRange', [-5, 5]);
     this.setRange('yRange', [-5, 5]);
   }
 

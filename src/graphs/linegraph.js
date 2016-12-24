@@ -50,8 +50,6 @@ class LineGraph extends Graph {
       pace: 1,
       id: this.animId
     });
-
-    this.setRange('xRange', [-5, 5]);
   }
 
   teardown() {

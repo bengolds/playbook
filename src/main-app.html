@@ -12,8 +12,11 @@
       }
     </style>
     <paper-card id="card">
-    <function-row></function-row>
+      <template is='dom-repeat' items='[[rows]]'>
+        <function-row name='{{item.name}}' synced-parameters='{{syncedParameters}}'></function-row>
+      </template>
     </paper-card>
+    <button on-click='addRow'>+</button>
 
   </template>
 
@@ -21,7 +24,63 @@
     Polymer({
       is: 'main-app',
       properties: {
+        rows: {
+          type: Array,
+          value: function() {return [];}
+        },
+        syncedParameters: {
+          type: Object,
+          value: function() {
+            return {xRange: [-5, 5], yRange: [-5, 5]};
+          }
+        },
+        startNamesAt: {
+          type: String,
+          value: 'f'
+        }
       },
+
+      listeners: {
+        'remove-row': 'removeRow'
+      },
+
+      attached: function () {
+        this.addRow();
+      },
+
+      addRow: function () {
+        let newRow = this.newRow(this.getNextName());
+        this.push('rows', newRow);
+      },
+
+      removeRow: function (_, name) {
+        let index = this.indexInRows(name);
+        if (index == -1) {
+          throw Error('Can\'t delete ' + name + ' because it doesn\'t exist');
+        }
+        this.splice('rows', index, 1);
+      },
+
+      newRow: function (name) {
+        return {name: name};
+      },
+
+      getNextName: function() {
+        let nextName = this.startNamesAt;
+        while (this.indexInRows(nextName) != -1) {
+          nextName = String.fromCharCode(nextName.charCodeAt(0)+1);
+        }
+        return nextName;
+      },
+
+      indexInRows: function (name) {
+        return this.rows.findIndex((val) => {
+          return val.name === name;
+        });
+      },
+
+
+
     });
  </script>
 </dom-module>
