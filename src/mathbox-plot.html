@@ -96,6 +96,7 @@
 
       attached: function() {
         this.initialized = true;
+        this.supportedGraphs = [LineGraph, ColorGraph];
 
         var aspectRatio = this._getAspectRatio();
         var options = {
@@ -117,22 +118,17 @@
         this.mathbox = mathBox(options);
         this.mathbox.three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
 
-        var camera = this.mathbox.camera({
+        this.camera = this.mathbox.camera({
           proxy: true,
           position: [0,0,1]
         });
 
         this.view = this.mathbox.cartesian();
 
-
-        this.supportedGraphs = [LineGraph, ColorGraph];
-        this.tweeners = {};
-        this.tweenerTargets = {};
-        this.currDimensions = 0;
-        this._setupDataAndDisplay(LineGraph);
         this._resize();
         this._setupGridLines();
-        this._functionChanged(false);
+        this._setupDataAndDisplay(LineGraph);
+        this._functionChanged();
 
         this.classList.add('ungrabbed');
       },
@@ -191,7 +187,7 @@
             }
             this.dimensionsOk = true;
             this.cancelDebouncer('dimensions-error');
-            this._functionChanged(this.animated);
+            this._functionChanged();
           } 
           else {
             this.debounce('dimensions-error', (_)=> {
@@ -224,7 +220,7 @@
         this.graph.setup();
       },
 
-      _functionChanged: function(animated = false) {
+      _functionChanged: function() {
         if (!this.functor || !this.graph) {
           return;
         }

@@ -106,6 +106,9 @@
         "THREE": false,
         "Tweenable": false,
         "Functor": true,
-        "warmCoolMap": true
+        "warmCoolMap": true,
+        "Graph": true,
+        "LineGraph": true,
+        "ColorGraph": true
     }
 }

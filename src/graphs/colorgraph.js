@@ -22,7 +22,7 @@ class ColorGraph extends Graph {
   }
 
   setup () {
-    let dim = 100;
+    let dim = 150;
     let view = this.mathbox.select('cartesian'); 
     let ranges = view.get('range');
     this.setRange('xRange', this.vectorToRange(ranges[0]), false);
