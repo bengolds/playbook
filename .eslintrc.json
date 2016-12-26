@@ -109,6 +109,7 @@
         "warmCoolMap": true,
         "Graph": true,
         "LineGraph": true,
-        "ColorGraph": true
+        "ColorGraph": true,
+        "mqUtil": true
     }
 }

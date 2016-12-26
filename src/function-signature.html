@@ -7,17 +7,26 @@
       :host {
         display: block;
       }
-      #quill {
+      mathquill-element {
         font-size: 200%;
+      }
+      #nameQuill {
+        margin-right: -10px;
       }
       .hidden {
         display:none;
       }
     </style>
 
-  <mathquill-element id="quill"
-    on-element-mouseover='onElementMouseOver'
-    on-click='onClick'>
+  <mathquill-element id="nameQuill"
+    on-element-mouseover='onNameMouseOver' 
+    on-m  ouseleave='onNameMouseLeave'
+    on-edit='onNameEdit'
+    on-enter='onNameExit'
+    editable='[[editing]]'>
+  </mathquill-element>
+  <mathquill-element id="parametersQuill"
+    on-element-mouseover='onParameterMouseOver'>
   </mathquill-element>
   <var-action-bar id="actionbar" class="hidden" functor='{{functor}}'></var-action-bar>
 
@@ -38,84 +47,71 @@
         },
         editing: {
           type: Boolean,
-          observer: '_updateSignature',
           value: false
         }
       },
 
       attached: function () {
         this._updateSignature();
+        this.$.nameQuill.latex(this.symbol);
       },
       
       _functorChanged: function () {
         this._updateSignature();
       },
 
-      onClick: function(e) {
-        if (!this.editing) {
-          let clickedNode = e.path[0];
-          this.editing = true;
-          this.oldSymbol = this.symbol;
-          let nameField = this.$.quill.getMathQuill().innerFields[0];
-          nameField.focus();
-          nameField.config({
-            handlers: {
-              edit: this.onNameEdit.bind(this),
-              enter: this.onNameExit.bind(this)
-            }
-          });
-          this.listen(this.$.quill, 'blur', 'onNameExit');
+      _updateSignature: function () {
+        let latex = '\\left(';
+        if (this.functor) {
+          let sorted = this.functor.symbols.slice().sort();
+          latex += sorted.join(',');
+        }
+        latex += '\\right)=';
+        this.$.parametersQuill.latex(latex);
+      },
+
+      onParameterMouseOver: function (e, details) {
+        if (details.target.tagName == 'VAR') {
+          this.showHoverBar(details.target);
+          $(this).on('mouseout', this.hideHoverBar);
         }
       },
 
-      onNameEdit: function (mathField) {
-        this.symbol = mathField.latex();
+      onNameMouseOver: function (e, details) {
+        if (!this.editing) {
+          this.editing = true;
+          this.oldSymbol = this.symbol;
+          this.listen(this.$.nameQuill, 'blur', 'onNameExit');
+        }
       },
 
-      onNameExit: function (mathField) {
+      onNameMouseLeave: function (_) {
+        let mq = this.$.nameQuill.getMathQuill();
+        //TODO: EXPOSE THIS BLURRED PROP BETTER
+        if (mq.__controller.blurred) {
+          this.onNameExit();
+        }
+      },
+
+      onNameEdit: function (e, details) {
+        this.symbol = details.mathField.latex();
+      },
+
+      onNameExit: function (_) {
         if (this.symbol == '') {
           this.symbol = this.oldSymbol;
         }
         this.editing = false;
       },
 
-      _updateSignature: function () {
-        let latex = '';
-        if (this.editing) {
-          latex = '\\MathQuillMathField{' + this.symbol + '}\\left(';
-        } else {
-          latex = this.symbol + '\\left(';
-        }
-        if (this.functor) {
-          let sorted = this.functor.symbols.slice().sort();
-          latex += sorted.join(',');
-        }
-        latex += '\\right)=';
-        this.$.quill.latex(latex);
-      },
-
-      onElementMouseOver: function (e, details) {
-        //TODO: When hovering over the function name, change
-        //to an input box
-        
-        // this.$.quill.editable = true;
-        var mqCmdId = 'mathquill-command-id';
-        var mqBlockId = 'mathquill-block-id';
-        if (details.target.tagName == 'VAR' &&
-            details.target.textContent != this.symbol) {
-          this.showHoverBar(details.target);
-          $(this).on('mouseout', this.hideHoverBar);
-        }
-      },
-
       showHoverBar: function (target) {
         let actionbar = this.$.actionbar;
         actionbar.classList.remove('hidden');
         let pushDown = 10;
-        let topY = target.offsetTop+target.offsetHeight-pushDown;
+        let topY = target.offsetTop-this.$.actionbar.offsetHeight + pushDown;
         let middleX = target.offsetLeft + target.offsetWidth/2 - actionbar.offsetWidth/2;
         actionbar.style.left = middleX + 'px';
-        actionbar.style.bottom = topY + 'px';
+        actionbar.style.top = topY + 'px';
         actionbar.variable = target.textContent;
       },
 

@@ -102,16 +102,19 @@
       if (!semanticNode) {
         return;
       }
+
       let applicationNode = mqUtil.getClosestApplicationNode(semanticNode);
       if (!applicationNode.parent) {
         return;
       }
-      let hoveredDisplayNodes = applicationNode.getDisplayNodes();
 
+      let hoveredDisplayNodes = applicationNode.getDisplayNodes();
       let outlineRect = this.getBoundingBox(hoveredDisplayNodes);
       this.drawOutline(outlineRect);
+
       let xCenter = outlineRect.left + (outlineRect.right-outlineRect.left)/2;
       this.createHoverPlot(xCenter, outlineRect.bottom, applicationNode.toString());
+      
       this.listen(this.$.hoverplot, 'mouseleave', 'hideHoverItems');
       this.listen(this, 'mouseleave', 'hideHoverItems');
       this.listen(this, 'mousemove', 'checkForLeaveOutline');
