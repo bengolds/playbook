@@ -1,5 +1,6 @@
 <link rel="import" href="hover-plot.html">
 <link rel="import" href="function-parser.html">
+<link rel="import" href="mathquill-element.html">
 <dom-module id="function-input">
 	<template>
 		<style>
@@ -97,32 +98,11 @@
     },
 
     onElementMouseOver: function(e, details) {
-      let mqCmdId = 'mathquill-command-id';
-      let mqBlockId = 'mathquill-block-id';
-      let getClosestApplicationNode = (semanticNode) => {
-        if (semanticNode instanceof ApplicationNode) {
-          return semanticNode;
-        } else if (semanticNode == null) {
-          return null;
-        }
-        return getClosestApplicationNode(semanticNode.parent);
-      };
-
-      //Filter to make sure we're on a usable mathquill node
-      let jqTarget = $(details.target);
-      let id = -1;
-      if (jqTarget.attr(mqBlockId)) {
-        id = jqTarget.attr(mqBlockId);
-      } else if (jqTarget.attr(mqCmdId)) {
-        id = jqTarget.attr(mqCmdId);
-      } else {
+      let semanticNode = mqUtil.semanticNodeFromHTML(details.target, details.mathField);
+      if (!semanticNode) {
         return;
       }
-
-      //Get the nearest Application node to the hovered object
-      let semanticTree = details.mathField.semanticTree();
-      let semanticNode = semanticTree.findDisplayNode(id);
-      let applicationNode = getClosestApplicationNode(semanticNode);
+      let applicationNode = mqUtil.getClosestApplicationNode(semanticNode);
       if (!applicationNode.parent) {
         return;
       }

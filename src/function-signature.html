@@ -52,8 +52,8 @@
       },
 
       onClick: function(e) {
-        //TODO: Figure out why this doesn't propagate up.
         if (!this.editing) {
+          let clickedNode = e.path[0];
           this.editing = true;
           this.oldSymbol = this.symbol;
           let nameField = this.$.quill.getMathQuill().innerFields[0];
