@@ -14,6 +14,9 @@ mqUtil = {
       return null;
     }
     let semanticTree = mathField.semanticTree();
+    if (!semanticTree) {
+      return null;
+    }
     let semanticNode = semanticTree.findDisplayNode(id);
     return semanticNode;
   },

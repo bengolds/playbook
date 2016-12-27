@@ -104,7 +104,7 @@
       }
 
       let applicationNode = mqUtil.getClosestApplicationNode(semanticNode);
-      if (!applicationNode.parent) {
+      if (!applicationNode || !applicationNode.parent) {
         return;
       }
 
