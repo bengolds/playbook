@@ -1,6 +1,7 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="../bower_components/paper-card/paper-card.html">
 <link rel="import" href="function-row.html">
+<link rel="import" href="math-compiler.html">
 
 <dom-module id="main-app">
   <template>
@@ -11,9 +12,14 @@
         margin:0px auto;
       }
     </style>
+    <math-compiler 
+      functors='[[functors]]' 
+      pinned-vars='[[pinnedVars]]'></math-compiler>
     <paper-card id="card">
-      <template is='dom-repeat' items='{{rows}}'>
-        <function-row name='{{item.name}}' synced-parameters='{{syncedParameters}}'></function-row>
+      <template is='dom-repeat' items='{{functors}}'>
+        <function-row functor='{{item}}'
+          pinned-vars='[[pinnedVars]]'
+          synced-parameters='{{syncedParameters}}'></function-row>
       </template>
     </paper-card>
     <button on-click='addRow'>+</button>
@@ -24,9 +30,12 @@
     Polymer({
       is: 'main-app',
       properties: {
-        rows: {
+        functors: {
           type: Array,
           value: function() {return [];}
+        },
+        pinnedVars: {
+          type: Array
         },
         syncedParameters: {
           type: Object,
@@ -62,7 +71,7 @@
       },
 
       newRow: function (name) {
-        return {name: name};
+        return new Functor();
       },
 
       getNextName: function() {
@@ -78,8 +87,6 @@
           return val.name === name;
         });
       },
-
-
 
     });
  </script>

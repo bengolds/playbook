@@ -18,13 +18,17 @@
       }
     </style>
     <button on-click='removeRow'>X</button>
-    <function-signature functor='{{functor}}' symbol='{{name}}'></function-signature>
-    <function-input id='input' functor='{{functor}}' 
-      synced-parameters='{{syncedParameters}}'></function-input>
-    <template is='dom-repeat' items='[[_getBoundVarsArray(functor, functor.boundVars)]]'>
-      <variable-slider id='slider' symbol='{{item.symbol}}' functor='{{functor}}'></variable-slider>
-    </template>
-    <mathbox-plot id='plot' animated functor='[[functor]]' 
+    <button on-click='testText'>Change Text</button>
+    <function-signature id='signature'
+      symbol='{{functor.name}}' 
+      parameters='[[getSymbols(functor.definition)]]'></function-signature>
+    <function-input id='input'
+      definition='{{functor.definition}}'
+      latex='{{functor.latex}}'
+      ></function-input>
+    <mathbox-plot id='plot' animated 
+      functor='[[functor]]' 
+      pinnedVars='[[pinnedVars]]'
       synced-parameters='{{syncedParameters}}'></mathbox-plot>
   </template>
 
@@ -32,18 +36,11 @@
     Polymer({
       is: 'function-row',
       properties: {
-        name: {
-          type: String,
-          value: 'f',
+        functor: {
+          type: Object,
           notify: true
         },
-        functor: {
-          type: Object
-        },
-        syncedParameters: {
-          type: Object,
-          notify: true,
-        },
+        pinnedVars: Array
       },
 
       listeners: {
@@ -55,6 +52,10 @@
       },
 
       attached: function () {
+      },
+
+      testText: function () {
+        this.$.definition = 'x^2+\\lambda';
       },
 
       pinVariable: function (_, detail) {

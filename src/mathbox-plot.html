@@ -56,6 +56,16 @@
 
       properties: {
         functor: Object,
+        animated: Boolean,
+        pinnedVars: Array,
+        syncedParameters: {
+          type: Object,
+          notify: true,
+          value: function() {return {
+            xRange: [-5, 5],
+            yRange: [-5, 5],
+          };}
+        },
         width: {
           type: Number,
           observer: '_resize',
@@ -65,15 +75,6 @@
           type: Number,
           observer: '_resize',
           value: 0
-        },
-        animated: Boolean,
-        syncedParameters: {
-          type: Object,
-          notify: true,
-          value: function() {return {
-            xRange: [-5, 5],
-            yRange: [-5, 5],
-          };}
         },
         inputOk: Boolean,
         dimensionsOk: Boolean

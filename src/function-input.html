@@ -34,7 +34,6 @@
    on-element-mouseover='onElementMouseOver'>
   </mathquill-element>
   <p id='errorMessage'></p>
-  <function-parser id='parser'></function-parser>
   <hover-plot class='hidden' id='hoverplot' 
     synced-parameters='{{syncedParameters}}'></hover-plot>
   <div id='outline' class='hidden'></div>
@@ -45,32 +44,32 @@
     is: 'function-input',
 
     properties: {
-      functor: {
-        type: Object,
-        notify: true
-      },
       syncedParameters: {
         type: Object,
         notify: true
+      },
+      text: {
+        type: String,
+        notify: true,
+        readOnly: true
       }
     },
 
     ready: function() {
       this.scopeSubtree(this.$.quill, true);
-      this.functor = this.$.parser.getFunctor('0');
     },
 
     onEdit: function() {
-      var parser = this.$.parser;
       this.hideHoverItems();
       try {
-        var functionString = this.$.quill.semanticText();
+        let functionString = this.$.quill.semanticText();
         if (functionString == '') {
           return;
         }
-        let newFunctor = parser.getFunctor(functionString);
-        this._matchPinnedVariables(this.functor, newFunctor);
-        this.functor = newFunctor;
+        this.text = functionString;
+        // let newFunctor = parser.getFunctor(functionString);
+        // this._matchPinnedVariables(this.functor, newFunctor);
+        // this.functor = newFunctor;
         this.$.errorMessage.textContent = '';
         this.cancelDebouncer('input-error');
         this.fire('input-ok');
@@ -84,20 +83,30 @@
       }
     },
 
-    _matchPinnedVariables(oldFunctor, newFunctor) {
-      if (!oldFunctor) {
-        return;
-      }
-      for (let pinnedVar in oldFunctor.boundVars) {
-        if (newFunctor.symbols.includes(pinnedVar)) {
-          newFunctor.pinVar(pinnedVar, 
-            oldFunctor.boundVars[pinnedVar].value, 
-            oldFunctor.boundVars[pinnedVar].range);
-        }
-      }
+    getLatex: function () {
+      return this.$.quill.latex();
     },
 
+    setLatex: function (latex) {
+      this.$.quill.latex(latex);
+    },
+
+    // _matchPinnedVariables(oldFunctor, newFunctor) {
+    //   if (!oldFunctor) {
+    //     return;
+    //   }
+    //   for (let pinnedVar in oldFunctor.boundVars) {
+    //     if (newFunctor.symbols.includes(pinnedVar)) {
+    //       newFunctor.pinVar(pinnedVar, 
+    //         oldFunctor.boundVars[pinnedVar].value, 
+    //         oldFunctor.boundVars[pinnedVar].range);
+    //     }
+    //   }
+    // },
+
     onElementMouseOver: function(e, details) {
+      //TODO: REMOVE THIS
+      return;
       let semanticNode = mqUtil.semanticNodeFromHTML(details.target, details.mathField);
       if (!semanticNode) {
         return;
@@ -121,6 +130,8 @@
     },
 
     createHoverPlot: function(x, y, funcString) {
+      //TODO: Make sure this gets the global scope
+      //Move this to the main-app/global scope, and send up an event
       this.$.hoverplot.functor = this.$.parser.getFunctor(funcString);
       this.$.hoverplot.classList.remove('hidden');
       this.$.hoverplot.style.top = y+'px';
