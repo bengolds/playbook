@@ -21,7 +21,7 @@
 
   <mathquill-element id="nameQuill"
     on-element-mouseover='onNameMouseOver' 
-    on-m  ouseleave='onNameMouseLeave'
+    on-mouseleave='onNameMouseLeave'
     on-edit='onNameEdit'
     on-enter='onNameExit'
     editable='[[editing]]'>
@@ -103,6 +103,7 @@
           this.symbol = this.oldSymbol;
         }
         this.editing = false;
+        this.$.nameQuill.latex(this.symbol);
       },
 
       showHoverBar: function (target) {
