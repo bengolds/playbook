@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>function-input</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="fake-elements.html">
+    <link rel="import" href="../src/function-input.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template is="dom-template">
+        <function-input definition='{{definition}}' latex='{{latex}}'></function-input>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('function-input tests', function() {
+        var el;
+        var quill;
+        var cosString = '\\cos x';
+
+        setup(function() {
+          el = fixture('basic', {definition: 'x^2', latex: cosString});
+          quill = el.$.quill;
+        });
+
+        let latexShouldEqual = function (expected) {
+          expect(el.latex).to.equal(expected);
+          expect(quill.latex()).to.equal(expected);
+        };
+
+        test('initialization', function() {
+          //Initial values should be ignored
+          expect(el.definition).to.equal('');
+          latexShouldEqual('');
+        });
+
+        test('changing latex', function() {
+          el.setLatex(cosString);
+          latexShouldEqual(cosString);
+          expect(el.definition).to.equal('cos(x)');
+          //TODO: Have behavior for both changing latex imperatively (a la split out)
+          //and for changing it just display-wise (subbing numbers in)
+        });
+
+        test('input success', function(done) {
+          el.addEventListener('input-ok', function() {
+            latexShouldEqual('x');
+            expect(el.definition).to.equal('x');
+            done();
+          });
+          let fail = (e) => {done(e.detail); };
+          el.addEventListener('input-error', fail);
+          quill.focus();
+          quill.typedText('x');
+        });
+
+        test('input failure', function(done) {
+          el.setLatex(cosString);
+
+          el.addEventListener('input-ok', function() {
+            done(Error('expected input to throw an error'));
+          });
+          el.addEventListener('input-error', function() {
+            //The latex of the quill should change, but the definition and function shouldn't
+            expect(quill.latex()).to.equal(cosString + '+');
+            expect(el.latex).to.equal(cosString);
+            expect(el.definition).to.equal('cos(x)');
+            done();
+          });
+          quill.focus();
+          quill.typedText('+');
+        });
+
+        test('input debouncing', function(done) {
+          let fail = (e) => {done(e.detail); };
+          el.addEventListener('input-error', fail);
+
+          quill.focus();
+          quill.typedText('x+y^z');
+
+          latexShouldEqual('x+y^z');
+          expect(el.definition).to.equal('(x+(y^z))');
+          done();
+        });
+
+        // test('hover-event fired', function() {
+        //   //Set up the mathquill, find the el you want to hover, fire the event 
+        // });
+
+      });
+    </script>
+  </body>
+</html>

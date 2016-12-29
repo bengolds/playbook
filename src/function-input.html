@@ -1,4 +1,4 @@
-<link rel="import" href="hover-plot.html">
+  <link rel="import" href="hover-plot.html">
 <link rel="import" href="function-parser.html">
 <link rel="import" href="mathquill-element.html">
 <dom-module id="function-input">
@@ -44,51 +44,71 @@
     is: 'function-input',
 
     properties: {
-      syncedParameters: {
-        type: Object,
-        notify: true
-      },
-      text: {
+      latex: {
         type: String,
         notify: true,
-        readOnly: true
+        readOnly: true,
+        value: ''
+      },
+      definition: {
+        type: String,
+        notify: true,
+        readOnly: true,
+        value: ''
       }
     },
 
-    ready: function() {
+    attached: function() {
       this.scopeSubtree(this.$.quill, true);
+      this.alreadyChangingLatex = false;
     },
 
     onEdit: function() {
+      if (this.alreadyChangingLatex)
+        return;
+      this.alreadyChangingLatex = true;
+
       this.hideHoverItems();
+      this.tryParseLatex();
+
+      this.alreadyChangingLatex = false;
+    },
+
+    setLatex: function(newLatex) {
+      if (this.alreadyChangingLatex)
+        return;
+      this.alreadyChangingLatex = true;
+
+      this._setLatex(newLatex);
+      this.$.quill.latex(newLatex);
+      this.tryParseLatex();
+
+      this.alreadyChangingLatex = false;
+    },
+
+    tryParseLatex: function() {
       try {
         let functionString = this.$.quill.semanticText();
         if (functionString == '') {
           return;
         }
-        this.text = functionString;
+        this._setDefinition(functionString);
+        this._setLatex(this.$.quill.latex());
+        this.cancelDebouncer('input-error');
+        this.fire('input-ok');
         // let newFunctor = parser.getFunctor(functionString);
         // this._matchPinnedVariables(this.functor, newFunctor);
         // this.functor = newFunctor;
-        this.$.errorMessage.textContent = '';
-        this.cancelDebouncer('input-error');
-        this.fire('input-ok');
+        // this.$.errorMessage.textContent = '';
       }
       catch (e) {
         this.debounce('input-error', (x)=>{
-          this.$.errorMessage.textContent = e.message;
-          console.log(e.stack);
-          this.fire('input-error');
+          // TODO: Move this to function row
+          // this.$.errorMessage.textContent = e.message;
+          // console.log(e.stack);
+          this.fire('input-error', e);
         }, 500);
       }
-    },
-
-    getLatex: function () {
-      return this.$.quill.latex();
-    },
-
-    setLatex: function (latex) {
-      this.$.quill.latex(latex);
     },
 
     // _matchPinnedVariables(oldFunctor, newFunctor) {

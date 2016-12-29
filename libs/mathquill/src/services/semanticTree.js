@@ -22,13 +22,6 @@ Controller.open(function(_) {
   };
 });
 
-var SETS = {
-  INTEGER: 1,
-  REAL: 2,
-  COMPLEX: 3,
-  CONSTANT: 4
-};
-
 SemanticNode = P(function(_) {
   _.__type__ = 'SemanticNode';	
   _.init = function() {
@@ -160,9 +153,9 @@ NumberNode = P(SymbolNode, function(_, super_) {
 
 VariableNode = P(SemanticNode, function(_, super_) {
   _.__type__ = 'VariableNode';
-  _.init = function (variableName, variableType = SETS.REAL) {
+  _.init = function (variableName) {
     this.variableName = variableName;
-    this.variableType = variableType;
+    // this.variableType = variableType;
     super_.init.call(this);
   };
   _.toString = function() {
