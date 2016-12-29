@@ -65,6 +65,7 @@
         "Parser": true,
         "MathCommand": true,
         "VanillaSymbol": true,
+        "NonSymbolaSymbol": true,
         "TextBlock": true,
         "BinaryOperator": true,
         "Digit": true,
@@ -102,6 +103,12 @@
         "Algebrite": false,
         "math": false,
         "mathBox": false,
-        "THREE": false
+        "THREE": false,
+        "Tweenable": false,
+        "Functor": true,
+        "warmCoolMap": true,
+        "Graph": true,
+        "LineGraph": true,
+        "ColorGraph": true
     }
 }

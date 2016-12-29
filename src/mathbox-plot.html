@@ -1,8 +1,10 @@
-<script src="mathbox/build/mathbox-bundle.js"></script>
+<script src="../libs/mathbox/build/mathbox-bundle.js"></script>
+<link rel="import" href="graphs/graph-import.html">
 <link rel="import" href="../bower_components/iron-resizable-behavior/iron-resizable-behavior.html">
+<link rel="import" href="../bower_components/iron-icon/iron-icon.html">
 <dom-module id="mathbox-plot">
   <template>
-    <style>
+    <style is="custom-style">
       :host {
         height:100%;
         position:relative;
@@ -14,9 +16,37 @@
         bottom:0px;
         right:0px;
         left:0px;
+        transition: filter .5s;
+      }
+      :host(.ungrabbed) #mathbox {
+        cursor: grab;
+        cursor: -webkit-grab;
+        cursor: -moz-grab;
+      }
+      iron-icon {
+        display:none;
+        opacity:0;
+        position:absolute;
+        z-index:1;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%,-50%);
+        --iron-icon-fill-color: #d40000;
+        --iron-icon-stroke-color: rgba(0,0,0,0.1);
+        --iron-icon-width: 64px;
+        --iron-icon-height: 64px;
+        transition: opacity .5s;
+      }
+      :host(.error) iron-icon {
+        opacity:1;
+        display:block;
+      }
+      :host(.error) #mathbox{
+        filter:blur(10px);
       }
     </style>
-    <div id='mathbox'></div>
+    <iron-icon icon='error'></iron-icon>
+    <div id='mathbox' class='blur'></div>
     
   </template>
 
@@ -25,10 +55,7 @@
       is: 'mathbox-plot',
 
       properties: {
-        functor: {
-          type: Object,
-          observer: '_functorChanged'
-        },
+        functor: Object,
         width: {
           type: Number,
           observer: '_resize',
@@ -39,10 +66,23 @@
           observer: '_resize',
           value: 0
         },
-        animated: {
-          type: Boolean,
-        }
+        animated: Boolean,
+        syncedParameters: {
+          type: Object,
+          notify: true,
+          value: function() {return {
+            xRange: [-5, 5],
+            yRange: [-5, 5],
+          };}
+        },
+        inputOk: Boolean,
+        dimensionsOk: Boolean
       },
+
+      observers: [
+        '_functorChanged(functor, functor.boundVars)',
+        '_shouldError(inputOk, dimensionsOk)'
+      ],
 
       behaviors: [
         Polymer.IronResizableBehavior
@@ -50,10 +90,13 @@
 
       listeners: {
         'iron-resize': '_resize',
+        'down': 'onPanStart',
+        'wheel': 'onWheel'
       },
 
       attached: function() {
         this.initialized = true;
+        this.supportedGraphs = [LineGraph, ColorGraph];
 
         var aspectRatio = this._getAspectRatio();
         var options = {
@@ -64,7 +107,7 @@
             left: -aspectRatio,
             right: aspectRatio
           },
-          size: {}
+          size:{},
         };
         if (this.width != 0) {
           options.size.width = this.width;
@@ -75,27 +118,31 @@
         this.mathbox = mathBox(options);
         this.mathbox.three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
 
-        var camera = this.mathbox.camera({
+        this.camera = this.mathbox.camera({
+          proxy: true,
           position: [0,0,1]
         });
 
         this.view = this.mathbox.cartesian();
 
-        this.data = this.view.interval({
-          channels: 2,
-          fps: 60
-        });
-
-        this.curve = this.view.line({
-          width: 5,
-          color: '#3090FF',
-          zIndex: 2
-        });
-
         this._resize();
         this._setupGridLines();
-        this._initializeAnimators();
-        this._plotFunction(false);
+        this._setupDataAndDisplay(LineGraph);
+        this._functionChanged();
+
+        this.classList.add('ungrabbed');
+      },
+
+      _getAspectRatio: function() {
+        return this._getWidth()/this._getHeight();
+      },
+
+      _getWidth: function() {
+        return this.width || this.scrollWidth;
+      },
+
+      _getHeight: function() {
+        return this.height || this.scrollHeight;
       },
 
       _setupGridLines: function() {
@@ -114,151 +161,104 @@
         });
       },
 
-      _functorChanged: function() {
-        if (this.initialized) {
-          this._plotFunction(this.animated);
-        }
-      },
-
-      _plotFunction: function(animated = false) {
-        if (!this.functor) {
-          return;
-        }
-        var cachedExpr = this.functor.eval.bind(this.functor);
-        var newExpr = (emit, x, i, t) => {
-          emit(x, cachedExpr(x));
-        };
-        var newRange = this._getBounds(newExpr, [0, 10]);
-
-        if (animated) {
-          var currExpr = this.data.get('expr');
-          this.intervalAnim.set('script', {
-            '0.001': {props: {expr: currExpr}},
-            '1': {props: {expr: newExpr}},
-          });
-
-          var currRange = this.view.get('range');
-          this.cartesianAnim.set('script', {
-            '0.001': {props: {range: currRange}},
-            '1': {props: {range: newRange}},
-          });
-        }
-        else {
-          this.data.set('expr', newExpr);
-          this.view.set('range', newRange);
-        }
-      },
-
       _resize: function() {
         if (!this.initialized)
           return;
         var plotEl = this.$.mathbox;
         var aspectRatio = this._getAspectRatio();
+        //Maybe bind this?
         this.view.set('scale', [aspectRatio, 1]);
         this.mathbox.three.camera.left = -aspectRatio;
         this.mathbox.three.camera.right = aspectRatio;
-        this.data.set('width', this._getWidth());
       },
 
-      _getAspectRatio: function() {
-        return this._getWidth()/this._getHeight();
-      },
-
-      _getWidth: function() {
-        return this.width || this.scrollWidth;
-      },
-
-      _getHeight: function() {
-        return this.height || this.scrollHeight;
-      },
-
-      _initializeAnimators: function() {
-        this.cartesianAnim = this.mathbox.play({
-          target: 'cartesian',
-          pace: 1,
-        });
-        this.intervalAnim = this.mathbox.play({
-          target: 'interval',
-          pace: 1,
-        });
-      },
-
-      _getBounds: function(dataExpr, range, numSamples=200) {
-        let minY = 0, maxY = 0;
-        switch (this.functor.unboundVars.length) {
-        case 0:
-          minY = maxY = this.functor.eval();
-          break;
-        case 1:
-          var sampledRange = this._sampleFuncForBounds(this.functor, range, numSamples);
-          minY = sampledRange[0];
-          maxY = sampledRange[1];
-          break;
-        default:
-          throw 'Too many unbound variables to calculate range';
-        }
-
-        // Apply some tricks to the resulting values to get a good range
-        if (minY == Number.NEGATIVE_INFINITY) {
-          minY = -10;
-        }
-        if (maxY == Number.POSITIVE_INFINITY) {
-          maxY = 10;
-        }
-        if (minY == maxY) {
-          minY = minY - 5;
-          maxY = maxY + 5;
-        }
-        minY = Math.min(minY, 0);
-        maxY = Math.max(maxY, 0);
-        return [range,[minY, maxY]];
-      },
-
-      _sampleFuncForBounds: function(functor, range, numSamples) {
-        let oldBoundVars = Object.assign({}, functor.boundVars);
-        let oldUnboundVars = functor.unboundVars.slice(0);
-        
-        let iterateVars = functor.symbols.slice(0);
-        let iterateRanges = Object.assign({}, functor.boundRanges);
-        if (functor.unboundVars.length == 1) {
-          iterateRanges[functor.unboundVars[0]] = range;
-        }
-        let iterateSteps = {};
-        let numSamplePoints = Math.round(Math.pow(numSamples, 1/iterateVars.length));
-
-        for (let key in iterateRanges) {
-          let currRange = iterateRanges[key];
-          let rangeWidth = currRange[1]-currRange[0];
-          iterateSteps[key] = rangeWidth/numSamplePoints;
-        }
-
-        var minY = Number.MAX_VALUE, maxY = -minY;
-        var checkValue = function (y) {
-          if (!isNaN(y)) {
-            minY = Math.min(minY, y);
-            maxY = Math.max(maxY, y);
-          }
-        };
-
-        let iterate = (dimension) => {
-          let currVar = iterateVars[dimension];
-          let currRange = iterateRanges[currVar];
-          let currStep = iterateSteps[currVar];
-          for (let i = currRange[0]; i < currRange[1]; i+=currStep) {
-            functor.bindVar(currVar, i);
-            if (dimension == iterateVars.length-1) {
-              checkValue(functor.eval());
-            } else {
-              iterate(dimension+1);
+      _functorChanged: function() {
+        if (this.initialized) {
+          let compatibleGraphs = this._getCompatibleGraphs(this.functor);
+          if (compatibleGraphs.length != 0) {
+            if (!this.graph) {
+              this._setupDataAndDisplay(compatibleGraphs[0]);
+            } 
+            else if (compatibleGraphs[0] !== this.graph.constructor) {
+              if (this.graph) {
+                this.graph.teardown();
+              }
+              this._setupDataAndDisplay(compatibleGraphs[0]);
             }
+            this.dimensionsOk = true;
+            this.cancelDebouncer('dimensions-error');
+            this._functionChanged();
+          } 
+          else {
+            this.debounce('dimensions-error', (_)=> {
+              this.dimensionsOk = false;
+            }, 500);
           }
-        };
-        iterate(0);
-        functor.boundVars = oldBoundVars;
-        functor.unboundVars = oldUnboundVars;
-        return [minY, maxY];
+        }
       },
 
+      _shouldError: function () {
+        if (this.inputOk && this.dimensionsOk) {
+          this.classList.remove('error');
+        }
+        else {
+          this.classList.add('error');
+        }
+      },
+
+      _getCompatibleGraphs: function (functor) {
+        let matchingGraphs = this.supportedGraphs.filter((graph) => {
+          return graph.isSupported(this.functor);
+        });
+        return matchingGraphs;
+      },
+
+      _setupDataAndDisplay: function(graphConstructor) {
+        if (!this.functor)
+          return;
+        this.graph = new graphConstructor(this.mathbox, this.syncedParameters, this.animated);
+        this.graph.setup();
+      },
+
+      _functionChanged: function() {
+        if (!this.functor || !this.graph) {
+          return;
+        }
+        this.graph.showFunction(this.functor);
+      },
+
+      onPanStart: function (e) {
+        this.classList.remove('ungrabbed');
+        this.lastPan = {x:e.detail.x, y:e.detail.y};
+        this.listen(this, 'track', 'onPan');
+        this.listen(this, 'up', 'onPanStop');
+        for (let value of ['grabbing', '-webkit-grabbing', '-moz-grabbing']) {
+          document.body.style.cursor = value;
+          if (document.body.style.cursor  === value)
+            break;
+        }
+        this.graph.onPanStart();
+      },
+
+      onPan: function (e) {
+        let dx = e.detail.x - this.lastPan.x;
+        let dy = e.detail.y - this.lastPan.y;
+        this.graph.onPan(dx, dy);
+        this.lastPan = {x:e.detail.x, y:e.detail.y};
+      },
+
+      onPanStop: function (e) {
+        this.graph.onPanStop();
+        this.classList.add('ungrabbed');
+        this.lastPanX = null;
+        this.unlisten(this, 'track', 'onPan');
+        this.unlisten(this, 'up', 'onPanStop');
+        document.body.style.cursor = null;
+      },
+
+      onWheel: function (e) {
+        this.graph.onZoom(e.deltaY, e.offsetX, e.offsetY);
+      },
     });
  </script>
 </dom-module>

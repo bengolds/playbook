@@ -4,32 +4,31 @@
   <template>
     <style>
       :host {
-        position: absolute;
-        width: 480px;
-        height: 192px;
       }
       mathbox-plot {
         display:block;
         width: 480px;
         height: 192px;
-        z-index: 10;
+        z-index: 2;
       }
     </style>
-    <paper-card>
-      <mathbox-plot func="[[func]]" width='480' height='190'></mathbox-plot>
-    </paper-card>
+    <arrow-box direction='up'>
+      <mathbox-plot width='480' height='190' functor="[[functor]]" 
+        synced-parameters='{{syncedParameters}}'></mathbox-plot>
+    </arrow-box>
     
   </template>
   <script>
     Polymer({
       is: 'hover-plot',
       properties: {
-        func: {
+        functor: {
           type: Object,
-          value: {eval:(x)=>{return 0;}}
+        },
+        syncedParameters: {
+          type: Object,
+          notify: true
         }
-      },
-      attached: function() {
       }
     });
   </script>

@@ -56,8 +56,10 @@
 
       _valueChanged: function () {
         var val = this.$.slider.immediateValue;
-        this.functor.bindVar(this.symbol, val);
-        this.functor.bindRange(this.symbol, this.range);
+        this.fire('functor-bindvar', {
+          variable: this.symbol, 
+          value: val,
+        });
       },
 
       _functorChanged: function () {

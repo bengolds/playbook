@@ -14,22 +14,74 @@
       #tailFill {
         content: "";
         position:absolute;
-        bottom: -24px;
-        left: 50%;
-        transform: translate(-50%, 0%);
-        z-index: 2;
         border: solid 13px transparent;
-        border-top-color: #FFF;
+        z-index: 2;
       }
       #tailBorder {
         content: "";
         position:absolute;
+        border: solid 15px transparent;
+        z-index: 1;
+      }
+      :host(.down) #mainBox {
+        margin-bottom: 15px;
+      }
+      :host(.down) #tailFill {
+        bottom: -24px;
+        left: 50%;
+        transform: translate(-50%, 0%);
+        border-top-color: #FFF;
+      }
+      :host(.down) #tailBorder {
         bottom: -30px;
         left: 50%;
         transform: translate(-50%, 0%);
-        z-index: 1;
-        border: solid 15px transparent;
         border-top-color: #9C9C9C;
+      }
+      :host(.up) #mainBox {
+        margin-top: 15px;
+      }
+      :host(.up) #tailFill {
+        top: -24px;
+        left: 50%;
+        transform: translate(-50%, 0%);
+        border-bottom-color: #FFF;
+      }
+      :host(.up) #tailBorder {
+        top: -30px;
+        left: 50%;
+        transform: translate(-50%, 0%);
+        border-bottom-color: #9C9C9C;
+      }
+      :host(.left) #mainBox {
+        margin-left: 15px;
+      }
+      :host(.left) #tailFill {
+        top: 50%;
+        left: -24px;
+        transform: translate(0%, -50%);
+        border-right-color: #FFF;
+      }
+      :host(.left) #tailBorder {
+        top: 50%;
+        left: -30px;
+        transform: translate(0%, -50%);
+        border-right-color: #9C9C9C;
+      }
+      :host(.right) #mainBox {
+        margin-right: 15px;
+      }
+      :host(.right) #tailFill {
+        top: 50%;
+        right: -24px;
+        transform: translate(0%, -50%);
+        border-left-color: #FFF;
+      }
+      :host(.right) #tailBorder {
+        top: 50%;
+        right: -30px;
+        transform: translate(0%, -50%);
+        border-left-color: #9C9C9C;
       }
        
     </style>
@@ -42,7 +94,20 @@
   </template>
   <script>
     Polymer({
-      is: 'arrow-box'
+      is: 'arrow-box',
+      properties: {
+        direction: {
+          type: String,
+          value: 'down',
+          observer: 'directionChanged'
+        }
+      },
+
+      directionChanged: function () {
+        this.classList.remove('left','right','down','up');
+        this.classList.add(this.direction);
+      }
+
     });
   </script>
 </dom-module>

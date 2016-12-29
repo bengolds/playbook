@@ -17,12 +17,14 @@
         flex-basis: 480px;
       }
     </style>
-    <function-signature functor="{{functor}}" symbol='f'></function-signature>
-    <function-input id='input' functor='{{functor}}'></function-input>
-    <template is="dom-repeat" items="[[_getBoundVarsArray(functor.*)]]">
+    <function-signature functor='{{functor}}' symbol='f'></function-signature>
+    <function-input id='input' functor='{{functor}}' 
+      synced-parameters='{{syncedParameters}}'></function-input>
+    <template is='dom-repeat' items='[[_getBoundVarsArray(functor, functor.boundVars)]]'>
       <variable-slider id='slider' symbol='{{item.symbol}}' functor='{{functor}}'></variable-slider>
     </template>
-    <mathbox-plot functor="[[functor]]" id="plot" animated='true'></mathbox-plot>
+    <mathbox-plot id='plot' animated functor='[[functor]]' 
+      synced-parameters='{{syncedParameters}}'></mathbox-plot>
   </template>
 
   <script>
@@ -31,25 +33,74 @@
       properties: {
         functor: {
           type: Object
-        }
+        },
+        syncedParameters: {
+          type: Object,
+          notify: true,
+          value: function() {return {
+            xRange: [-5, 5],
+            yRange: [-5, 5],
+          };}
+        },
       },
 
-      observers: [
-        'testObserver(functor.*)'
-      ],
+      listeners: {
+        'functor-pinvar': 'pinVariable',
+        'functor-bindvar': 'bindVariable',
+        'functor-unpinvar': 'unpinVariable',
+        'input-ok': 'inputOk',
+        'input-error': 'inputError',
+      },
 
-      _symbols: function (_) {
-        return this.functor.symbols;  
+      attached: function () {
+      },
+
+      pinVariable: function (_, detail) {
+        this.functor.pinVar(detail.variable, detail.value, detail.range);
+        this._forceNotifyPath('functor.boundVars');
+      },
+
+      bindVariable: function (_, detail) {
+        this.functor.bindVar(detail.variable, detail.value);
+        this._forceNotifyPath('functor.boundVars.' + detail.variable, detail.value);
+      },
+
+      unpinVariable: function (_, detail) {
+        this.functor.unpinVar(detail.variable);
+        this._forceNotifyPath('functor.boundVars');
+      },
+
+      inputOk: function (_) {
+        this.$.plot.inputOk = true;
+      },
+
+      inputError: function (_) {
+        this.$.plot.inputOk = false;
       },
 
       _getBoundVarsArray: function (_) {
         let returnArray = [];
         for (let key in this.functor.boundVars) {
-          let object = {symbol: key, value:this.functor.boundVars[key]};
+          // TODO: ADD RANGE HERE
+          let object = {symbol: key, value:this.functor.boundVars[key].value};
           returnArray.push(object);
         }
         return returnArray;
+      },
+
+      _forceNotifyPath: function (path) {
+        var obj = this.get(path);
+        //Override the dirty checking
+        if (Array.isArray(obj)) {
+          obj = obj.slice();
+        } 
+        else if (typeof obj === 'object') {
+          obj = Object.assign({}, obj);
+        }
+        this.set(path, obj);
+        this.notifyPath(path);
       }
+
     });
  </script>
 </dom-module>
