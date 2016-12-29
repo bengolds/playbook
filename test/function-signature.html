@@ -17,7 +17,7 @@
   <body>
     <test-fixture id="basic">
       <template>
-        <function-signature name='f'></function-signature>
+        <function-signature name='f' parameters='["v","w","x","y","z"]'></function-signature>
       </template>
     </test-fixture>
 
@@ -30,46 +30,83 @@
           el = fixture('basic');
         });
 
+        let nameEquals = function(name) {
+          expect(el.name).to.equal(name);
+          expect(el.$.nameQuill.latex()).to.equal(name);
+        };
 
-        test('name editing', function() {
-          let nameEquals = function(name) {
-            expect(el.name).to.equal(name);
-            expect(el.$.nameQuill.latex()).to.equal(name);
-          };
-          let testEditing = function(shouldBeEditing) {
-            expect(el.editing).to.equal(shouldBeEditing);
-            expect(el.$.nameQuill.editable).to.equal(shouldBeEditing);
-          };
+        let testEditing = function(shouldBeEditing) {
+          expect(el.editing).to.equal(shouldBeEditing);
+          expect(el.$.nameQuill.editable).to.equal(shouldBeEditing);
+        };
 
+        test('name initialization', function() {
           nameEquals('f');
           testEditing(false);
+        });
 
+        test('editing name from outside', function() {
           el.name = 'g';
           nameEquals('g');
+        });
 
+        test('editing name by typing text', function() {
           el.editing = true;
           testEditing(true);
-          nameEquals('g');
+          nameEquals('f');
 
           el.$.nameQuill.focus();
           el.$.nameQuill.typedText('xyz');
-          nameEquals('gxyz');
+          nameEquals('fxyz');
           testEditing(true);
 
+          //Hitting enter should exit the editing mode
           el.$.nameQuill.typedText('abc\n');
-          nameEquals('gxyzabc');
+          nameEquals('fxyzabc');
           testEditing(false);
+        });
+
+        test('blurring after deleting name', function() {
+          el.name = 'lazarus';
 
           el.editing = true;
           el.$.nameQuill.latex('');
           expect(el.$.nameQuill.latex()).to.equal('');
-          expect(el.name).to.equal('gxyzabc');
+          expect(el.name).to.equal('lazarus');
           testEditing(true);
-          
+
           el.onNameExit();
-          nameEquals('gxyzabc');
+          nameEquals('lazarus');
           testEditing(false);
         });
+
+        let parametersShouldRead = function(expected) {
+          expect(el.$.parametersQuill.latex()).to.equal('\\left(' + expected + '\\right)=');
+        };
+
+        test('parameter initialization', function() {
+          parametersShouldRead('v,w,x,y,z');
+        });
+
+        test('changing parameters', function() {
+          el.parameters = ['b', 'a', 'c'];
+          parametersShouldRead('a,b,c');
+
+          el.push('parameters', 'g');
+          parametersShouldRead('a,b,c,g');
+
+          el.push('parameters', 'd');
+          parametersShouldRead('a,b,c,d,g');
+
+          let index = el.parameters.indexOf('c');
+          el.splice('parameters', index, 1);
+          parametersShouldRead('a,b,d,g');
+        });
+
+        test('pinned variables', function() {
+          // el.pinnedVariables = 
+        });
+
       });
     </script>
   </body>

@@ -43,10 +43,14 @@
           notify: true,
           observer: 'nameChanged'
         },
-        symbols: Array,
+        parameters: {
+          type: Array,
+          observer: 'updateSignature'
+        },
         pinnedVariables: {
           type: Array,
-          notify: true
+          notify: true,
+          observer: 'updateSignature'
         },
         editing: {
           type: Boolean,
@@ -55,19 +59,34 @@
         }
       },
 
+      observers: [
+        'updateSignature(parameters.splices)'
+      ],
+
       attached: function () {
-        this._updateSignature();
+        this.updateSignature();
         this.$.nameQuill.latex(this.name);
       },
       
-      _updateSignature: function () {
+      updateSignature: function () {
         let latex = '\\left(';
-        if (this.functor) {
-          let sorted = this.functor.symbols.slice().sort();
+        if (this.parameters) {
+          let sorted = this.parameters.slice().sort();
           latex += sorted.join(',');
         }
         latex += '\\right)=';
         this.$.parametersQuill.latex(latex);
+      },
+
+      nameChanged: function (_) {
+        this.$.nameQuill.latex(this.name);
+      },
+
+      editingChanged: function (_) {
+        if (this.editing) {
+          this.oldName = this.name;
+          this.listen(this.$.nameQuill, 'blur', 'onNameExit');
+        }
       },
 
       onParameterMouseOver: function (e, details) {
@@ -94,17 +113,6 @@
       onNameEdit: function (e, details) {
         if (details.mathField.latex() != '')  {
           this.name = details.mathField.latex();
-        }
-      },
-
-      nameChanged: function (_) {
-        this.$.nameQuill.latex(this.name);
-      },
-
-      editingChanged: function (_) {
-        if (this.editing) {
-          this.oldName = this.name;
-          this.listen(this.$.nameQuill, 'blur', 'onNameExit');
         }
       },
 
