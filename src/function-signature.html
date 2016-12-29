@@ -1,6 +1,7 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="mathquill-element.html">
 <link rel="import" href="var-action-bar.html">
+<script src="variable.js"></script>
 <script src="../bower_components/mathjs/dist/math.js"></script>
 
 <dom-module id="function-signature">
@@ -45,11 +46,13 @@
         },
         parameters: {
           type: Array,
+          value: function() {return [];},
           observer: 'updateSignature'
         },
         pinnedVariables: {
           type: Array,
           notify: true,
+          value: function() {return [];},
           observer: 'updateSignature'
         },
         editing: {
@@ -60,19 +63,32 @@
       },
 
       observers: [
-        'updateSignature(parameters.splices)'
+        'updateSignature(parameters.splices)',
+        'updateSignature(pinnedVariables.splices)'
       ],
 
       attached: function () {
+        this.initialized = true;
         this.updateSignature();
         this.$.nameQuill.latex(this.name);
       },
       
       updateSignature: function () {
+        if (!this.initialized)
+          return;
+
         let latex = '\\left(';
         if (this.parameters) {
           let sorted = this.parameters.slice().sort();
-          latex += sorted.join(',');
+
+          let isNotPinned = (val) => {
+            return !this.pinnedVariables.some((pinned) => {
+              return pinned.variable.name === val;
+            });
+          };
+
+          let filtered = sorted.filter(isNotPinned);
+          latex += filtered.join(',');
         }
         latex += '\\right)=';
         this.$.parametersQuill.latex(latex);

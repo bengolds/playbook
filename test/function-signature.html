@@ -104,7 +104,27 @@
         });
 
         test('pinned variables', function() {
-          // el.pinnedVariables = 
+          let w = new Variable('w');
+          let x = new Variable('x');
+          let z = new Variable('z');
+          let a = new Variable('a');
+          let b = new Variable('b');
+
+          el.pinnedVariables = [
+            {variable: x},
+            {variable: z},
+            {variable: a},
+          ];
+          parametersShouldRead('v,w,y');
+
+          el.push('pinnedVariables', {variable: w});
+          parametersShouldRead('v,y');
+
+          el.push('pinnedVariables', {variable: b});
+          parametersShouldRead('v,y');
+
+          el.push('parameters', 'a');
+          parametersShouldRead('v,y');
         });
 
       });

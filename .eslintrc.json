@@ -110,6 +110,7 @@
         "Graph": true,
         "LineGraph": true,
         "ColorGraph": true,
-        "mqUtil": true
+        "mqUtil": true,
+        "SETS": true
     }
 }
