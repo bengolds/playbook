@@ -1,3 +1,4 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="mathquill-element.html">
 <link rel="import" href="var-action-bar.html">
 <script src="../bower_components/mathjs/dist/math.js"></script>
@@ -26,7 +27,7 @@
     on-edit='onNameEdit'
     on-enter='onNameExit'
     editable='[[editing]]'>
-  </mathquill-elementn->
+  </mathquill-element>
   <mathquill-element id="parametersQuill"
     on-element-mouseover='onParameterMouseOver'>
   </mathquill-element>
@@ -37,31 +38,28 @@
     Polymer({
       is: 'function-signature',
       properties: {
-        functor: {
-          type: Object,
-          observer: '_functorChanged',
-          notify: true
-        },
-        symbol: {
+        name: {
           type: String,
-          value: 'Ɵ',
+          notify: true,
+          observer: 'nameChanged'
+        },
+        symbols: Array,
+        pinnedVariables: {
+          type: Array,
           notify: true
         },
         editing: {
           type: Boolean,
-          value: false
+          value: false,
+          observer: 'editingChanged'
         }
       },
 
       attached: function () {
         this._updateSignature();
-        this.$.nameQuill.latex(this.symbol);
+        this.$.nameQuill.latex(this.name);
       },
       
-      _functorChanged: function () {
-        this._updateSignature();
-      },
-
       _updateSignature: function () {
         let latex = '\\left(';
         if (this.functor) {
@@ -82,8 +80,6 @@
       onNameMouseOver: function (e, details) {
         if (!this.editing) {
           this.editing = true;
-          this.oldSymbol = this.symbol;
-          this.listen(this.$.nameQuill, 'blur', 'onNameExit');
         }
       },
 
@@ -96,15 +92,28 @@
       },
 
       onNameEdit: function (e, details) {
-        this.symbol = details.mathField.latex();
+        if (details.mathField.latex() != '')  {
+          this.name = details.mathField.latex();
+        }
+      },
+
+      nameChanged: function (_) {
+        this.$.nameQuill.latex(this.name);
+      },
+
+      editingChanged: function (_) {
+        if (this.editing) {
+          this.oldName = this.name;
+          this.listen(this.$.nameQuill, 'blur', 'onNameExit');
+        }
       },
 
       onNameExit: function (_) {
-        if (this.symbol == '') {
-          this.symbol = this.oldSymbol;
+        if (this.$.nameQuill.latex() == '') {
+          this.name = this.oldName;
+          this.$.nameQuill.latex(this.name);
         }
         this.editing = false;
-        this.$.nameQuill.latex(this.symbol);
       },
 
       showHoverBar: function (target) {

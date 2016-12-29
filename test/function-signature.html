@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>function-signature</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" type="css" href="../libs/mathquill/build/mathquill.css"/>
+    <link rel="import" href="fake-elements.html">
+    <link rel="import" href="../src/function-signature.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template>
+        <function-signature name='f'></function-signature>
+      </template>
+    </test-fixture>
+
+    <script>
+
+      suite('function-signature tests', function() {
+        var el;
+
+        setup(function() {
+          el = fixture('basic');
+        });
+
+
+        test('name editing', function() {
+          let nameEquals = function(name) {
+            expect(el.name).to.equal(name);
+            expect(el.$.nameQuill.latex()).to.equal(name);
+          };
+          let testEditing = function(shouldBeEditing) {
+            expect(el.editing).to.equal(shouldBeEditing);
+            expect(el.$.nameQuill.editable).to.equal(shouldBeEditing);
+          };
+
+          nameEquals('f');
+          testEditing(false);
+
+          el.name = 'g';
+          nameEquals('g');
+
+          el.editing = true;
+          testEditing(true);
+          nameEquals('g');
+
+          el.$.nameQuill.focus();
+          el.$.nameQuill.typedText('xyz');
+          nameEquals('gxyz');
+          testEditing(true);
+
+          el.$.nameQuill.typedText('abc\n');
+          nameEquals('gxyzabc');
+          testEditing(false);
+
+          el.editing = true;
+          el.$.nameQuill.latex('');
+          expect(el.$.nameQuill.latex()).to.equal('');
+          expect(el.name).to.equal('gxyzabc');
+          testEditing(true);
+          
+          el.onNameExit();
+          nameEquals('gxyzabc');
+          testEditing(false);
+        });
+      });
+    </script>
+  </body>
+</html>

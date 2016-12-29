@@ -1,0 +1,14 @@
+{
+	"globals": {
+        "setup": false,
+        "teardown": false,
+        "assert": false,
+        "test": false,
+        "suite": false,
+        "WCT": false,
+        "should": false,
+        "expect": false,
+        "fixture": false,
+        "replace": false
+    }
+}
