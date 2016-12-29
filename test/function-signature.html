@@ -75,7 +75,7 @@
           expect(el.name).to.equal('lazarus');
           testEditing(true);
 
-          el.onNameExit();
+          el.editing = false;
           nameEquals('lazarus');
           testEditing(false);
         });
