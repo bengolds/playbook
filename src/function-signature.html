@@ -51,13 +51,13 @@
         },
         pinnedVariables: {
           type: Array,
-          notify: true,
           value: function() {return [];},
           observer: 'updateSignature'
         },
         editing: {
           type: Boolean,
           value: false,
+          readOnly: true,
           observer: 'editingChanged'
         }
       },
