@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>mathbox-plot</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/mathbox-plot.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template>
+        <div id='container' style='width:400px; height:300px; display: flex'>
+          <mathbox-plot id='plot'></mathbox-plot>
+        </div>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('mathbox-plot tests', function() {
+        var outerDiv;
+        var el;
+
+        setup(function() {
+          outerDiv = fixture('basic');
+          el = outerDiv.querySelector('#plot');
+        });
+
+        let dimensionsShouldBe = function(width, height) {
+          let innerCanvas = el.mathbox.three.canvas;
+          expect(el.offsetWidth).to.equal(width);
+          expect(innerCanvas.offsetWidth).to.equal(width);
+          expect(el.offsetHeight).to.equal(height);
+          expect(innerCanvas.offsetHeight).to.equal(height);
+          expect(el.getAspectRatio()).to.equal(width/height);
+        };
+
+        test('initialization', function() {
+          expect(el.noGraphFound).to.equal(true);
+          expect(el.graph).to.not.be.ok;
+          dimensionsShouldBe(400, 300);
+        });
+
+        test('resizing', function() {
+          outerDiv.style.height = '200px';
+          el.resize();
+          dimensionsShouldBe(400, 200);
+
+          outerDiv.style.width = '100px';
+          el.resize();
+          dimensionsShouldBe(100, 200);
+        });
+
+
+        let makeFakeFunction = function(domain, range) {
+          return {
+            getDomain: function() {return domain;},
+            getRange: function() {return range;},
+            getSignature: function() {
+              return  {
+                domain: domain,
+                range: range,
+              };
+            },
+          };
+        };
+
+        test('graph signature finding', function(){
+          let expectGraph = function(domain, range, graphType) {
+            let f = makeFakeFunction(domain, range);
+            el.compiledFunction = f;
+            expect(el.graph.constructor).to.equal(graphType);
+            expect(el.noGraphFound).to.be.false;
+          };
+
+          expectGraph([SETS.REAL], [SETS.REAL], LineGraph);
+          expectGraph([SETS.REAL], [SETS.INTEGER], LineGraph);
+
+          expectGraph([SETS.REAL, SETS.REAL], [SETS.REAL], ColorGraph);
+          expectGraph([SETS.COMPLEX], [SETS.REAL], ColorGraph);
+        });
+
+        test('if signature doesn\'t change, graph shouldn\'t', function() {
+          let f = makeFakeFunction([SETS.REAL], [SETS.REAL]);
+          let g = makeFakeFunction([SETS.REAL], [SETS.INTEGER]);
+
+          el.compiledFunction = f;
+          let oldGraph = el.graph;
+          el.compiledFunction = g;
+          expect(el.graph).to.equal(oldGraph);
+        });
+
+        test('throw error if no graph found', function(done) {
+          el.compiledFunction = makeFakeFunction([SETS.REAL], [SETS.REAL]);
+
+          el.addEventListener('graph-ok', function() {
+            done(Error('expected input to throw an error'));
+          });
+          el.addEventListener('graph-error', function() {
+            expect(el.noGraphFound).to.be.true;
+            done();
+          });
+
+          let bad = makeFakeFunction([SETS.COMPLEX, SETS.COMPLEX, SETS.COMPLEX], [SETS.REAL]);
+          el.compiledFunction = bad;
+        });
+
+        let expectStyleToBe = function(element, key, value) {
+          let computed = window.getComputedStyle(element);
+          expect(computed[key]).to.equal(value);
+        };
+
+        test('icon hides and shows', function() {
+          el.showError = false;
+          expectStyleToBe(el.$.errorIcon, 'display', 'none');
+
+          el.showError = true;
+          expectStyleToBe(el.$.errorIcon, 'display', 'block');
+        });
+
+        //Test changing compiled function
+        //Test pan/zoom events with dummy graph
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>graphs</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/graphs/graph-import.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template>
+        <mathbox-plot></mathbox-plot>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('graphs tests', function() {
+        var el;
+
+        setup(function() {
+          el = fixture('basic');
+          //Replace with fake mathbox-plot
+        });
+
+        let makeSignature = function(domain, range) {
+          return {
+            domain: domain,
+            range: range
+          };
+        };
+
+        test('signature matching', function() {
+          let f = makeSignature([SETS.REAL], [SETS.REAL]);
+          let g = makeSignature([SETS.COMPLEX], [SETS.REAL]);
+          let h = makeSignature([SETS.REAL, SETS.REAL], [SETS.REAL]);
+
+          expect(LineGraph.isSupported(f)).to.be.true;
+          expect(LineGraph.isSupported(g)).to.be.false;
+          expect(LineGraph.isSupported(h)).to.be.false;
+
+          expect(ColorGraph.isSupported(f)).to.be.false;
+          expect(ColorGraph.isSupported(g)).to.be.true;
+          expect(ColorGraph.isSupported(h)).to.be.true;
+        });
+
+      });
+    </script>
+  </body>
+</html>
