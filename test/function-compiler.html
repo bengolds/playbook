@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>function-compiler</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/function-compiler.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template>
+        <function-compiler></function-compiler>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('function-compiler tests', function() {
+        var el;
+        var epsilon = 1e-14;
+
+        let numSamples = 100;
+        let range = [-5, 5];
+        let rangeWidth = range[1]-range[0];
+
+        let assertCompiledMatches = function(f, params) {
+          let wrapped = wrapEval(el.compiled, params);
+
+          let evaluate = function(bound1, bound2, dim) {
+            for (let i = 0; i < numSamples; i++) {
+              let t = i/numSamples;
+              let x = range[0] + t*rangeWidth;
+              if (dim == params.length - 1) {
+                assert.closeTo(bound1(x), bound2(x), epsilon);
+              } 
+              else {
+                let newBound1 = bound1.bind(null, x);
+                let newBound2 = bound2.bind(null, x);
+                evaluate(newBound1, newBound2, dim+1);
+              }
+            }
+          };
+
+          evaluate(f, wrapped, 0);
+        };
+
+        let wrapEval = function(compiled, params) {
+          return function(...args) {
+            let scope = {};
+            for (let i = 0; i < params.length; i++) {
+              let param = params[i];
+              scope[param] = args[i];
+            }
+            return compiled.eval(scope);
+          };
+        };
+
+        setup(function() {
+          el = fixture('basic');
+        });
+
+        test('compiling scopeless function', function(){
+          el.definition='2*x';
+          let f = (x) => {return 2*x;};
+          assertCompiledMatches(f, ['x']);
+        });
+
+        test('compiling multivar function', function() {
+          el.definition = '2*x*y';
+          let f = (x,y) => {return 2*x*y;};
+          assertCompiledMatches(f, ['x','y']);
+        });
+
+        test('changing scope recompiles', function() {
+          el.definition = '2*x*y';
+          let f = (x) => {return 2*x*2;};
+          let pinnedVariables = [ 
+            {
+              variable: new Variable('y'),
+              bounds: [-10,10],
+              value: 2
+            },
+          ];
+          el.scope = new Scope(null, pinnedVariables, null);
+          assertCompiledMatches(f, ['x']);
+
+          let g = (x,y) => {return 2*x*y;};
+          el.splice('scope.pinnedVariables',0,1);
+          assertCompiledMatches(g, ['x','y']);
+        });
+
+        test('should fire compile-ok event', function(done) {
+          el.addEventListener('compile-ok', function () {
+            done();
+          });
+          el.addEventListener('compile-error', function(e) {
+            done(e.detail);
+          });
+          el.definition='2*x';
+        });
+
+        test('should fire compile-error event', function(done){
+          el.definition='2*x';
+
+          el.addEventListener('compile-error', function(e) {
+            let f = (x) => {return 2*x;};
+            assertCompiledMatches(f, ['x']);
+            done();
+          });
+          el.addEventListener('compile-ok', function() {
+            done(Error('Expected to throw an error'));
+          });
+
+          el.definition='2*';
+        });
+
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,67 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="mathObjects/math-objects-import.html">
+<script src="../libs/algebrite/dist/algebrite.bundle-for-browser.js"></script>
+<script src="../bower_components/mathjs/dist/math.js"></script>
+
+<dom-module id="function-compiler">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    
+  </template>
+  <script>
+    Polymer({
+      is: 'function-compiler',
+      properties: {
+        definition: {
+          type: Object,
+          notify: false,
+          observer: 'recompile'
+        },
+        scope: {
+          type: Object,
+          notify: false,
+          value: function() {return new Scope();},
+          observer: 'recompile'
+        },
+        compiled: {
+          type: Object,
+          readOnly: true,
+          notify: true,
+          value: function() {return new CompiledFunction();}
+        }
+      },
+
+      attached: function() {
+
+      },
+
+      recompile: function() {
+        try {
+          let simplified = Algebrite.simplify(this.definition).toString();
+          let parsed = math.parse(simplified);
+          let symbols = this.getSymbols(parsed);
+          this._setCompiled(new CompiledFunction(parsed.compile(), symbols, this.scope));
+          this.fire('compile-ok');
+        }
+        catch(e) {
+          this.fire('compile-error', e);
+        }
+      },
+
+      getSymbols: function(parsedFunction) {
+        var symbols = [];
+        parsedFunction.traverse(function (node) {
+          if (node.type == 'SymbolNode' && !symbols.includes(node.name)) {
+            symbols.push(node.name);
+          }
+        });
+        return symbols;
+      },
+
+    });
+  </script>
+</dom-module>

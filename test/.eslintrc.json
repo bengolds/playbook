@@ -5,6 +5,7 @@
 
 	"globals": {
         "WCT": false,
+        "assert": false,
         "should": false,
         "expect": false,
         "fixture": false,
