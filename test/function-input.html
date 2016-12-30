@@ -38,12 +38,12 @@
 
         test('initialization', function() {
           //Initial values should be ignored
-          expect(el.definition).to.equal('');
-          latexShouldEqual('');
+          expect(el.definition).to.equal('cos(x)');
+          latexShouldEqual('\\cos x');
         });
 
         test('changing latex', function() {
-          el.setLatex(cosString);
+          el.latex = cosString;
           latexShouldEqual(cosString);
           expect(el.definition).to.equal('cos(x)');
           //TODO: Have behavior for both changing latex imperatively (a la split out)
@@ -51,6 +51,8 @@
         });
 
         test('input success', function(done) {
+          el.latex = '';
+
           el.addEventListener('input-ok', function() {
             latexShouldEqual('x');
             expect(el.definition).to.equal('x');
@@ -63,32 +65,18 @@
         });
 
         test('input failure', function(done) {
-          el.setLatex(cosString);
+          el.latex = cosString;
 
           el.addEventListener('input-ok', function() {
             done(Error('expected input to throw an error'));
           });
           el.addEventListener('input-error', function() {
-            //The latex of the quill should change, but the definition and function shouldn't
-            expect(quill.latex()).to.equal(cosString + '+');
-            expect(el.latex).to.equal(cosString);
+            latexShouldEqual(cosString+'+');
             expect(el.definition).to.equal('cos(x)');
             done();
           });
           quill.focus();
           quill.typedText('+');
-        });
-
-        test('input debouncing', function(done) {
-          let fail = (e) => {done(e.detail); };
-          el.addEventListener('input-error', fail);
-
-          quill.focus();
-          quill.typedText('x+y^z');
-
-          latexShouldEqual('x+y^z');
-          expect(el.definition).to.equal('(x+(y^z))');
-          done();
         });
 
         // test('hover-event fired', function() {

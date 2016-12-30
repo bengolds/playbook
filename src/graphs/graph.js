@@ -25,13 +25,19 @@ class Graph {
     }
   }
 
-  static isSupported(functor) {
-    let supportedDims = this.supportedDimensions;
-    let numInputDimensions = functor.unboundVars.length;
-    let filtered = supportedDims.filter((signature) => {
-      return signature[0] == numInputDimensions;
+  static isSupported(signature) {
+    let domains = this.supportedSignatures.domains;
+    let ranges = this.supportedSignatures.ranges;
+    let matchingDomains = domains.filter((domain) => {
+      //MAYBE NEED TO SORT THESE FIRST
+      return JSON.stringify(signature.domain) == JSON.stringify(domain);
     });
-    return filtered.length != 0;
+    let matchingRanges = ranges.filter((range) => {
+      //MAYBE NEED TO SORT THESE FIRST
+      return JSON.stringify(signature.range) == JSON.stringify(range);
+    });
+
+    return matchingDomains.length != 0 && matchingRanges.length != 0;
   }
 
   static humanizeBounds(minMax) {
@@ -141,7 +147,7 @@ class Graph {
   teardown() {}
   showFunction(functor) {}
   unboundRanges() {}
-  static get supportedDimensions() {return [];}
+  static get supportedSignatures() {return [];}
   static get syncedParameterNames() {return [];}
   //Mouse events
   onPanStart() {}

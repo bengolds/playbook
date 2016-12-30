@@ -1,8 +1,6 @@
 <link rel="import" href="mathbox-plot.html">
 <link rel="import" href="function-input.html">
-<link rel="import" href="function-parser.html">
 <link rel="import" href="function-signature.html">
-<link rel="import" href="variable-slider.html">
 
 <dom-module id="function-row">
   <template>
@@ -17,11 +15,10 @@
         flex-basis: 480px;
       }
     </style>
-    <button on-click='removeRow'>X</button>
-    <button on-click='testText'>Change Text</button>
+    <!-- <button on-click='removeRow'>X</button> -->
     <function-signature id='signature'
-      symbol='{{functor.name}}' 
-      parameters='[[getSymbols(functor.definition)]]'></function-signature>
+      name='{{functionDefinition.name}}'
+      ></function-signature>
     <function-input id='input'
       definition='{{functor.definition}}'
       latex='{{functor.latex}}'
@@ -29,84 +26,92 @@
     <mathbox-plot id='plot' animated 
       functor='[[functor]]' 
       pinnedVars='[[pinnedVars]]'
-      synced-parameters='{{syncedParameters}}'></mathbox-plot>
+      synced-parameters='{{graphParameters}}'></mathbox-plot>
   </template>
 
   <script>
     Polymer({
       is: 'function-row',
       properties: {
-        functor: {
+        functionDefinition: {
           type: Object,
-          notify: true
+          notify: true,
+          value: function() {return new FunctionDefinition();},
+          observer: 'functionDefinitionChanged'
         },
-        pinnedVars: Array
+        graphParameters: {
+          type: Object,
+          notify: true,
+          value: function() {return {};},
+        },
+        scope: {
+          type: Object,
+          notify: true,
+          value: function() {return new Scope();},
+        }
       },
 
       listeners: {
-        'functor-pinvar': 'pinVariable',
-        'functor-bindvar': 'bindVariable',
-        'functor-unpinvar': 'unpinVariable',
-        'input-ok': 'inputOk',
-        'input-error': 'inputError',
+      //   'functor-pinvar': 'pinVariable',
+      //   'functor-bindvar': 'bindVariable',
+      //   'functor-unpinvar': 'unpinVariable',
+        // 'input-ok': 'inputOk',
+        // 'input-error': 'inputError',
       },
 
-      attached: function () {
+      functionDefinitionChanged: function() {
+        this.$.input.setLatex(this.functionDefinition.latex);
       },
 
-      testText: function () {
-        this.$.definition = 'x^2+\\lambda';
-      },
+      // pinVariable: function (_, detail) {
+      //   this.functor.pinVar(detail.variable, detail.value, detail.range);
+      //   this._forceNotifyPath('functor.boundVars');
+      // },
 
-      pinVariable: function (_, detail) {
-        this.functor.pinVar(detail.variable, detail.value, detail.range);
-        this._forceNotifyPath('functor.boundVars');
-      },
+      // bindVariable: function (_, detail) {
+      //   this.functor.bindVar(detail.variable, detail.value);
+      //   this._forceNotifyPath('functor.boundVars.' + detail.variable, detail.value);
+      // },
 
-      bindVariable: function (_, detail) {
-        this.functor.bindVar(detail.variable, detail.value);
-        this._forceNotifyPath('functor.boundVars.' + detail.variable, detail.value);
-      },
+      // unpinVariable: function (_, detail) {
+      //   this.functor.unpinVar(detail.variable);
+      //   this._forceNotifyPath('functor.boundVars');
+      // },
 
-      unpinVariable: function (_, detail) {
-        this.functor.unpinVar(detail.variable);
-        this._forceNotifyPath('functor.boundVars');
-      },
+      // removeRow: function() {
+      //   this.fire('remove-row', this.name);
+      // },
 
-      removeRow: function() {
-        this.fire('remove-row', this.name);
-      },
+      // inputOk: function (_) {
+      //   this.$.plot.inputOk = true;
+      // },
 
-      inputOk: function (_) {
-        this.$.plot.inputOk = true;
-      },
+      // inputError: function (_) {
+      //   this.$.plot.inputOk = false;
+      // },
 
-      inputError: function (_) {
-        this.$.plot.inputOk = false;
-      },
+      // _getBoundVarsArray: function (_) {
+      //   let returnArray = [];
+      //   for (let key in this.functor.boundVars) {
+      //     // TODO: ADD RANGE HERE
+      //     let object = {symbol: key, value:this.functor.boundVars[key].value};
+      //     returnArray.push(object);
+      //   }
+      //   return returnArray;
+      // },
 
-      _getBoundVarsArray: function (_) {
-        let returnArray = [];
-        for (let key in this.functor.boundVars) {
-          // TODO: ADD RANGE HERE
-          let object = {symbol: key, value:this.functor.boundVars[key].value};
-          returnArray.push(object);
-        }
-        return returnArray;
-      },
-
-      _forceNotifyPath: function (path) {
-        var obj = this.get(path);
-        //Override the dirty checking
-        if (Array.isArray(obj)) {
-          obj = obj.slice();
-        } 
-        else if (typeof obj === 'object') {
-          obj = Object.assign({}, obj);
-        }
-        this.set(path, obj);
-        this.notifyPath(path);
-      }
+      // _forceNotifyPath: function (path) {
+      //   var obj = this.get(path);
+      //   //Override the dirty checking
+      //   if (Array.isArray(obj)) {
+      //     obj = obj.slice();
+      //   } 
+      //   else if (typeof obj === 'object') {
+      //     obj = Object.assign({}, obj);
+      //   }
+      //   this.set(path, obj);
+      //   this.notifyPath(path);
+      // }
 
     });
  </script>

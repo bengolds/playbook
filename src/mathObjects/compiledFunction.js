@@ -17,4 +17,11 @@ class CompiledFunction {
   getRange() {
     return [SETS.REAL];
   }
+
+  getSignature() {
+    return {
+      domain: this.getDomain(),
+      range: this.getRange(),
+    };
+  }
 }

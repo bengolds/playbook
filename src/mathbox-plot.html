@@ -6,16 +6,14 @@
   <template>
     <style is="custom-style">
       :host {
-        height:100%;
         position:relative;
         overflow:hidden;
+        display: block;
+        flex-grow: 1;
       }
       #mathbox {
-        position:absolute;
-        top:0px;
-        bottom:0px;
-        right:0px;
-        left:0px;
+        height: 100%;
+        width: 100%;
         transition: filter .5s;
       }
       :host(.ungrabbed) #mathbox {
@@ -23,7 +21,7 @@
         cursor: -webkit-grab;
         cursor: -moz-grab;
       }
-      iron-icon {
+      #errorIcon {
         display:none;
         opacity:0;
         position:absolute;
@@ -37,7 +35,7 @@
         --iron-icon-height: 64px;
         transition: opacity .5s;
       }
-      :host(.error) iron-icon {
+      :host(.error) #errorIcon {
         opacity:1;
         display:block;
       }
@@ -45,7 +43,7 @@
         filter:blur(10px);
       }
     </style>
-    <iron-icon icon='error'></iron-icon>
+    <iron-icon id='errorIcon' icon='error'></iron-icon>
     <div id='mathbox' class='blur'></div>
     
   </template>
@@ -55,9 +53,11 @@
       is: 'mathbox-plot',
 
       properties: {
-        functor: Object,
         animated: Boolean,
-        pinnedVars: Array,
+        compiledFunction: {
+          type: Object,
+          observer: 'compiledFunctionChanged'
+        },
         syncedParameters: {
           type: Object,
           notify: true,
@@ -66,31 +66,26 @@
             yRange: [-5, 5],
           };}
         },
-        width: {
-          type: Number,
-          observer: '_resize',
-          value: 0
+        noGraphFound: {
+          type: Boolean,
+          notify: true,
+          readOnly: true,
+          value: true
         },
-        height: {
-          type: Number,
-          observer: '_resize',
-          value: 0
-        },
-        inputOk: Boolean,
-        dimensionsOk: Boolean
+        showError: {
+          type: Boolean,
+          notify: false,
+          observer: 'showErrorChanged'
+        }
       },
 
-      observers: [
-        '_functorChanged(functor, functor.boundVars)',
-        '_shouldError(inputOk, dimensionsOk)'
-      ],
-
-      behaviors: [
-        Polymer.IronResizableBehavior
-      ],
+      // observers: [
+      //   '_functorChanged(functor, functor.boundVars)',
+      //   '_shouldError(inputOk, dimensionsOk)'
+      // ],
 
       listeners: {
-        'iron-resize': '_resize',
+        'resize': 'resize',
         'down': 'onPanStart',
         'wheel': 'onWheel'
       },
@@ -99,7 +94,7 @@
         this.initialized = true;
         this.supportedGraphs = [LineGraph, ColorGraph];
 
-        var aspectRatio = this._getAspectRatio();
+        var aspectRatio = this.getAspectRatio();
         var options = {
           plugins: ['core', 'cursor', 'mathbox'],
           element: this.$.mathbox,
@@ -108,14 +103,7 @@
             left: -aspectRatio,
             right: aspectRatio
           },
-          size:{},
         };
-        if (this.width != 0) {
-          options.size.width = this.width;
-        }
-        if (this.height != 0) {
-          options.size.height = this.height;
-        }
         this.mathbox = mathBox(options);
         this.mathbox.three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
 
@@ -126,24 +114,25 @@
 
         this.view = this.mathbox.cartesian();
 
-        this._resize();
+        this.resize();
         this._setupGridLines();
-        this._setupDataAndDisplay(LineGraph);
-        this._functionChanged();
+        // this._setupDataAndDisplay(LineGraph);
+        // this._functionChanged();
 
         this.classList.add('ungrabbed');
       },
 
-      _getAspectRatio: function() {
-        return this._getWidth()/this._getHeight();
+      showErrorChanged: function () {
+        if (this.showError) {
+          this.classList.add('error');
+        } 
+        else {
+          this.classList.remove('error');
+        }
       },
 
-      _getWidth: function() {
-        return this.width || this.scrollWidth;
-      },
-
-      _getHeight: function() {
-        return this.height || this.scrollHeight;
+      getAspectRatio: function() {
+        return this.offsetWidth/this.offsetHeight;
       },
 
       _setupGridLines: function() {
@@ -162,57 +151,76 @@
         });
       },
 
-      _resize: function() {
+      resize: function() {
         if (!this.initialized)
           return;
-        var plotEl = this.$.mathbox;
-        var aspectRatio = this._getAspectRatio();
+        this.mathbox.three.canvas.style.width = this.offsetWidth+'px';
+        this.mathbox.three.canvas.style.height = this.offsetHeight+'px';
+
+        let aspectRatio = this.getAspectRatio();
         //Maybe bind this?
         this.view.set('scale', [aspectRatio, 1]);
         this.mathbox.three.camera.left = -aspectRatio;
         this.mathbox.three.camera.right = aspectRatio;
       },
 
-      _functorChanged: function() {
-        if (this.initialized) {
-          let compatibleGraphs = this._getCompatibleGraphs(this.functor);
-          if (compatibleGraphs.length != 0) {
-            if (!this.graph) {
-              this._setupDataAndDisplay(compatibleGraphs[0]);
-            } 
-            else if (compatibleGraphs[0] !== this.graph.constructor) {
-              if (this.graph) {
-                this.graph.teardown();
-              }
-              this._setupDataAndDisplay(compatibleGraphs[0]);
-            }
-            this.dimensionsOk = true;
-            this.cancelDebouncer('dimensions-error');
-            this._functionChanged();
-          } 
+      compiledFunctionChanged: function() {
+        if (!this.initialized)
+          return;
+
+        let newSignature = this.compiledFunction.getSignature();
+        if (!this.graph || !this.graph.constructor.isSupported(newSignature)) {
+          let graphConstructor = this._getCompatibleGraph();
+          if (graphConstructor) {
+            this.graph = new graphConstructor();
+            this._setNoGraphFound(false);
+            this.fire('graph-ok');
+          }
           else {
-            this.debounce('dimensions-error', (_)=> {
-              this.dimensionsOk = false;
-            }, 500);
+            this._setNoGraphFound(true);
+            this.fire('graph-error');
           }
         }
+
       },
 
-      _shouldError: function () {
-        if (this.inputOk && this.dimensionsOk) {
-          this.classList.remove('error');
+      _getCompatibleGraph: function() {
+        let matchingGraphs = this.supportedGraphs.filter((graph) => {
+          return graph.isSupported(this.compiledFunction.getSignature());
+        });
+        if (matchingGraphs.length != 0) {
+          return matchingGraphs[0];
         }
         else {
-          this.classList.add('error');
+          return null;
         }
       },
 
-      _getCompatibleGraphs: function (functor) {
-        let matchingGraphs = this.supportedGraphs.filter((graph) => {
-          return graph.isSupported(this.functor);
-        });
-        return matchingGraphs;
-      },
+      // _functorChanged: function() {
+      //   if (this.initialized) {
+      //     let compatibleGraphs = this._getCompatibleGraphs(this.functor);
+      //     if (compatibleGraphs.length != 0) {
+      //       if (!this.graph) {
+      //         this._setupDataAndDisplay(compatibleGraphs[0]);
+      //       } 
+      //       else if (compatibleGraphs[0] !== this.graph.constructor) {
+      //         if (this.graph) {
+      //           this.graph.teardown();
+      //         }
+      //         this._setupDataAndDisplay(compatibleGraphs[0]);
+      //       }
+      //       this.dimensionsOk = true;
+      //       this.cancelDebouncer('dimensions-error');
+      //       this._functionChanged();
+      //     } 
+      //     else {
+      //       this.debounce('dimensions-error', (_)=> {
+      //         this.dimensionsOk = false;
+      //       }, 500);
+      //     }
+      //   }
+      // },
+
 
       _setupDataAndDisplay: function(graphConstructor) {
         if (!this.functor)
@@ -221,12 +229,12 @@
         this.graph.setup();
       },
 
-      _functionChanged: function() {
-        if (!this.functor || !this.graph) {
-          return;
-        }
-        this.graph.showFunction(this.functor);
-      },
+      // _functionChanged: function() {
+      //   if (!this.functor || !this.graph) {
+      //     return;
+      //   }
+      //   this.graph.showFunction(this.functor);
+      // },
 
       onPanStart: function (e) {
         this.classList.remove('ungrabbed');

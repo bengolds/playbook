@@ -8,10 +8,18 @@ class ColorGraph extends Graph {
     this.flatId = 'flat';
   }
 
-  static get supportedDimensions() {
-    return [
-      [2, 1], 
-    ];
+  static get supportedSignatures() {
+    return {
+      domains: [
+        [SETS.REAL, SETS.REAL],
+        [SETS.COMPLEX],
+      ],
+      ranges: [
+        [SETS.REAL], 
+        [SETS.INTEGER],
+        [SETS.NATURAL]
+      ],
+    };
   }
 
   static get syncedParameterNames() {

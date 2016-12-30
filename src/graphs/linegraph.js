@@ -7,11 +7,17 @@ class LineGraph extends Graph {
     this.animId = 'anim';
   }
 
-  static get supportedDimensions() {
-    return [
-      [0, 1], 
-      [1, 1]
-    ];
+  static get supportedSignatures() {
+    return {
+      domains: [
+        [SETS.REAL],
+      ],
+      ranges: [
+        [SETS.REAL],
+        [SETS.INTEGER],
+        [SETS.NATURAL],
+      ],
+    };
   }
 
   static get syncedParameterNames() {

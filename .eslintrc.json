@@ -111,6 +111,9 @@
         "LineGraph": true,
         "ColorGraph": true,
         "mqUtil": true,
-        "SETS": true
+        "SETS": true,
+        "Scope": true,
+        "FunctionDefinition": true,
+        "CompiledFunction": true
     }
 }

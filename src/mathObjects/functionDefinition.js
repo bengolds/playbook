@@ -1,7 +1,7 @@
 class FunctionDefinition{
-  constructor() {
-    this.name = '';
-    this.parseableString = '';
-    this.latex = '';
+  constructor(name='', latex='', parseableString='') {
+    this.name = name;
+    this.latex = latex;
+    this.parseableString = parseableString;
   }
 }

@@ -1,4 +1,4 @@
-  <link rel="import" href="hover-plot.html">
+<link rel="import" href="hover-plot.html">
 <link rel="import" href="function-parser.html">
 <link rel="import" href="mathquill-element.html">
 <dom-module id="function-input">
@@ -47,8 +47,8 @@
       latex: {
         type: String,
         notify: true,
-        readOnly: true,
-        value: ''
+        value: '',
+        observer: 'latexChanged'
       },
       definition: {
         type: String,
@@ -68,19 +68,19 @@
         return;
       this.alreadyChangingLatex = true;
 
-      this.hideHoverItems();
+      // this.hideHoverItems();
+      this.latex = this.$.quill.latex();
       this.tryParseLatex();
 
-      this.alreadyChangingLatex = false;
+      this.alreadyEditingQuill = false;
     },
 
-    setLatex: function(newLatex) {
+    latexChanged: function() {
       if (this.alreadyChangingLatex)
         return;
       this.alreadyChangingLatex = true;
 
-      this._setLatex(newLatex);
-      this.$.quill.latex(newLatex);
+      this.$.quill.latex(this.latex);
       this.tryParseLatex();
 
       this.alreadyChangingLatex = false;
@@ -93,8 +93,6 @@
           return;
         }
         this._setDefinition(functionString);
-        this._setLatex(this.$.quill.latex());
-        this.cancelDebouncer('input-error');
         this.fire('input-ok');
         // let newFunctor = parser.getFunctor(functionString);
         // this._matchPinnedVariables(this.functor, newFunctor);
@@ -102,12 +100,10 @@
         // this.$.errorMessage.textContent = '';
       }
       catch (e) {
-        this.debounce('input-error', (x)=>{
           // TODO: Move this to function row
           // this.$.errorMessage.textContent = e.message;
           // console.log(e.stack);
-          this.fire('input-error', e);
-        }, 500);
+        this.fire('input-error', e);
       }
     },
 
