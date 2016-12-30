@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>function-row</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/function-row.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template>
+        <function-row></function-row>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('function-row tests', function() {
+        var el;
+
+        setup(function() {
+          el = fixture('basic');
+        });
+
+        test('initialization', function() {
+          let f = new FunctionDefinition('f', 'x^2');
+          el.functionDefinition = f;
+
+          expect(el.$.signature.name).to.equal('f');
+          expect(el.$.input.latex).to.equal('x^2');
+          expect(el.$.input.definition).to.equal('x^2');
+        });
+
+        //Test errors across input, graph, and compiler
+        //Test debouncing of errors
+        //Test name change propagation
+
+      });
+    </script>
+  </body>
+</html>
