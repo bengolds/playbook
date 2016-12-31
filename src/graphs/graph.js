@@ -145,7 +145,7 @@ class Graph {
   //TO IMPLEMENT:
   setup() {}
   teardown() {}
-  showFunction(functor) {}
+  showFunction(compiledFunction) {}
   unboundRanges() {}
   static get supportedSignatures() {return [];}
   static get syncedParameterNames() {return [];}

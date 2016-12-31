@@ -8,6 +8,7 @@
 
     <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../bower_components/web-component-tester/browser.js"></script>
+    <script src="../bower_components/mathjs/dist/math.js"></script>
 
     <!-- Import the element to test -->
     <link rel="import" href="../src/mathbox-plot.html">
@@ -58,7 +59,11 @@
 
 
         let makeFakeFunction = function(domain, range) {
-          return {
+          let numFree = domain.length;
+          let fakeFreeVars = [new Variable('a'), new Variable('b'), new Variable('c')];
+          fakeFreeVars = fakeFreeVars.slice(0, numFree);
+          let fake = new CompiledFunction(math.compile('0'), fakeFreeVars);
+          Object.assign(fake, {
             getDomain: function() {return domain;},
             getRange: function() {return range;},
             getSignature: function() {
@@ -67,7 +72,8 @@
                 range: range,
               };
             },
-          };
+          });
+          return fake;
         };
 
         test('graph signature finding', function(){
@@ -92,7 +98,7 @@
           el.compiledFunction = f;
           let oldGraph = el.graph;
           el.compiledFunction = g;
-          expect(el.graph).to.equal(oldGraph);
+          expect(el.graph).to.eql(oldGraph);
         });
 
         test('throw error if no graph found', function(done) {

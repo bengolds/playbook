@@ -78,11 +78,14 @@
 
         let latex = '\\left(';
         if (this.parameters) {
-          let sorted = this.parameters.slice().sort();
+          let names = this.parameters.map( (variable) => {
+            return variable.name;
+          });
+          let sorted = names.sort();
 
-          let isNotPinned = (val) => {
+          let isNotPinned = (name) => {
             return !this.pinnedVariables.some((pinned) => {
-              return pinned.variable.name === val;
+              return pinned.variable.name === name;
             });
           };
 

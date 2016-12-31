@@ -17,7 +17,7 @@
   <body>
     <test-fixture id="basic">
       <template>
-        <function-signature name='f' parameters='["v","w","x","y","z"]'></function-signature>
+        <function-signature name='f'></function-signature>
       </template>
     </test-fixture>
 
@@ -28,6 +28,13 @@
 
         setup(function() {
           el = fixture('basic');
+          el.parameters = [
+            new Variable('v'),
+            new Variable('w'),
+            new Variable('x'),
+            new Variable('y'),
+            new Variable('z'),
+          ];
         });
 
         let nameEquals = function(name) {
@@ -89,17 +96,20 @@
         });
 
         test('changing parameters', function() {
-          el.parameters = ['b', 'a', 'c'];
+          el.parameters = [
+            new Variable('b'),
+            new Variable('a'),
+            new Variable('c')
+          ];
           parametersShouldRead('a,b,c');
 
-          el.push('parameters', 'g');
+          el.push('parameters', new Variable('g'));
           parametersShouldRead('a,b,c,g');
 
-          el.push('parameters', 'd');
+          el.push('parameters', new Variable('d'));
           parametersShouldRead('a,b,c,d,g');
 
-          let index = el.parameters.indexOf('c');
-          el.splice('parameters', index, 1);
+          el.splice('parameters', 2, 1);
           parametersShouldRead('a,b,d,g');
         });
 
@@ -123,7 +133,7 @@
           el.push('pinnedVariables', {variable: b});
           parametersShouldRead('v,y');
 
-          el.push('parameters', 'a');
+          el.push('parameters', new Variable('a'));
           parametersShouldRead('v,y');
         });
 

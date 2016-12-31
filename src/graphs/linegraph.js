@@ -64,11 +64,18 @@ class LineGraph extends Graph {
     this.mathbox.remove('#'+this.animId);
   }
 
-  showFunction(functor) {
-    this.functor = functor;
-    let cachedEval = functor.eval.bind(functor);
+  showFunction(compiledFunction) {
+    if (!this.constructor.isSupported(compiledFunction.getSignature())) {
+      throw Error('The function signature ' + compiledFunction.getSignature() + 'is unsupported');
+    }
+
+    this.compiled = compiledFunction;
+    let cachedEval = compiledFunction.eval.bind(compiledFunction);
+    let cachedVarName = compiledFunction.freeVariables[0].name;
     let newExpr = (emit, x) => {
-      emit(x, cachedEval(x));
+      emit(x, cachedEval({
+        [cachedVarName]: x
+      }));
     };
     this.changeExpr(newExpr);
     this.resetBounds();
@@ -90,13 +97,16 @@ class LineGraph extends Graph {
   //Ranges
 
   resetBounds() {
-    var newRange = this.functor.getMinMax(this.unboundRanges());
+    var newRange = this.compiled.getMinMax(this.unboundRanges());
     newRange = this.constructor.humanizeBounds(newRange);
     this.setRange('yRange', newRange);
   }
 
   unboundRanges() {
-    return [this.getFinal('xRange')];
+    let ranges = {};
+    let unboundVar = this.compiled.freeVariables[0];
+    ranges[unboundVar.name] = this.getFinal('xRange');
+    return ranges;
   }
 
   //Mouse events

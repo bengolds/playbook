@@ -78,14 +78,14 @@ class ColorGraph extends Graph {
   }
 
   showFunction(functor) {
-    this.functor = functor;
-    let cachedEval = this.functor.eval.bind(this.functor);
-    let newExpr = (emit, x, y) => {
-      let val = cachedEval(x, y);
-      emit (...this.colorMap(val), 255);
-    };
-    this.changeExpr(newExpr);
-    this.resetBounds();
+    // this.functor = functor;
+    // let cachedEval = this.functor.eval.bind(this.functor);
+    // let newExpr = (emit, x, y) => {
+    //   let val = cachedEval(x, y);
+    //   emit (...this.colorMap(val), 255);
+    // };
+    // this.changeExpr(newExpr);
+    // this.resetBounds();
   }
 
   changeExpr(newExpr) {

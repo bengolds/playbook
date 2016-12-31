@@ -8,13 +8,14 @@
 
     <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../bower_components/web-component-tester/browser.js"></script>
+    <script src="../bower_components/mathjs/dist/math.js"></script>
 
     <!-- Import the element to test -->
     <link rel="import" href="../src/mathObjects/math-objects-import.html">
   </head>
   <body>
     <script>
-      suite('math-objects tests', function() {
+      suite('scope tests', function() {
         setup(function() {
         });
 
@@ -40,7 +41,59 @@
           });
         });
 
-        // Domain should be automatically found in compiled function
+      
+
+      });
+
+      suite ('compiledFunction tests', function() {
+        setup(function(){
+
+        });
+
+        let makeFakeCompiled = function(funcString, freeVarNames) {
+          let freeVars = freeVarNames.map( (name) => {
+            return new Variable(name);
+          });
+          return new CompiledFunction(math.compile(funcString), freeVars);
+        };
+
+        test('domain should be automatically found', function() {
+          let inputVariables = [
+            new Variable('a'),
+            new Variable('g'),
+            new Variable('b', SETS.INTEGER),
+            new Variable('c', SETS.COMPLEX),
+          ];
+          let f = new CompiledFunction(null, inputVariables);
+
+          expect(f.getDomain()).to.deep.equal([SETS.REAL, SETS.REAL, SETS.INTEGER, SETS.COMPLEX]);
+        });
+
+
+        test('getMinMax', function() {
+          let unboundRanges = {
+            a: [-5, 5],
+            b: [-2, 2],
+          };
+
+          let testMinMax = (funcString, freeVars, expected) => {
+            let f = makeFakeCompiled(funcString, freeVars);
+            let minMax = f.getMinMax(unboundRanges);
+            expect(minMax[0]).to.be.closeTo(expected[0], 0.1);
+            expect(minMax[1]).to.be.closeTo(expected[1], 0.1);
+          };
+
+          testMinMax('3', [], [3, 3]);
+          testMinMax('a', ['a'], [-5, 5]);
+          testMinMax('a^2', ['a'], [0, 25]);
+          testMinMax('a*b', ['a', 'b'], [-10, 10]);
+
+          // Check how it behaves if it doesn't have the right unboundRanges
+          // testMinMax('c', ['c'], [-5, 5]);
+
+          //NOW DO IT WITH PINNED VARS
+        });
+
         // Range should be automatically found in compiled function
 
         // test('compiledFunction shouldn\'t evaluate with incomplete scope', function() {
@@ -53,7 +106,6 @@
         // test('should resolve other functions', function() {
         //   //Test here
         // });
-
       });
     </script>
   </body>

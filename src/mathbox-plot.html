@@ -79,11 +79,6 @@
         }
       },
 
-      // observers: [
-      //   '_functorChanged(functor, functor.boundVars)',
-      //   '_shouldError(inputOk, dimensionsOk)'
-      // ],
-
       listeners: {
         'resize': 'resize',
         'down': 'onPanStart',
@@ -116,8 +111,6 @@
 
         this.resize();
         this._setupGridLines();
-        // this._setupDataAndDisplay(LineGraph);
-        // this._functionChanged();
 
         this.classList.add('ungrabbed');
       },
@@ -172,14 +165,22 @@
         if (!this.graph || !this.graph.constructor.isSupported(newSignature)) {
           let graphConstructor = this._getCompatibleGraph();
           if (graphConstructor) {
-            this.graph = new graphConstructor();
+            if (this.graph) {
+              this.graph.teardown();
+            }
+            this.graph = new graphConstructor(this.mathbox, this.syncedParameters, this.animated);
+            this.graph.setup();
             this._setNoGraphFound(false);
             this.fire('graph-ok');
+            this.graph.showFunction(this.compiledFunction);
           }
           else {
             this._setNoGraphFound(true);
             this.fire('graph-error');
           }
+        }
+        else {
+          this.graph.showFunction(this.compiledFunction);
         }
 
       },
@@ -195,46 +196,6 @@
           return null;
         }
       },
-
-      // _functorChanged: function() {
-      //   if (this.initialized) {
-      //     let compatibleGraphs = this._getCompatibleGraphs(this.functor);
-      //     if (compatibleGraphs.length != 0) {
-      //       if (!this.graph) {
-      //         this._setupDataAndDisplay(compatibleGraphs[0]);
-      //       } 
-      //       else if (compatibleGraphs[0] !== this.graph.constructor) {
-      //         if (this.graph) {
-      //           this.graph.teardown();
-      //         }
-      //         this._setupDataAndDisplay(compatibleGraphs[0]);
-      //       }
-      //       this.dimensionsOk = true;
-      //       this.cancelDebouncer('dimensions-error');
-      //       this._functionChanged();
-      //     } 
-      //     else {
-      //       this.debounce('dimensions-error', (_)=> {
-      //         this.dimensionsOk = false;
-      //       }, 500);
-      //     }
-      //   }
-      // },
-
-
-      _setupDataAndDisplay: function(graphConstructor) {
-        if (!this.functor)
-          return;
-        this.graph = new graphConstructor(this.mathbox, this.syncedParameters, this.animated);
-        this.graph.setup();
-      },
-
-      // _functionChanged: function() {
-      //   if (!this.functor || !this.graph) {
-      //     return;
-      //   }
-      //   this.graph.showFunction(this.functor);
-      // },
 
       onPanStart: function (e) {
         this.classList.remove('ungrabbed');

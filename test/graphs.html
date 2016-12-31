@@ -8,8 +8,10 @@
 
     <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../bower_components/web-component-tester/browser.js"></script>
+    <script src="../bower_components/mathjs/dist/math.js"></script>
 
     <!-- Import the element to test -->
+    <link rel="import" href="../src/mathbox-plot.html">
     <link rel="import" href="../src/graphs/graph-import.html">
   </head>
   <body>
@@ -25,7 +27,6 @@
 
         setup(function() {
           el = fixture('basic');
-          //Replace with fake mathbox-plot
         });
 
         let makeSignature = function(domain, range) {
@@ -48,8 +49,63 @@
           expect(ColorGraph.isSupported(g)).to.be.true;
           expect(ColorGraph.isSupported(h)).to.be.true;
         });
+      });
+
+      suite('linegraph tests', function() {
+        let graph;
+        let el;
+
+        setup(function() {
+          el = fixture('basic');
+          graph = new LineGraph(el.mathbox, {}, true);
+          graph.setup();
+        });
+
+        test('show incompatible function', function() {
+          let f = new CompiledFunction(null, [new Variable('a'), new Variable('b')]);
+          let g = new CompiledFunction(null, [new Variable('a', SETS.COMPLEX)]);
+
+          expect(graph.showFunction.bind(graph, f)).to.throw(Error);
+          expect(graph.compiled).to.be.not.ok;
+          expect(graph.showFunction.bind(graph, g)).to.throw(Error);
+          expect(graph.compiled).to.be.not.ok;
+        });
+
+        let makeFakeCompiled = function(funcString, freeVarNames) {
+          let freeVars = freeVarNames.map( (name) => {
+            return new Variable(name);
+          });
+          return new CompiledFunction(math.compile(funcString), freeVars);
+        };
+
+        test('unboundRanges', function() {
+          graph.setRange('xRange', [-5, 5]);
+          graph.compiled = makeFakeCompiled(null, ['a']);
+
+          expect(graph.unboundRanges()).to.deep.equal({
+            a: [-5, 5]
+          });
+        });
+
+        test('show function', function() {
+          graph.setRange('xRange', [-5, 5]);
+
+          let compiled = makeFakeCompiled('a^2', ['a']);
+          graph.showFunction(compiled);
+
+          expect(graph.compiled).to.equal(compiled);
+
+          let yRange = graph.getFinal('yRange');
+          expect(yRange[0]).to.be.closeTo(0, 0.1);
+          expect(yRange[1]).to.be.closeTo(25, 0.1);
+        });
+
 
       });
+
+      // suite('colograph tests', function() {
+
+      // });
     </script>
   </body>
 </html>

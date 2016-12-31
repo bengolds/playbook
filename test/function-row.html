@@ -26,6 +26,23 @@
         setup(function() {
           el = fixture('basic');
         });
+        
+        test('integration: automatic graph selection', function() {
+          let input = el.$.input;
+          let plot = el.$.plot;
+
+          input.latex = 'x^2';
+          expect(plot.graph.constructor).to.equal(LineGraph);
+
+          input.latex = 'xy';
+          expect(plot.graph.constructor).to.equal(ColorGraph);
+
+          input.latex = 'x';
+          expect(plot.graph.constructor).to.equal(LineGraph);
+
+          //Set x to be complex and expect colorgraph
+          // el.scope.freeVariables
+        });
 
         test('initialization', function() {
           let f = new FunctionDefinition('f', 'x^2');
@@ -94,6 +111,7 @@
           input.latex = 'a+b+c';
           expect(signature.$.parametersQuill.latex()).to.equal('\\left(a,b,c\\right)=');
         });
+
 
         // test('function requires name', function() {
         //   let f = new FunctionDefinition('', 'x^2');

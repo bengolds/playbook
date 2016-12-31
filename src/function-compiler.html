@@ -50,6 +50,7 @@
           let simplified = Algebrite.simplify(this.definition).toString();
           let parsed = math.parse(simplified);
           let symbols = this.getSymbols(parsed);
+          //GET VARIABLES FROM SCOPE HERE! SET THEM IF NEEDED OR GET DOMAIN
           this._setCompiled(new CompiledFunction(parsed.compile(), symbols, this.scope));
           this.fire('compile-ok');
         }
@@ -62,7 +63,7 @@
         var symbols = [];
         parsedFunction.traverse(function (node) {
           if (node.type == 'SymbolNode' && !symbols.includes(node.name)) {
-            symbols.push(node.name);
+            symbols.push(new Variable(node.name));
           }
         });
         return symbols;

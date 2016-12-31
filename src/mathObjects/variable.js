@@ -6,7 +6,7 @@ SETS = {
 };
 
 class Variable {
-  constructor(name, set) {
+  constructor(name, set=SETS.REAL) {
     this.name = name;
     this.set = set;
   }

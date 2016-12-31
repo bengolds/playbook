@@ -21,7 +21,8 @@
         margin-left: 24px;
       }
       #plot {
-        flex-basis: 480px;
+        max-width: 480px;
+        height: 100%;
       }
     </style>
     <paper-card id='container'>
@@ -38,7 +39,10 @@
         scope='{{scope}}'
         compiled='{{compiled}}'
         ></function-compiler>
-      <mathbox-plot id='plot'></mathbox-plot>
+      <mathbox-plot id='plot' animated
+        compiled-function='{{compiled}}'
+        synced-parameters='{{graphParameters}}'
+        ></mathbox-plot>
     </paper-card>
   </template>
 
