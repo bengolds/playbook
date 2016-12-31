@@ -86,7 +86,13 @@
           });
           expect(el.compiled).to.be.ok;
           expect(el.compiled).to.not.equal(oldFunc);
+        });
 
+        test('integration: automatic parameters', function() {
+          let input = el.$.input;
+          let signature = el.$.signature;
+          input.latex = 'a+b+c';
+          expect(signature.$.parametersQuill.latex()).to.equal('\\left(a,b,c\\right)=');
         });
 
         // test('function requires name', function() {
