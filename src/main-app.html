@@ -1,4 +1,5 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-fab/paper-fab.html">
 <link rel="import" href="function-row.html">
 <link rel="import" href="mathObjects/math-objects-import.html">
 
@@ -10,6 +11,13 @@
         max-width:1280px;
         margin:0px auto;
       }
+      #addButton {
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 16px;
+        --paper-fab-background: #FFFFFF;
+        --paper-fab-keyboard-focus-background: #4285F4;
+      }
     </style>
       <template is='dom-repeat' id='repeater' items='{{scope.functions}}'>
         <function-row 
@@ -18,7 +26,10 @@
           graph-parameters='{{graphParameters}}'
         ></function-row>
       </template>
-    <button on-click='addRow'>+</button>
+      <paper-fab id='addButton' icon="add" 
+        on-click='addRow' 
+        on-focus='buttonFocused'
+        on-blur='buttonBlurred'></paper-fab>
 
   </template>
 
@@ -48,6 +59,7 @@
 
       attached: function () {
         this.addRow();
+        this.buttonBlurred();
       },
 
       addRow: function () {
@@ -79,6 +91,16 @@
         }
         return nextName;
       },
+
+      buttonFocused: function() {
+        //NO WAY TO DO THIS FROM CSS I GUESS
+        this.$.addButton.$.icon.style.color = '#FFFFFF';
+      },
+
+      buttonBlurred: function() {
+        //NO WAY TO DO THIS FROM CSS I GUESS
+        this.$.addButton.$.icon.style.color = '#757575';
+      }
 
     });
  </script>
