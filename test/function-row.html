@@ -36,6 +36,67 @@
           expect(el.$.input.definition).to.equal('(x^2)');
         });
 
+        test('receive changes from function-input', function() {
+          let input = el.$.input;
+
+          el.$.input.latex = 'a+b';
+          expect(el.functionDefinition.latex).to.equal('a+b');
+          expect(el.functionDefinition.definition).to.equal('(a+b)');
+
+          el.$.input.$.quill.typedText('+c');
+          expect(el.functionDefinition.latex).to.equal('a+b+c');
+          expect(el.functionDefinition.definition).to.equal('((a+b)+c)');
+        });
+
+        test('pass changes to function-signature', function() {
+          let signature = el.$.signature;
+          el.set('functionDefinition.name', 'testme');
+
+          expect(signature.name).to.equal('testme');
+          expect(signature.$.nameQuill.latex()).to.equal('testme');
+        });
+
+        test('receive changes from function-signature', function() {
+          let signature = el.$.signature;
+
+          signature.name = 'g';
+          expect(el.functionDefinition.name).to.equal('g');
+
+          signature.editing = true;
+          signature.$.nameQuill.focus();
+          signature.$.nameQuill.typedText('h\n');
+          expect(el.functionDefinition.name).to.equal('gh');
+        });
+
+        test('function compiler recompiles appropriately', function() {
+          expect(el.compiled).to.be.not.ok;
+
+          el.functionDefinition = new FunctionDefinition('f', 'x^2');
+
+          expect(el.compiled).to.be.ok;
+
+          let oldFunc = el.compiled;
+          el.set('functionDefinition.definition','3xy^3');
+          expect(el.compiled).to.be.ok;
+          expect(el.compiled).to.not.equal(oldFunc);
+
+          oldFunc = el.compiled;
+          el.push('scope.pinnedVariables', {
+            variable: new Variable('y')
+          });
+          expect(el.compiled).to.be.ok;
+          expect(el.compiled).to.not.equal(oldFunc);
+
+        });
+
+        // test('function requires name', function() {
+        //   let f = new FunctionDefinition('', 'x^2');
+        // });
+
+        // test('function requires definition', function() {
+        //   //Test here
+        // });
+
         //Test errors across input, graph, and compiler
         //Test debouncing of errors
         //Test name change propagation

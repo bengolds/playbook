@@ -1,7 +1,7 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="../bower_components/paper-card/paper-card.html">
 <link rel="import" href="function-row.html">
-<link rel="import" href="math-compiler.html">
+<link rel="import" href="mathObjects/math-objects-import.html">
 
 <dom-module id="main-app">
   <template>
@@ -12,14 +12,13 @@
         margin:0px auto;
       }
     </style>
-    <math-compiler 
-      functors='[[functors]]' 
-      pinned-vars='[[pinnedVars]]'></math-compiler>
     <paper-card id="card">
-      <template is='dom-repeat' items='{{functors}}'>
-        <function-row functor='{{item}}'
-          pinned-vars='[[pinnedVars]]'
-          synced-parameters='{{syncedParameters}}'></function-row>
+      <template is='dom-repeat' id='repeater' items='{{scope.functions}}'>
+        <function-row 
+          function-definition='{{item}}'
+          scope='{{scope}}'
+          graph-parameters='{{graphParameters}}'
+        ></function-row>
       </template>
     </paper-card>
     <button on-click='addRow'>+</button>
@@ -30,14 +29,11 @@
     Polymer({
       is: 'main-app',
       properties: {
-        functors: {
-          type: Array,
-          value: function() {return [];}
+        scope: {
+          type: Object,
+          value: function() {return new Scope();},
         },
-        pinnedVars: {
-          type: Array
-        },
-        syncedParameters: {
+        graphParameters: {
           type: Object,
           value: function() {
             return {xRange: [-5, 5], yRange: [-5, 5]};
@@ -50,7 +46,7 @@
       },
 
       listeners: {
-        'remove-row': 'removeRow'
+        // 'remove-row': 'removeRow'
       },
 
       attached: function () {
@@ -58,34 +54,33 @@
       },
 
       addRow: function () {
-        let newRow = this.newRow(this.getNextName());
-        this.push('rows', newRow);
+        let nextFunc = new FunctionDefinition(this.getNextName());
+        this.push('scope.functions', nextFunc);
       },
 
       removeRow: function (_, name) {
-        let index = this.indexInRows(name);
+        let index = this.scope.functions.findIndex((func) => {
+          return func.name === name;
+        });
+
         if (index == -1) {
           throw Error('Can\'t delete ' + name + ' because it doesn\'t exist');
         }
-        this.splice('rows', index, 1);
-      },
 
-      newRow: function (name) {
-        return new Functor();
+        this.splice('scope.functions', index, 1);
       },
 
       getNextName: function() {
+        let isNameInRow = (name) => {
+          return this.scope.functions.some((func) => {
+            return func.name === name;
+          });
+        };
         let nextName = this.startNamesAt;
-        while (this.indexInRows(nextName) != -1) {
+        while (isNameInRow(nextName)) {
           nextName = String.fromCharCode(nextName.charCodeAt(0)+1);
         }
         return nextName;
-      },
-
-      indexInRows: function (name) {
-        return this.rows.findIndex((val) => {
-          return val.name === name;
-        });
       },
 
     });

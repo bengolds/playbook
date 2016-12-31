@@ -1,6 +1,7 @@
 <link rel="import" href="mathbox-plot.html">
 <link rel="import" href="function-input.html">
 <link rel="import" href="function-signature.html">
+<link rel="import" href="function-compiler.html">
 
 <dom-module id="function-row">
   <template>
@@ -20,13 +21,14 @@
       name='{{functionDefinition.name}}'
       ></function-signature>
     <function-input id='input'
-      definition='{{functor.definition}}'
-      latex='{{functor.latex}}'
+      definition='{{functionDefinition.definition}}'
+      latex='{{functionDefinition.latex}}'
       ></function-input>
-    <mathbox-plot id='plot' animated 
-      functor='[[functor]]' 
-      pinnedVars='[[pinnedVars]]'
-      synced-parameters='{{graphParameters}}'></mathbox-plot>
+    <function-compiler id='compiler'
+      definition='{{functionDefinition.definition}}'
+      scope='{{scope}}'
+      compiled='{{compiled}}'
+      ></function-compiler>
   </template>
 
   <script>
@@ -37,7 +39,6 @@
           type: Object,
           notify: true,
           value: function() {return new FunctionDefinition();},
-          observer: 'functionDefinitionChanged'
         },
         graphParameters: {
           type: Object,
@@ -48,6 +49,10 @@
           type: Object,
           notify: true,
           value: function() {return new Scope();},
+        },
+        compiled: {
+          type: Object,
+          notify: false
         }
       },
 
@@ -57,10 +62,6 @@
       //   'functor-unpinvar': 'unpinVariable',
         // 'input-ok': 'inputOk',
         // 'input-error': 'inputError',
-      },
-
-      functionDefinitionChanged: function() {
-        this.$.input.latex = this.functionDefinition.latex;
       },
 
       // pinVariable: function (_, detail) {

@@ -31,9 +31,12 @@
           type: Object,
           readOnly: true,
           notify: true,
-          value: function() {return new CompiledFunction();}
         }
       },
+
+      observers: [
+        'recompile(scope.functions.*, scope.pinnedVariables.*)'
+      ],
 
       attached: function() {
 
@@ -41,6 +44,9 @@
 
       recompile: function() {
         try {
+          if (!this.definition || this.definition == '') {
+            throw Error('No function to compile');
+          }
           let simplified = Algebrite.simplify(this.definition).toString();
           let parsed = math.parse(simplified);
           let symbols = this.getSymbols(parsed);

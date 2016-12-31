@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>main-app</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/main-app.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template>
+        <main-app></main-app>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('main-app tests', function() {
+        var el;
+
+        setup(function() {
+          el = fixture('basic');
+        });
+
+        let getRows = function() {
+          el.$.repeater.render();
+          return Polymer.dom(el.root).querySelectorAll('function-row');
+        };
+
+        let numberOfRows = function () {
+          return getRows().length;
+        };
+
+        test('rows match scope', function() {
+          el.set('scope.functions', [
+            new FunctionDefinition(),
+            new FunctionDefinition(),
+            new FunctionDefinition(),
+          ]);
+
+          expect(numberOfRows()).to.equal(3);
+
+          el.splice('scope.functions', 1, 1);
+          expect(numberOfRows()).to.equal(2);
+
+          el.push('scope.functions', new FunctionDefinition());
+          expect(numberOfRows()).to.equal(3);
+        });
+
+        test('addRow works', function() {
+          el.set('scope.functions', []);
+
+          el.startNamesAt = 'a';
+          el.addRow();
+          el.addRow();
+          expect(el.scope.functions[0].name).to.equal('a');
+          expect(el.scope.functions[1].name).to.equal('b');
+
+          let rows = getRows();
+          expect(rows.length).to.equal(2);
+          expect(rows[0].functionDefinition.name).to.equal('a');
+          expect(rows[1].functionDefinition.name).to.equal('b');
+        });
+
+        test('removeRow works', function(done) {
+          el.set('scope.functions', [
+            new FunctionDefinition('a'),
+            new FunctionDefinition('b'),
+            new FunctionDefinition('c'),
+          ]);
+
+          el.removeRow(null, 'b');
+          let rows = getRows();
+          expect(rows.length).to.equal(2);
+          expect(rows[0].functionDefinition.name).to.equal('a');
+          expect(rows[1].functionDefinition.name).to.equal('c');
+
+          try {
+            el.removeRow(null, 'f');
+            done('Removing a row that doesn\'t exist should throw an error');
+          }
+          catch(e) {
+            done();
+          }
+        });
+
+      });
+    </script>
+  </body>
+</html>
