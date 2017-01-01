@@ -1,6 +1,7 @@
 <link rel="import" href="../bower_components/paper-card/paper-card.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="mathquill-element.html">
+<link rel="import" href="playbook-icons.html">
 
 <dom-module id="pinned-variable-card">
   <template>
@@ -36,14 +37,18 @@
         margin-right: 8px;
         width: 24px;
         height: 24px;
+        color: #4285F4;
       }
     </style>
 
     <paper-card id='card'>
       <div id='topLeftTray'>
-        <paper-icon-button icon="add" class='topLeftButton'></paper-icon-button>
-        <paper-icon-button icon="add" class='topLeftButton'></paper-icon-button>
-        <paper-icon-button icon="add" class='topLeftButton'></paper-icon-button>
+        <paper-icon-button icon="playbook-icons:pin" class='topLeftButton'></paper-icon-button>
+        <paper-icon-button icon="playbook-icons:play" class='topLeftButton'></paper-icon-button>
+        <paper-icon-button icon="playbook-icons:natural" class='topLeftButton'></paper-icon-button>
+        <paper-icon-button icon="playbook-icons:integer" class='topLeftButton'></paper-icon-button>
+        <paper-icon-button icon="playbook-icons:real" class='topLeftButton'></paper-icon-button>
+        <paper-icon-button icon="playbook-icons:complex" class='topLeftButton'></paper-icon-button>
       </div>
       <div id='header'>
         <mathquill-element id='name'>a</mathquill-element>
