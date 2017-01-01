@@ -49,6 +49,24 @@
           expect(ColorGraph.isSupported(g)).to.be.true;
           expect(ColorGraph.isSupported(h)).to.be.true;
         });
+
+        test('zoomRange', function() {
+          let graph = new LineGraph();
+
+          let expectZoom = function(scale, tFocus, expected) {
+            graph.xRange = [-1, 1];
+            graph.zoomRange('xRange', scale, tFocus);
+            expect(graph.xRange).to.deep.equal(expected);
+          };
+
+          //Centered
+          expectZoom(1.5, .5, [-1.5, 1.5]);
+          expectZoom(0.5, .5, [-0.5, 0.5]);
+
+          //Off-center
+          expectZoom(1.5, 1, [-2, 1]);
+          expectZoom(0.5, 1, [0, 1]);
+        });
       });
 
       suite('linegraph tests', function() {
@@ -100,6 +118,35 @@
           expect(yRange[1]).to.be.closeTo(25, 0.1);
         });
 
+        test('function animations should match', function() {
+          graph.animated = false;
+          let f = makeFakeCompiled('x', ['x']);
+          graph.showFunction(f);
+
+          graph.animated = true;
+          let g = makeFakeCompiled('x^2', ['x']);
+          graph.showFunction(g);
+
+          let exprDuration = graph.dataAnim.get('pace')*1000;
+          expect(exprDuration).to.equal(graph._exprAnimDuration);
+          expect(graph.tweeners.yRange._duration).to.equal(exprDuration);
+        });
+
+        test('range animations should be right', function() {
+          graph.animated = false;
+          let f = makeFakeCompiled('x', ['x']);
+          graph.showFunction(f);
+
+          graph.animated = true;
+          graph.setRange('xRange', [-2, 2]);
+          let expectedDuration = graph._resetBoundsDuration;
+          expect(graph.tweeners.xRange._duration).to.equal(expectedDuration);
+
+          graph.resetBounds();
+          expect(graph.tweeners.yRange._duration).to.equal(expectedDuration);
+        });
+
+        // test('')
 
       });
 

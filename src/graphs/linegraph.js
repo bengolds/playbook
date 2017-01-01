@@ -5,6 +5,9 @@ class LineGraph extends Graph {
     this.dataId = 'data';
     this.displayId = 'display';
     this.animId = 'anim';
+
+    this._exprAnimDuration = 500;
+    this._resetBoundsDuration = 250;
   }
 
   static get supportedSignatures() {
@@ -53,7 +56,7 @@ class LineGraph extends Graph {
     });
     this.dataAnim = this.mathbox.play({
       target: '#' + this.dataId,
-      pace: 1,
+      pace: this._exprAnimDuration/1000,
       id: this.animId
     });
   }
@@ -78,7 +81,7 @@ class LineGraph extends Graph {
       }));
     };
     this.changeExpr(newExpr);
-    this.resetBounds();
+    this.resetBounds(this._exprAnimDuration, 'easeInOutSine');
   }
 
   changeExpr(newExpr) {
@@ -96,10 +99,15 @@ class LineGraph extends Graph {
 
   //Ranges
 
-  resetBounds() {
+  resetBounds(animDuration=this._resetBoundsDuration, animEasing='easeOutSine') {
     var newRange = this.compiled.getMinMax(this.unboundRanges());
     newRange = this.constructor.humanizeBounds(newRange);
-    this.setRange('yRange', newRange);
+    if (this.animated) {
+      this.animateRange('yRange', newRange, animDuration, animEasing);
+    } 
+    else {
+      this.setRange('yRange', newRange);
+    }
   }
 
   unboundRanges() {
