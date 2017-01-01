@@ -1,0 +1,59 @@
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="mathquill-element.html">
+
+<dom-module id="pinned-variable-card">
+  <template>
+    <style>
+      :host {
+        flex-basis: 384px;
+        flex-grow: 0;
+        height: 192px;
+        padding-left: 8px;
+        padding-right: 8px;
+        padding-top: 16px;
+      }
+      #card {
+        height: 100%;
+        width: 100%;
+        display:block;
+        position:relative;
+      }
+      #header {
+        text-align: center;
+        margin-top: 10px;
+      }
+      #name {
+        --mathquill-font-size: 250%;
+      }
+      #topLeftTray {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+      }
+      .topLeftButton {
+        padding: 0px;
+        margin-right: 8px;
+        width: 24px;
+        height: 24px;
+      }
+    </style>
+
+    <paper-card id='card'>
+      <div id='topLeftTray'>
+        <paper-icon-button icon="add" class='topLeftButton'></paper-icon-button>
+        <paper-icon-button icon="add" class='topLeftButton'></paper-icon-button>
+        <paper-icon-button icon="add" class='topLeftButton'></paper-icon-button>
+      </div>
+      <div id='header'>
+        <mathquill-element id='name'>a</mathquill-element>
+      </div>
+    </paper-card>
+
+  </template>
+  <script>
+    Polymer({
+      is: 'pinned-variable-card'
+    });
+  </script>
+</dom-module>

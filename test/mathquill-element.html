@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>mathquill-element</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/mathquill-element.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template>
+        <mathquill-element></mathquill-element>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('mathquill-element tests', function() {
+        var el;
+
+        setup(function() {
+          el = fixture('basic');
+        });
+
+        let expectInSync = function() {
+          expect(el.mathquill.latex()).to.equal(el.latex);
+        };
+
+        test('latex property in sync with element', function() {
+          el.latex = '\\cos x';
+          expectInSync();
+
+          el.editable = true;
+          el.latex = '\\tan x';
+          expectInSync();
+
+          el.mathquill.latex('\\cot x');
+          expectInSync();
+
+          el.mathquill.latex('');
+          el.typedText('\\csc x');
+          expectInSync();
+        });
+
+        //TODO: ADD TESTS FOR EDITABLE, HANDLERS, AND API
+
+      });
+    </script>
+  </body>
+</html>

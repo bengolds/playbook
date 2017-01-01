@@ -12,7 +12,7 @@
         white-space: nowrap;
       }
       mathquill-element {
-        font-size: 200%;
+        --mathquill-font-size: 200%;
       }
       #nameQuill {
         margin-right: -10px;
@@ -25,8 +25,8 @@
   <mathquill-element id="nameQuill"
     on-element-mouseover='onNameMouseOver' 
     on-mouseleave='onNameMouseLeave'
-    on-edit='onNameEdit'
     on-enter='stopEditingName'
+    latex='{{name}}'
     editable='[[editing]]'>
   </mathquill-element>
   <mathquill-element id="parametersQuill"
@@ -41,8 +41,7 @@
       properties: {
         name: {
           type: String,
-          notify: true,
-          observer: 'nameChanged'
+          notify: true
         },
         parameters: {
           type: Array,
@@ -69,7 +68,6 @@
       attached: function () {
         this.initialized = true;
         this.updateSignature();
-        this.$.nameQuill.latex(this.name);
       },
       
       updateSignature: function () {
@@ -93,11 +91,7 @@
           latex += filtered.join(',');
         }
         latex += '\\right)=';
-        this.$.parametersQuill.latex(latex);
-      },
-
-      nameChanged: function (_) {
-        this.$.nameQuill.latex(this.name);
+        this.$.parametersQuill.latex = latex;
       },
 
       editingChanged: function (_) {
@@ -106,9 +100,8 @@
           this.listen(this.$.nameQuill, 'blur', 'stopEditingName');
         }
         else {
-          if (this.$.nameQuill.latex() == '') {
+          if (this.$.nameQuill.latex == '') {
             this.name = this.oldName;
-            this.$.nameQuill.latex(this.name);
           }
         }
       },
@@ -131,12 +124,6 @@
         //TODO: EXPOSE THIS BLURRED PROP BETTER
         if (mq.__controller.blurred) {
           this.stopEditingName();
-        }
-      },
-
-      onNameEdit: function (e, details) {
-        if (details.mathField.latex() != '')  {
-          this.name = details.mathField.latex();
         }
       },
 

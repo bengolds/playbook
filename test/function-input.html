@@ -16,7 +16,9 @@
   <body>
     <test-fixture id="basic">
       <template is="dom-template">
-        <function-input definition='{{definition}}' latex='{{latex}}'></function-input>
+        <function-input 
+          definition='{{definition}}' 
+          latex='{{latex}}'></function-input>
       </template>
     </test-fixture>
 
@@ -33,7 +35,7 @@
 
         let latexShouldEqual = function (expected) {
           expect(el.latex).to.equal(expected);
-          expect(quill.latex()).to.equal(expected);
+          expect(quill.latex).to.equal(expected);
         };
 
         test('initialization', function() {

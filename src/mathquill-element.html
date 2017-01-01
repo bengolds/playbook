@@ -1,3 +1,4 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
 <script src='../bower_components/jquery/dist/jquery.min.js'></script>
 <script src='../libs/mathquill/build/mathquill.js'></script>
 <script src="mathquill-util.js"></script>
@@ -6,6 +7,9 @@
   <template>
     <style>
       :host {
+      }
+      #quill {
+        font-size: var(--mathquill-font-size);
       }
     </style>
     <span id="quill"></span>
@@ -21,6 +25,11 @@
         },
         config: {
           type: Object,
+        },
+        latex: {
+          type: String,
+          notify: true,
+          observer: '_latexChanged'
         }
       },
 
@@ -40,7 +49,24 @@
         }
       },
 
+      _latexChanged: function () {
+        if (this.alreadyChangingLatex || !this.mathquill)
+          return;
+        this.alreadyChangingLatex = true;
+
+        this.mathquill.latex(this.latex);
+
+        this.alreadyChangingLatex = false;
+      },
+
       _edit: function(mathField) {
+        if (this.alreadyChangingLatex)
+          return;
+        this.alreadyChangingLatex = true;
+
+        this.latex = this.mathquill.latex();
+
+        this.alreadyChangingLatex = false;
         this.fire('edit', {mathField: mathField});
       },
       _enter: function(mathField) {
@@ -59,7 +85,7 @@
           contents = this.mathquill.latex();
           this.mathquill.revert();
         } else {
-          contents = Polymer.dom(this).textContent;
+          contents = this.latex;
         }
         mqEl.textContent = contents;
         var handlerConfig = {
@@ -79,7 +105,7 @@
         } else {
           this.mathquill = this._MQ.StaticMath(mqEl, mergedConfig);
         }
-        var mathquillAPI = ['el','text','semanticText','semanticTree', 'latex','html','reflow','focus','blur','write', 'cmd','select','clearSelection','moveToDirEnd', 'moveToLeftEnd','moveToRightEnd','keystroke', 'typedText','dropEmbedded','clickAt','ignoreNextMousedown'];
+        var mathquillAPI = ['el','text','semanticText','semanticTree', 'html','reflow','focus','blur','write', 'cmd','select','clearSelection','moveToDirEnd', 'moveToLeftEnd','moveToRightEnd','keystroke', 'typedText','dropEmbedded','clickAt','ignoreNextMousedown'];
         for (let method of mathquillAPI) {
           if (typeof this.mathquill[method] == 'function') {
             this[method] = this.mathquill[method].bind(this.mathquill);

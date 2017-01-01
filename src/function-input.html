@@ -1,5 +1,5 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="hover-plot.html">
-<link rel="import" href="function-parser.html">
 <link rel="import" href="mathquill-element.html">
 <dom-module id="function-input">
 	<template>
@@ -8,7 +8,7 @@
 				flex-grow: 1;
 			}
 			#quill {
-				font-size:200%;
+        --mathquill-font-size: 200%;
 			}
       #errorMessage {
         color: #d40000;
@@ -30,10 +30,9 @@
       }
 		</style>
 	<mathquill-element id="quill" editable
-   on-edit = 'onEdit'
-   on-element-mouseover='onElementMouseOver'>
+    latex='{{latex}}'
+    on-element-mouseover='onElementMouseOver'>
   </mathquill-element>
-  <p id='errorMessage'></p>
   <hover-plot class='hidden' id='hoverplot' 
     synced-parameters='{{syncedParameters}}'></hover-plot>
   <div id='outline' class='hidden'></div>
@@ -60,30 +59,11 @@
 
     attached: function() {
       this.scopeSubtree(this.$.quill, true);
-      this.alreadyChangingLatex = false;
-    },
-
-    onEdit: function() {
-      if (this.alreadyChangingLatex)
-        return;
-      this.alreadyChangingLatex = true;
-
-      // this.hideHoverItems();
-      this.latex = this.$.quill.latex();
-      this.tryParseLatex();
-
-      this.alreadyChangingLatex = false;
+      // this.latexChanged();
     },
 
     latexChanged: function() {
-      if (this.alreadyChangingLatex)
-        return;
-      this.alreadyChangingLatex = true;
-
-      this.$.quill.latex(this.latex);
       this.tryParseLatex();
-
-      this.alreadyChangingLatex = false;
     },
 
     tryParseLatex: function() {

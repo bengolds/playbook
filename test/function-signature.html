@@ -39,7 +39,7 @@
 
         let nameEquals = function(name) {
           expect(el.name).to.equal(name);
-          expect(el.$.nameQuill.latex()).to.equal(name);
+          expect(el.$.nameQuill.latex).to.equal(name);
         };
 
         let testEditing = function(shouldBeEditing) {
@@ -77,9 +77,9 @@
           el.name = 'lazarus';
 
           el.editing = true;
-          el.$.nameQuill.latex('');
-          expect(el.$.nameQuill.latex()).to.equal('');
-          expect(el.name).to.equal('lazarus');
+          el.$.nameQuill.latex = '';
+          expect(el.$.nameQuill.latex).to.equal('');
+          expect(el.name).to.equal('');
           testEditing(true);
 
           el.editing = false;
@@ -88,7 +88,7 @@
         });
 
         let parametersShouldRead = function(expected) {
-          expect(el.$.parametersQuill.latex()).to.equal('\\left(' + expected + '\\right)=');
+          expect(el.$.parametersQuill.latex).to.equal('\\left(' + expected + '\\right)=');
         };
 
         test('parameter initialization', function() {
