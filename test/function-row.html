@@ -70,7 +70,7 @@
           el.set('functionDefinition.name', 'testme');
 
           expect(signature.name).to.equal('testme');
-          expect(signature.$.nameQuill.latex()).to.equal('testme');
+          expect(signature.$.nameQuill.latex).to.equal('testme');
         });
 
         test('receive changes from function-signature', function() {
@@ -109,7 +109,7 @@
           let input = el.$.input;
           let signature = el.$.signature;
           input.latex = 'a+b+c';
-          expect(signature.$.parametersQuill.latex()).to.equal('\\left(a,b,c\\right)=');
+          expect(signature.$.parametersQuill.latex).to.equal('\\left(a,b,c\\right)=');
         });
 
 
