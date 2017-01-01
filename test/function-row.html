@@ -112,6 +112,17 @@
           expect(signature.$.parametersQuill.latex).to.equal('\\left(a,b,c\\right)=');
         });
 
+        test('close button', function(done) {
+          el.functionDefinition = new FunctionDefinition('f');
+
+          el.addEventListener('remove-row', function(e) {
+            expect(e.detail.name) === el.functionDefinition.name;
+            done();
+          });
+
+          el.$.closeButton.click();
+        });
+
 
         // test('function requires name', function() {
         //   let f = new FunctionDefinition('', 'x^2');

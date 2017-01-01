@@ -2,9 +2,11 @@
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="mathquill-element.html">
 <link rel="import" href="playbook-icons.html">
+<link rel="import" href="shared-styles.html">
 
 <dom-module id="pinned-variable-card">
   <template>
+  <style include="shared-styles"></style>
     <style>
       :host {
         flex-basis: 384px;
@@ -27,28 +29,12 @@
       #name {
         --mathquill-font-size: 250%;
       }
-      #topLeftTray {
-        position: absolute;
-        top: 8px;
-        left: 8px;
-      }
-      .topLeftButton {
-        padding: 0px;
-        margin-right: 8px;
-        width: 24px;
-        height: 24px;
-        color: #4285F4;
-      }
     </style>
 
     <paper-card id='card'>
-      <div id='topLeftTray'>
-        <paper-icon-button icon="playbook-icons:pin" class='topLeftButton'></paper-icon-button>
-        <paper-icon-button icon="playbook-icons:play" class='topLeftButton'></paper-icon-button>
-        <paper-icon-button icon="playbook-icons:natural" class='topLeftButton'></paper-icon-button>
-        <paper-icon-button icon="playbook-icons:integer" class='topLeftButton'></paper-icon-button>
-        <paper-icon-button icon="playbook-icons:real" class='topLeftButton'></paper-icon-button>
-        <paper-icon-button icon="playbook-icons:complex" class='topLeftButton'></paper-icon-button>
+      <div class='topLeftTray'>
+        <paper-icon-button icon="playbook-icons:pin"></paper-icon-button>
+        <paper-icon-button icon="speaker-notes"></paper-icon-button>
       </div>
       <div id='header'>
         <mathquill-element id='name'>a</mathquill-element>

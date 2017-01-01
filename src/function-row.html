@@ -1,4 +1,6 @@
 <link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="shared-styles.html">
 <link rel="import" href="mathbox-plot.html">
 <link rel="import" href="function-input.html">
 <link rel="import" href="function-signature.html">
@@ -6,8 +8,10 @@
 
 <dom-module id="function-row">
   <template>
+  <style include="shared-styles"></style>
     <style>
       #container {
+        position: relative;
         display: flex;
         flex-wrap: nowrap;
         align-items: center;
@@ -26,6 +30,11 @@
       }
     </style>
     <paper-card id='container'>
+      <div class='topLeftTray'>
+        <paper-icon-button id='closeButton' icon="close" on-tap='removeRow'></paper-icon-button>
+        <paper-icon-button icon="speaker-notes"></paper-icon-button>
+      </div>
+
       <function-signature id='signature'
         name='{{functionDefinition.name}}'
         parameters='{{compiled.freeVariables}}'
@@ -94,9 +103,9 @@
       //   this._forceNotifyPath('functor.boundVars');
       // },
 
-      // removeRow: function() {
-      //   this.fire('remove-row', this.name);
-      // },
+      removeRow: function() {
+        this.fire('remove-row', this.functionDefinition.name);
+      },
 
       // inputOk: function (_) {
       //   this.$.plot.inputOk = true;

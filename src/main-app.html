@@ -67,7 +67,7 @@
       },
 
       listeners: {
-        // 'remove-row': 'removeRow'
+        'remove-row': 'removeRow'
       },
 
       attached: function () {
@@ -80,7 +80,8 @@
         this.push('scope.functions', nextFunc);
       },
 
-      removeRow: function (_, name) {
+      removeRow: function (e) {
+        let name = e.detail;
         let index = this.scope.functions.findIndex((func) => {
           return func.name === name;
         });

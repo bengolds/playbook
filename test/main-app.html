@@ -115,26 +115,24 @@
           expect(rows[1].functionDefinition.name).to.equal('b');
         });
 
-        test('removeRow works', function(done) {
+        test('removeRow works', function() {
           el.set('scope.functions', [
             new FunctionDefinition('a'),
             new FunctionDefinition('b'),
             new FunctionDefinition('c'),
           ]);
 
-          el.removeRow(null, 'b');
+          el.removeRow({detail: 'b'});
           let rows = getRows();
           expect(rows.length).to.equal(2);
           expect(rows[0].functionDefinition.name).to.equal('a');
           expect(rows[1].functionDefinition.name).to.equal('c');
 
           try {
-            el.removeRow(null, 'f');
-            done('Removing a row that doesn\'t exist should throw an error');
+            el.removeRow({detail: 'f'});
+            assert.fail('Removing a row that doesn\'t exist should throw an error');
           }
-          catch(e) {
-            done();
-          }
+          catch(e) {}
         });
 
       });
