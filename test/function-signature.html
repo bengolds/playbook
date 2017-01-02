@@ -120,17 +120,17 @@
           let a = new Variable('a');
           let b = new Variable('b');
 
-          el.pinnedVariables = [
+          el.set('scope.pinnedVariables', [
             {variable: x},
             {variable: z},
             {variable: a},
-          ];
+          ]);
           parametersShouldRead('v,w,y');
 
-          el.push('pinnedVariables', {variable: w});
+          el.push('scope.pinnedVariables', {variable: w});
           parametersShouldRead('v,y');
 
-          el.push('pinnedVariables', {variable: b});
+          el.push('scope.pinnedVariables', {variable: b});
           parametersShouldRead('v,y');
 
           el.push('parameters', new Variable('a'));

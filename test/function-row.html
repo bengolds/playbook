@@ -58,11 +58,11 @@
 
           el.$.input.latex = 'a+b';
           expect(el.functionDefinition.latex).to.equal('a+b');
-          expect(el.functionDefinition.definition).to.equal('(a+b)');
+          expect(el.functionDefinition.parseableString).to.equal('(a+b)');
 
           el.$.input.$.quill.typedText('+c');
           expect(el.functionDefinition.latex).to.equal('a+b+c');
-          expect(el.functionDefinition.definition).to.equal('((a+b)+c)');
+          expect(el.functionDefinition.parseableString).to.equal('((a+b)+c)');
         });
 
         test('pass changes to function-signature', function() {
@@ -123,6 +123,25 @@
           el.$.closeButton.click();
         });
 
+        test('integration: symbols get written into scope properly', function() {
+          let expectVariablesInScope = function(varNames) {
+            let freeVarNames = el.scope.freeVariables.map( (variable) => {
+              return variable.name;
+            });
+            expect(freeVarNames).to.deep.equal(varNames);
+          };
+
+          el.scope = new Scope();
+
+          let f = new FunctionDefinition('f', 'a*b*c', 'a*b*c');
+          let g = new FunctionDefinition('g', 'x*y*z', 'x*y*z');
+
+          expectVariablesInScope(['a','b','c']);
+
+          el.functionDefinition = g;
+          expectVariablesInScope(['x','y','z']);
+
+        });
 
         // test('function requires name', function() {
         //   let f = new FunctionDefinition('', 'x^2');

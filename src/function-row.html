@@ -1,5 +1,6 @@
 <link rel="import" href="../bower_components/paper-card/paper-card.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
 <link rel="import" href="shared-styles.html">
 <link rel="import" href="mathbox-plot.html">
 <link rel="import" href="function-input.html">
@@ -38,13 +39,14 @@
       <function-signature id='signature'
         name='{{functionDefinition.name}}'
         parameters='{{compiled.freeVariables}}'
+        scope='{{scope}}'
         ></function-signature>
       <function-input id='input'
-        definition='{{functionDefinition.definition}}'
+        definition='{{functionDefinition.parseableString}}'
         latex='{{functionDefinition.latex}}'
         ></function-input>
       <function-compiler id='compiler'
-        definition='{{functionDefinition.definition}}'
+        definition='{{functionDefinition.parseableString}}'
         scope='{{scope}}'
         compiled='{{compiled}}'
         ></function-compiler>
@@ -76,67 +78,42 @@
         },
         compiled: {
           type: Object,
-          notify: false
+          notify: false,
+          observer: 'compiledChanged'
         }
       },
 
       listeners: {
-      //   'functor-pinvar': 'pinVariable',
-      //   'functor-bindvar': 'bindVariable',
-      //   'functor-unpinvar': 'unpinVariable',
         // 'input-ok': 'inputOk',
         // 'input-error': 'inputError',
       },
-
-      // pinVariable: function (_, detail) {
-      //   this.functor.pinVar(detail.variable, detail.value, detail.range);
-      //   this._forceNotifyPath('functor.boundVars');
-      // },
-
-      // bindVariable: function (_, detail) {
-      //   this.functor.bindVar(detail.variable, detail.value);
-      //   this._forceNotifyPath('functor.boundVars.' + detail.variable, detail.value);
-      // },
-
-      // unpinVariable: function (_, detail) {
-      //   this.functor.unpinVar(detail.variable);
-      //   this._forceNotifyPath('functor.boundVars');
-      // },
 
       removeRow: function() {
         this.fire('remove-row', this.functionDefinition.name);
       },
 
-      // inputOk: function (_) {
-      //   this.$.plot.inputOk = true;
-      // },
+      compiledChanged: function() {
+        if (this.oldCompiled) {
+          for (let freeVar of this.oldCompiled.freeVariables) {
+            let indexOfVar = this.scope.indexOfFreeVar;
+            if (indexOfVar != -1) {
+              this.splice('scope.freeVariables', indexOfVar, 1);
+            }
+          }
+        }
 
-      // inputError: function (_) {
-      //   this.$.plot.inputOk = false;
-      // },
+        for (let freeVar of this.compiled.freeVariables) {
+          if (!this.scope.isVariableInScope(freeVar.name)) {
+            this.push('scope.freeVariables', freeVar);
+          }
+        }
 
-      // _getBoundVarsArray: function (_) {
-      //   let returnArray = [];
-      //   for (let key in this.functor.boundVars) {
-      //     // TODO: ADD RANGE HERE
-      //     let object = {symbol: key, value:this.functor.boundVars[key].value};
-      //     returnArray.push(object);
-      //   }
-      //   return returnArray;
-      // },
+        this.oldCompiled = this.compiled;
+      },
 
-      // _forceNotifyPath: function (path) {
-      //   var obj = this.get(path);
-      //   //Override the dirty checking
-      //   if (Array.isArray(obj)) {
-      //     obj = obj.slice();
-      //   } 
-      //   else if (typeof obj === 'object') {
-      //     obj = Object.assign({}, obj);
-      //   }
-      //   this.set(path, obj);
-      //   this.notifyPath(path);
-      // }
+      nameChanged: function () {
+        // body...
+      }
 
     });
  </script>

@@ -41,6 +41,28 @@
           });
         });
 
+        test('isVariableInScope', function() {
+          let pinnedVars = makePinnedVars(['a','b','c'], [0,0,0]);
+          let freeVars = [new Variable('x'), new Variable('y')];
+          let scope = new Scope(freeVars, pinnedVars);
+
+          let expectIsInScope = function(name) {
+            expect(scope.isVariableInScope(name)).to.be.true;
+          };
+          let expectIsNotInScope = function(name) {
+            expect(scope.isVariableInScope(name)).to.be.false;
+          };
+
+          expectIsInScope('a');
+          expectIsInScope('b');
+          expectIsInScope('c');
+          expectIsInScope('x');
+          expectIsInScope('y');
+
+          expectIsNotInScope('w');
+          expectIsNotInScope('z');
+        });
+
       
 
       });

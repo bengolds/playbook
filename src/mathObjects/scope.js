@@ -12,4 +12,42 @@ class Scope {
     }
     return ret;
   }
+
+  isVariableInScope(name) {
+    let isInPinned = this.pinnedVariables.some( (pinned) => {
+      return pinned.variable.name === name;
+    });
+    let isInFree = this.freeVariables.some( (free) => {
+      return free.name === name;
+    });
+
+    return isInFree || isInPinned;
+  }
+
+  indexOfFreeVar(name) {
+    return this.freeVariables.findIndex( (free) => {
+      return free.name === name;
+    });
+  }
+
+  indexOfPinnedVar(name) {
+    return this.pinnedVariables.findIndex( (pinned) => {
+      return pinned.variable.name === name;
+    });
+  }
+
+  indexOfFunction(name) {
+    return this.functions.findIndex( (f) => {
+      return f.name === name;
+    });
+  }
+
+  isPinned(name) {
+    return this.indexOfPinnedVar(name) != -1;
+  }
+
+  isFree(name) {
+    return this.indexOfFreeVar(name) != -1;
+  }
+
 }

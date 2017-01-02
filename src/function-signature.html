@@ -32,7 +32,7 @@
   <mathquill-element id="parametersQuill"
     on-element-mouseover='onParameterMouseOver'>
   </mathquill-element>
-  <var-action-bar id="actionbar" class="hidden" functor='{{functor}}'></var-action-bar>
+  <var-action-bar id="actionbar" class="hidden"></var-action-bar>
 
   </template>
   <script>
@@ -48,9 +48,9 @@
           value: function() {return [];},
           observer: 'updateSignature'
         },
-        pinnedVariables: {
-          type: Array,
-          value: function() {return [];},
+        scope: {
+          type: Object,
+          value: function() {return new Scope();},
           observer: 'updateSignature'
         },
         editing: {
@@ -62,7 +62,8 @@
 
       observers: [
         'updateSignature(parameters.splices)',
-        'updateSignature(pinnedVariables.splices)'
+        'updateSignature(scope.pinnedVariables)',
+        'updateSignature(scope.pinnedVariables.splices)',
       ],
 
       attached: function () {
@@ -82,9 +83,7 @@
           let sorted = names.sort();
 
           let isNotPinned = (name) => {
-            return !this.pinnedVariables.some((pinned) => {
-              return pinned.variable.name === name;
-            });
+            return !this.scope.isPinned(name);
           };
 
           let filtered = sorted.filter(isNotPinned);
@@ -92,6 +91,12 @@
         }
         latex += '\\right)=';
         this.$.parametersQuill.latex = latex;
+
+        if (!this.$.actionbar.classList.contains('hidden')
+          && !this.scope.isFree(this.$.actionbar.variable.name)) 
+        {
+          this.hideHoverBar();
+        }
       },
 
       editingChanged: function (_) {
@@ -139,7 +144,9 @@
         let middleX = target.offsetLeft + target.offsetWidth/2 - actionbar.offsetWidth/2;
         actionbar.style.left = middleX + 'px';
         actionbar.style.top = topY + 'px';
-        actionbar.variable = target.textContent;
+
+        //SHOULD BE PULLED FROM SCOPE.FREE
+        actionbar.variable = new Variable(target.textContent);
       },
 
       hideHoverBar: function() {

@@ -18,17 +18,35 @@
         margin-top: 16px;
         --paper-fab-background: #FFFFFF;
         --paper-fab-keyboard-focus-background: #4285F4;
+        --paper-fab-iron-icon: {
+          color: #757575;
+        };
       }
       #pinnedVars {
-        min-height: 192px;
+        min-height: 160px;
         display:flex;
         justify-content: center;
       }
+      #noPinnedVarsMsg {
+        text-align: center;
+        margin-top: auto;
+        margin-bottom: auto;
+        font-family: Symbola;
+        font-size: 20px;
+        color: #757575;
+      }
+      .hidden {
+        display: none;
+      }
     </style>
     <div id='pinnedVars'>
-        <pinned-variable-card ></pinned-variable-card>
+      <span id='noPinnedVarsMsg'>No variables pinned yet.</span>
       <template is='dom-repeat' id='pinnedVarsRepeater' items='{{scope.pinnedVariables}}'>
-        <pinned-variable-card ></pinned-variable-card>
+        <pinned-variable-card 
+          variable='{{item.variable}}'
+          bounds='{{item.bounds}}'
+          value='{{item.value}}'
+          ></pinned-variable-card>
       </template>
     </div>
 
@@ -67,8 +85,14 @@
       },
 
       listeners: {
-        'remove-row': 'removeRow'
+        'remove-row': 'removeRow',
+        'pin-var': 'pinVar',
+        'unpin-var': 'unpinVar',
       },
+
+      observers: [
+        'pinnedVarsChanged(scope.pinnedVariables.*)'
+      ],
 
       attached: function () {
         this.addRow();
@@ -106,14 +130,54 @@
         return nextName;
       },
 
+      pinVar: function(e) {
+        let name = e.detail.name;
+        if (!this.scope.isVariableInScope(name)) {
+          throw Error(name + ' can\'t be pinned because it doesn\'t exist');
+        }
+
+        let freeIndex = this.scope.indexOfFreeVar(name);
+        if (freeIndex != -1) {
+          this.splice('scope.freeVariables', freeIndex, 1);
+          let pinned = {
+            variable: new Variable(name),
+            bounds: [-5, 5],
+            value: 0,
+          };
+          this.push('scope.pinnedVariables', pinned);
+        }
+      },
+
+      unpinVar: function(e) {
+        let name = e.detail.name;
+        if (!this.scope.isVariableInScope(name)) {
+          throw Error(name + ' can\'t be unpinned because it doesn\'t exist');
+        }
+
+        let pinnedIndex = this.scope.indexOfPinnedVar(name);
+        if (pinnedIndex != -1) {
+          this.splice('scope.pinnedVariables', pinnedIndex, 1);
+          this.push('scope.freeVariables', e.detail);
+        }
+      },
+
+      pinnedVarsChanged: function () {
+        if (this.scope.pinnedVariables.length > 0) {
+          this.$.noPinnedVarsMsg.classList.add('hidden');
+        }
+        else {
+          this.$.noPinnedVarsMsg.classList.remove('hidden');
+        }
+      },
+
       buttonFocused: function() {
         //NO WAY TO DO THIS FROM CSS I GUESS
-        this.$.addButton.$.icon.style.color = '#FFFFFF';
+        // this.$.addButton.$.icon.style.color = '#FFFFFF';
       },
 
       buttonBlurred: function() {
         //NO WAY TO DO THIS FROM CSS I GUESS
-        this.$.addButton.$.icon.style.color = '#757575';
+        // this.$.addButton.$.icon.style.color = '#757575';
       }
 
     });

@@ -1,24 +1,26 @@
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
-<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
 <link rel="import" href="arrow-box.html">
+<link rel="import" href="shared-styles.html">
 <link rel="import" href="playbook-icons.html">
+<link rel="import" href="mathObjects/math-objects-import.html">
 
 <dom-module id="var-action-bar">
   <template>
+    <style include="shared-styles"></style>
     <style>
       :host {
         display: block;
         position: absolute;
       }
-      paper-icon-button {
-        opacity: .54;
+      arrow-box {
+        --arrow-box-padding:8px;
       }
     </style>
   <arrow-box direction='down'>
-    <paper-icon-button icon='playbook-icons:real' toggles></paper-icon-button>
-    <paper-icon-button icon='playbook-icons:complex' toggles></paper-icon-button>
-    <paper-icon-button icon='playbook-icons:pin'
+    <paper-icon-button icon='playbook-icons:pin' id='pin'
+      active='{{pinned}}'
       on-click='pinClicked'></paper-icon-button>
+    <paper-icon-button icon='playbook-icons:complex' toggles></paper-icon-button>
   </arrow-box>
   </template>
 
@@ -26,35 +28,27 @@
     Polymer({
       is: 'var-action-bar',
       properties: {
-        functor: {
-          type: Object,
-          notify: true
-        },
         variable: {
-          type: String,
+          type: Object,
+        },
+        pinned: {
+          type: Boolean,
+          value: false,
+          notify: false,
         }
       },
       attached: function () {
+
       },
 
       pinClicked: function (e, details) {
-        if (this.isCurrVarPinned()) {
-          this.fire('functor-unpinvar', {
-            variable: this.variable
-          });
+        if (this.pinned) {
+          this.fire('unpin-var', this.variable);
         } 
         else {
-          this.fire('functor-pinvar', {
-            variable: this.variable, 
-            value: 0.5,
-            range: [0,1],
-          });
+          this.fire('pin-var', this.variable);
         }
       },
-      isCurrVarPinned: function (_) {
-        return (this.variable in this.functor.boundVars);
-      }
-
     });
   </script>
 </dom-module>

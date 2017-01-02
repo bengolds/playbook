@@ -115,6 +115,13 @@
         this.classList.add('ungrabbed');
       },
 
+      detached: function() {
+        if (this.mathbox.three) {
+          this.mathbox.three.renderer.forceContextLoss() ;
+          this.mathbox.three.destroy();
+        }
+      },
+
       showErrorChanged: function () {
         if (this.showError) {
           this.classList.add('error');

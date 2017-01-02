@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>var-action-bar</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/var-action-bar.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template>
+        <var-action-bar></var-action-bar>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('var-action-bar tests', function() {
+        var el;
+
+        setup(function() {
+          el = fixture('basic');
+          el.variable = new Variable('a');
+          el.pinned = false;
+        });
+
+        test('respond to pinning/unpinning', function() {
+          el.pinned = true;
+          expect(el.$.pin.active).to.be.true;
+
+          el.pinned = false;
+          expect(el.$.pin.active).to.be.false;
+        });
+
+      });
+    </script>
+  </body>
+</html>
