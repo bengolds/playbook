@@ -1,0 +1,72 @@
+<link rel="import" href="../src/mathObjects/math-objects-import.html">
+<script src="../bower_components/mathjs/dist/math.js"></script>
+<script type="text/javascript">
+helper = {
+  makePinnedArray: function(scope, names, bounds = null, values = null) {
+    let pinned = [];
+    for (let i = 0; i < names.length; i++) {
+      let currBounds = [-10, 10];
+      if (bounds) {
+        currBounds = bounds[i];
+      }
+
+      let value = 0;
+      if (values) {
+        value = values[i];
+      }
+
+      let newPin = helper.makePinnedVar(scope, names[i], currBounds, value);
+
+      pinned.push(newPin);
+    }
+    return pinned;
+  },
+
+  makePinnedVar: function (scope, name, bounds=[-10, 10], value=0) {
+    let pinned = {};
+    pinned.variable = scope.getVariable(name);
+    pinned.bounds = [-10, 10];
+    pinned.value = value;
+
+    return pinned;
+  },
+
+  makeVarsArray: function (names, sets=null) {
+    let vars = [];
+    for (var i = 0; i < names.length; i++) {
+      let newVar = new Variable(names[i]);
+      if (sets)   {
+        newVar.set = sets[i];
+      }
+      vars.push(newVar);
+    }
+    return vars;
+  },
+
+  makeFakeCompiled: function (funcString, varNames, scope) {
+    let compiled = math.compile(funcString);
+    let allVars = varNames.map( (name) => {
+      return scope.getVariable(name);
+    });
+    return new CompiledFunction(compiled, allVars, scope);
+  },
+
+  makeFunctionWithSignature: function (domain, range) {
+    let varNames = ['a','b','c','d','e','f','g'];
+    let usedNames = varNames.slice(0, domain.length);
+    let scope = helper.makeScope(varNames, domain);
+    let funcString = usedNames.join('*');
+    return helper.makeFakeCompiled(funcString, usedNames, scope);
+  },
+
+  makeScope: function (varNames, varSets = null, pinnedNames = null, pinnedBounds = null, pinnedValues = null) {
+    let scope = new Scope(helper.makeVarsArray(varNames, varSets));
+    if (pinnedNames) {
+      scope.pinnedVariables = helper.makePinnedArray(scope, pinnedNames, pinnedBounds, pinnedValues);
+    }
+
+    return scope;
+  }
+
+};
+</script>

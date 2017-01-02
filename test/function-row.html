@@ -93,14 +93,7 @@
           expect(el.compiled).to.be.ok;
 
           let oldFunc = el.compiled;
-          el.set('functionDefinition.definition','3xy^3');
-          expect(el.compiled).to.be.ok;
-          expect(el.compiled).to.not.equal(oldFunc);
-
-          oldFunc = el.compiled;
-          el.push('scope.pinnedVariables', {
-            variable: new Variable('y')
-          });
+          el.set('functionDefinition.parseableString','3xy^3');
           expect(el.compiled).to.be.ok;
           expect(el.compiled).to.not.equal(oldFunc);
         });
@@ -136,6 +129,7 @@
           let f = new FunctionDefinition('f', 'a*b*c', 'a*b*c');
           let g = new FunctionDefinition('g', 'x*y*z', 'x*y*z');
 
+          el.functionDefinition = f;
           expectVariablesInScope(['a','b','c']);
 
           el.functionDefinition = g;

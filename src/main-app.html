@@ -132,25 +132,24 @@
 
       pinVar: function(e) {
         let name = e.detail.name;
-        if (!this.scope.isVariableInScope(name)) {
+        if (!this.scope.hasVariable(name)) {
           throw Error(name + ' can\'t be pinned because it doesn\'t exist');
         }
 
         let freeIndex = this.scope.indexOfFreeVar(name);
         if (freeIndex != -1) {
           let pinned = {
-            variable: this.scope.freeVariables[freeIndex],
+            variable: this.scope.getVariable(name),
             bounds: [-1, 1],
             value: 0,
           };
           this.push('scope.pinnedVariables', pinned);
-          this.splice('scope.freeVariables', freeIndex, 1);
         }
       },
 
       unpinVar: function(e) {
         let name = e.detail.name;
-        if (!this.scope.isVariableInScope(name)) {
+        if (!this.scope.hasVariable(name)) {
           throw Error(name + ' can\'t be unpinned because it doesn\'t exist');
         }
 
@@ -159,7 +158,6 @@
           let variable = this.scope.pinnedVariables[pinnedIndex].variable;
 
           this.splice('scope.pinnedVariables', pinnedIndex, 1);
-          this.push('scope.freeVariables', variable);
         }
       },
 

@@ -1,8 +1,14 @@
 class Scope {
-  constructor(freeVariables = [], pinnedVariables = [], functions = []) {
-    this.freeVariables = freeVariables;
-    this.pinnedVariables = pinnedVariables;
+  constructor(variables = [], functions = []) {
+    this.variables = variables;
+    this.pinnedVariables = [];
     this.functions = functions;
+  }
+
+  get freeVariables() {
+    return this.variables.filter( (variable) => {
+      return this.isFree(variable.name);
+    });
   }
 
   getForMathJS() {
@@ -13,15 +19,10 @@ class Scope {
     return ret;
   }
 
-  isVariableInScope(name) {
-    let isInPinned = this.pinnedVariables.some( (pinned) => {
-      return pinned.variable.name === name;
+  hasVariable(name) {
+    return this.variables.some( (variable) => {
+      return variable.name === name;
     });
-    let isInFree = this.freeVariables.some( (free) => {
-      return free.name === name;
-    });
-
-    return isInFree || isInPinned;
   }
 
   indexOfFreeVar(name) {
@@ -47,7 +48,13 @@ class Scope {
   }
 
   isFree(name) {
-    return this.indexOfFreeVar(name) != -1;
+    return !this.isPinned(name);
+  }
+
+  getVariable(name) {
+    return this.variables.find( (variable) => {
+      return name === variable.name;
+    });
   }
 
 }

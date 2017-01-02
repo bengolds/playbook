@@ -10,6 +10,7 @@
         "expect": false,
         "fixture": false,
         "replace": false,
-        "sinon": false
+        "sinon": false,
+        "helper": true
     }
 }

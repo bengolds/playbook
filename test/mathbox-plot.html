@@ -8,7 +8,7 @@
 
     <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../bower_components/web-component-tester/browser.js"></script>
-    <script src="../bower_components/mathjs/dist/math.js"></script>
+    <link rel="import" href="test-helpers.html">
 
     <!-- Import the element to test -->
     <link rel="import" href="../src/mathbox-plot.html">
@@ -26,10 +26,12 @@
       suite('mathbox-plot tests', function() {
         var outerDiv;
         var el;
+        let globalScope;
 
         setup(function() {
           outerDiv = fixture('basic');
           el = outerDiv.querySelector('#plot');
+          globalScope = new Scope();
         });
 
         let dimensionsShouldBe = function(width, height) {
@@ -57,28 +59,9 @@
           dimensionsShouldBe(100, 200);
         });
 
-
-        let makeFakeFunction = function(domain, range) {
-          let numFree = domain.length;
-          let fakeFreeVars = [new Variable('a'), new Variable('b'), new Variable('c')];
-          fakeFreeVars = fakeFreeVars.slice(0, numFree);
-          let fake = new CompiledFunction(math.compile('0'), fakeFreeVars);
-          Object.assign(fake, {
-            getDomain: function() {return domain;},
-            getRange: function() {return range;},
-            getSignature: function() {
-              return  {
-                domain: domain,
-                range: range,
-              };
-            },
-          });
-          return fake;
-        };
-
         test('graph signature finding', function(){
           let expectGraph = function(domain, range, graphType) {
-            let f = makeFakeFunction(domain, range);
+            let f = helper.makeFunctionWithSignature(domain, range);
             el.compiledFunction = f;
             expect(el.graph.constructor).to.equal(graphType);
             expect(el.noGraphFound).to.be.false;
@@ -92,8 +75,8 @@
         });
 
         test('if signature doesn\'t change, graph shouldn\'t', function() {
-          let f = makeFakeFunction([SETS.REAL], [SETS.REAL]);
-          let g = makeFakeFunction([SETS.REAL], [SETS.INTEGER]);
+          let f = helper.makeFunctionWithSignature([SETS.REAL], [SETS.REAL]);
+          let g = helper.makeFunctionWithSignature([SETS.REAL], [SETS.INTEGER]);
 
           el.compiledFunction = f;
           let oldGraph = el.graph;
@@ -101,19 +84,21 @@
           expect(el.graph).to.eql(oldGraph);
         });
 
-        test('throw error if no graph found', function(done) {
-          el.compiledFunction = makeFakeFunction([SETS.REAL], [SETS.REAL]);
+        test('throw error if no graph found', function() {
+          el.compiledFunction = helper.makeFunctionWithSignature([SETS.REAL], [SETS.REAL]);
 
           el.addEventListener('graph-ok', function() {
-            done(Error('expected input to throw an error'));
+            assert.fail(Error('expected input to throw an error'));
           });
+          let didThrowError = false;
           el.addEventListener('graph-error', function() {
-            expect(el.noGraphFound).to.be.true;
-            done();
+            didThrowError = true;
           });
 
-          let bad = makeFakeFunction([SETS.COMPLEX, SETS.COMPLEX, SETS.COMPLEX], [SETS.REAL]);
+          let bad = helper.makeFunctionWithSignature([SETS.COMPLEX, SETS.COMPLEX, SETS.COMPLEX], [SETS.REAL]);
           el.compiledFunction = bad;
+          expect(el.noGraphFound).to.be.true;
+          expect(didThrowError).to.be.test-fixture;
         });
 
         let expectStyleToBe = function(element, key, value) {
@@ -129,6 +114,28 @@
           expectStyleToBe(el.$.errorIcon, 'display', 'block');
         });
 
+
+        test('changing pinned variables changes graph', function() {
+          let freeVars = [new Variable('a'), new Variable('b')];
+          let scope = new Scope(freeVars) ;
+          let f = new CompiledFunction(math.compile('a*b'), freeVars, scope);
+          el.compiledFunction = f;
+
+          expect(el.graph.constructor).to.equal(ColorGraph);
+
+          let pin = {
+            variable: new Variable('a'),
+            bounds: [-1, 1],
+            value: 0
+          };
+          el.push('compiledFunction.globalScope.pinnedVariables', pin);
+          el.splice('compiledFunction.globalScope.freeVariables', 0, 1);
+          expect(el.graph.constructor).to.equal(LineGraph);
+
+          el.splice('compiledFunction.globalScope.pinnedVariables', 0, 1);
+          el.push('compiledFunction.globalScope.freeVariables', pin.variable);
+          expect(el.graph.constructor).to.equal(ColorGraph);
+        });
         //Test changing compiled function
         //Test pinning variable to see if graph changes
         //Test pan/zoom events with dummy graph

@@ -8,6 +8,7 @@
 
     <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../bower_components/web-component-tester/browser.js"></script>
+    <link rel="import" href="test-helpers.html">
 
     <!-- Import the element to test -->
     <link rel="import" href="../src/function-compiler.html">
@@ -27,6 +28,7 @@
         let numSamples = 100;
         let range = [-5, 5];
         let rangeWidth = range[1]-range[0];
+        let errorListener = (e) => {assert.fail(e);};
 
         let assertCompiledMatches = function(f, params) {
           let wrapped = wrapEval(el.compiled, params);
@@ -62,6 +64,7 @@
 
         setup(function() {
           el = fixture('basic');
+          el.addEventListener('compile-error', errorListener);
         });
 
         test('compiling scopeless function', function(){
@@ -89,14 +92,8 @@
         test('changing scope recompiles', function() {
           el.definition = '2*x*y';
           let f = (x) => {return 2*x*2;};
-          let pinnedVariables = [ 
-            {
-              variable: new Variable('y'),
-              bounds: [-10,10],
-              value: 2
-            },
-          ];
-          el.scope = new Scope(null, pinnedVariables, null);
+          
+          el.scope = helper.makeScope(['x','y'], null, ['y'], [[-10, 10]], [2]);
           assertCompiledMatches(f, ['x']);
 
           let g = (x,y) => {return 2*x*y;};
@@ -108,15 +105,13 @@
           el.addEventListener('compile-ok', function () {
             done();
           });
-          el.addEventListener('compile-error', function(e) {
-            done(e.detail);
-          });
           el.definition='2*x';
         });
 
         test('should fire compile-error event', function(done){
           el.definition='2*x';
 
+          el.removeEventListener('compile-error', errorListener);
           el.addEventListener('compile-error', function(e) {
             let f = (x) => {return 2*x;};
             assertCompiledMatches(f, ['x']);

@@ -8,50 +8,43 @@
 
     <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../bower_components/web-component-tester/browser.js"></script>
-    <script src="../bower_components/mathjs/dist/math.js"></script>
+    <link rel="import" href="test-helpers.html">
 
     <!-- Import the element to test -->
     <link rel="import" href="../src/mathObjects/math-objects-import.html">
   </head>
   <body>
     <script>
-      let makePinnedVars = function(names, vals) {
-        let pinned = [];
-        let bounds = [-10, 10];
-        for (let i = 0; i < names.length; i++) {
-          pinned.push({
-            variable: new Variable(names[i]),
-            bounds: bounds,
-            value: vals[i]
-          });
-        }
-        return pinned;
-      };
 
       suite('scope tests', function() {
         setup(function() {
         });
-
         
         test('scope converted for mathjs', function() {
-          let pinnedVars = makePinnedVars(['x', 'y'], [1, 3]);
-          let scope = new Scope([], pinnedVars);
+          let scope = helper.makeScope(['a','b','x','y'], null, ['x','y'], null, [1, 3]);
           expect(scope.getForMathJS()).to.deep.equal({
             x: 1,
             y: 3
           });
         });
 
-        test('isVariableInScope', function() {
-          let pinnedVars = makePinnedVars(['a','b','c'], [0,0,0]);
-          let freeVars = [new Variable('x'), new Variable('y')];
-          let scope = new Scope(freeVars, pinnedVars);
+        test('freeVariables', function() {
+          let scope = helper.makeScope(['a','b','c','d'], null, ['b','d']);
+          let expectedFreeVariables = [scope.getVariable('a'), scope.getVariable('c')];
+
+          expect(scope.freeVariables).to.deep.equal(expectedFreeVariables);
+
+        });
+
+        test('hasVariable', function() {
+          let pinnedNames = ['a','b','c'];
+          let scope = helper.makeScope(['x','y','a','b','c'], null, pinnedNames);
 
           let expectIsInScope = function(name) {
-            expect(scope.isVariableInScope(name)).to.be.true;
+            expect(scope.hasVariable(name)).to.be.true;
           };
           let expectIsNotInScope = function(name) {
-            expect(scope.isVariableInScope(name)).to.be.false;
+            expect(scope.hasVariable(name)).to.be.false;
           };
 
           expectIsInScope('a');
@@ -64,32 +57,19 @@
           expectIsNotInScope('z');
         });
 
-      
-
       });
 
       suite ('compiledFunction tests', function() {
         setup(function(){
-
         });
 
-        let makeFakeCompiled = function(funcString, freeVarNames) {
-          let freeVars = freeVarNames.map( (name) => {
-            return new Variable(name);
-          });
-          return new CompiledFunction(math.compile(funcString), freeVars);
-        };
 
         test('domain should be automatically found', function() {
-          let inputVariables = [
-            new Variable('a'),
-            new Variable('g'),
-            new Variable('b', SETS.INTEGER),
-            new Variable('c', SETS.COMPLEX),
-          ];
-          let pinned = makePinnedVars(['c, g'], [0,0]);
-          let scope = new Scope([new Variable('a'), new Variable('b')], pinned); 
-          let f = new CompiledFunction(null, inputVariables, scope);
+          let scope = helper.makeScope(
+            ['a','g','b','c'],
+            [SETS.REAL, SETS.REAL, SETS.INTEGER, SETS.COMPLEX],
+            ['c','g']);
+          let f = helper.makeFakeCompiled('a*g*b*c', ['a','g','b','c'], scope);
 
           expect(f.getDomain()).to.deep.equal([SETS.REAL, SETS.INTEGER]);
         });
@@ -99,10 +79,12 @@
           let unboundRanges = {
             a: [-5, 5],
             b: [-2, 2],
+            c: [-3, 3]
           };
 
           let testMinMax = (funcString, freeVars, expected) => {
-            let f = makeFakeCompiled(funcString, freeVars);
+            let scope = helper.makeScope(freeVars);
+            let f = helper.makeFakeCompiled(funcString, freeVars, scope);
             let minMax = f.getMinMax(unboundRanges);
             expect(minMax[0]).to.be.closeTo(expected[0], 0.1);
             expect(minMax[1]).to.be.closeTo(expected[1], 0.1);
@@ -112,14 +94,13 @@
           testMinMax('a', ['a'], [-5, 5]);
           testMinMax('a^2', ['a'], [0, 25]);
           testMinMax('a*b', ['a', 'b'], [-10, 10]);
-
           // Check how it behaves if it doesn't have the right unboundRanges
           // testMinMax('c', ['c'], [-5, 5]);
-
-          //NOW DO IT WITH PINNED VARS
         });
 
-        // Range should be automatically found in compiled function
+        test('getMinMax with pinnedVars', function() {
+          //Test here
+        });
 
         // test('compiledFunction shouldn\'t evaluate with incomplete scope', function() {
           

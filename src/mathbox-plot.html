@@ -79,6 +79,10 @@
         }
       },
 
+      observers: [
+        'compiledFunctionChanged(compiledFunction.globalScope.pinnedVariables.splices)'
+      ],
+
       listeners: {
         'resize': 'resize',
         'down': 'onPanStart',

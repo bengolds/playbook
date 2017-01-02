@@ -93,22 +93,6 @@
       },
 
       compiledChanged: function() {
-        // if (this.oldCompiled) {
-        //   for (let freeVar of this.oldCompiled.freeVariables) {
-        //     let indexOfVar = this.scope.indexOfFreeVar;
-        //     if (indexOfVar = -1) {
-        //       this.splice('scope.freeVariables', indexOfVar, 1);
-        //     }
-        //   }
-        // }
-
-        for (let freeVar of this.compiled.variables) {
-          if (!this.scope.isVariableInScope(freeVar.name)) {
-            this.push('scope.freeVariables', freeVar);
-          }
-        }
-
-        this.oldCompiled = this.compiled;
       },
 
       nameChanged: function () {

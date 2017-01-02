@@ -8,6 +8,7 @@
 
     <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../bower_components/web-component-tester/browser.js"></script>
+    <link rel="import" href="test-helpers.html">
 
     <!-- Import the element to test -->
     <link rel="import" href="../src/main-app.html">
@@ -36,23 +37,23 @@
           return getPinnedVarCards().length;
         };
 
-        let pinVariable = function(name, bounds=[-5, 5]) {
+        let pinVariable = function(name, bounds=[-5, 5], value=0) {
           let pinned = {
-            variable: new Variable(name),
+            variable: el.scope.getVariable(name),
             bounds: bounds,
-            value: 0
+            value: value
           };
           el.push('scope.pinnedVariables', pinned);
         };
 
         let unpinVariable = function(name) {
-          let index = el.scope.pinnedVariables.findIndex((pinned) => {
-            return pinned.variable.name === name;
-          });
+          let index = el.scope.indexOfPinnedVar(name);
           el.splice('scope.pinnedVariables', index, 1);
         };
 
         test('cards match scope', function() {
+          el.scope = helper.makeScope(['a','b','c']);
+
           expect(numberOfPinnedVarCards()).to.equal(0);
 
           pinVariable('a');
@@ -129,7 +130,7 @@
           expect(rows[1].functionDefinition.name).to.equal('c');
 
           let shouldFail = el.removeRow.bind(el, {detail: 'f'});
-          expect(shouldFail).to.throw("Can't delete f because it doesn't exist");
+          expect(shouldFail).to.throw('Can\'t delete f because it doesn\'t exist');
         });
 
         let isPinned = function(name) {
@@ -160,15 +161,12 @@
         };
 
         test('pinning variables', function() {
-          el.set('scope.freeVariables', [
-            new Variable('a', SETS.INTEGER),
-            new Variable('b'),
-          ]);
+          el.set('scope.variables', helper.makeVarsArray(['a','b'], [SETS.INTEGER, SETS.REAL]));
 
           pinVar('a');
           expect(isPinned('a')).to.be.true;
           expect(isPinned('b')).to.be.false;
-          let pinnedVarA = el.scope.pinnedVariables[el.scope.indexOfPinnedVar('a')].variable;
+          let pinnedVarA = el.scope.getVariable('a');
           expect(pinnedVarA.set).to.equal(SETS.INTEGER);
 
           //Double-pinning shouldn't throw an error
@@ -176,26 +174,24 @@
           expect(isPinned('a')).to.be.true;
 
           let shouldFail = el.pinVar.bind(el, {detail: new Variable('c')});
-          expect(shouldFail).to.throw("c can't be pinned because it doesn't exist");
+          expect(shouldFail).to.throw('c can\'t be pinned because it doesn\'t exist');
         });
 
         test('unpinning variables', function() {
-          el.set('scope.pinnedVariables', [
-            {variable: new Variable('a', SETS.INTEGER)},
-            {variable: new Variable('b')},
-          ]);
+          let scope = helper.makeScope(['a', 'b'], [SETS.INTEGER, SETS.REAL], ['a','b'], null, null);
+          el.scope = scope;
 
           unpinVar('a');
           expect(isPinned('a')).to.be.false;
           expect(isPinned('b')).to.be.true;
-          let freeVarA = el.scope.freeVariables[el.scope.indexOfFreeVar('a')];
-          expect(freeVarA.set).to.equal(SETS.INTEGER);
+          let varA = el.scope.getVariable('a');
+          expect(varA.set).to.equal(SETS.INTEGER);
 
           unpinVar('a');
           expect(isPinned('a')).to.be.false;
 
           let shouldFail = el.unpinVar.bind(el, {detail: new Variable('c')});
-          expect(shouldFail).to.throw("c can't be unpinned because it doesn't exist");
+          expect(shouldFail).to.throw('c can\'t be unpinned because it doesn\'t exist');
         });
 
         

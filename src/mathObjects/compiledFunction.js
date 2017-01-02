@@ -11,7 +11,7 @@ class CompiledFunction {
   }
 
   getDomain() {
-    return this.getFreeVariables().map((variable) => {
+    return this.freeVariables.map((variable) => {
       return variable.set;
     });
   }
@@ -27,9 +27,9 @@ class CompiledFunction {
     };
   }
 
-  getFreeVariables() {
+  get freeVariables() {
     return this.variables.filter( (variable) => {
-      return this.globalScope.isFree(variable.name);
+      return !this.globalScope.isPinned(variable.name);
     });
   }
 

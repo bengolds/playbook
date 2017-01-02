@@ -8,7 +8,7 @@
 
     <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../bower_components/web-component-tester/browser.js"></script>
-    <script src="../bower_components/mathjs/dist/math.js"></script>
+    <link rel="import" href="test-helpers.html">
 
     <!-- Import the element to test -->
     <link rel="import" href="../src/mathbox-plot.html">
@@ -71,10 +71,12 @@
 
       suite('linegraph tests', function() {
         let graph;
+        let scope;
         let el;
 
         setup(function() {
           el = fixture('basic');
+          scope = helper.makeScope(['a','b','c']);
           graph = new LineGraph(el.mathbox, {}, true);
           graph.setup();
         });
@@ -89,16 +91,9 @@
           expect(graph.compiled).to.be.not.ok;
         });
 
-        let makeFakeCompiled = function(funcString, freeVarNames) {
-          let freeVars = freeVarNames.map( (name) => {
-            return new Variable(name);
-          });
-          return new CompiledFunction(math.compile(funcString), freeVars);
-        };
-
         test('unboundRanges', function() {
           graph.setRange('xRange', [-5, 5]);
-          graph.compiled = makeFakeCompiled(null, ['a']);
+          graph.compiled = helper.makeFakeCompiled('a', ['a'], scope);
 
           expect(graph.unboundRanges()).to.deep.equal({
             a: [-5, 5]
@@ -108,7 +103,7 @@
         test('show function', function() {
           graph.setRange('xRange', [-5, 5]);
 
-          let compiled = makeFakeCompiled('a^2', ['a']);
+          let compiled = helper.makeFakeCompiled('a^2', ['a'], scope);
           graph.showFunction(compiled);
 
           expect(graph.compiled).to.equal(compiled);
@@ -120,11 +115,11 @@
 
         test('function animations should match', function() {
           graph.animated = false;
-          let f = makeFakeCompiled('x', ['x']);
+          let f = helper.makeFakeCompiled('a', ['a'], scope);
           graph.showFunction(f);
 
           graph.animated = true;
-          let g = makeFakeCompiled('x^2', ['x']);
+          let g = helper.makeFakeCompiled('a^2', ['a'], scope);
           graph.showFunction(g);
 
           let exprDuration = graph.dataAnim.get('pace')*1000;
@@ -134,7 +129,7 @@
 
         test('range animations should be right', function() {
           graph.animated = false;
-          let f = makeFakeCompiled('x', ['x']);
+          let f = helper.makeFakeCompiled('a', ['a'], scope);
           graph.showFunction(f);
 
           graph.animated = true;
