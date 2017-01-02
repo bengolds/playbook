@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>slider-scrubber</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/slider-scrubber.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template>
+        <slider-scrubber></slider-scrubber>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('slider-scrubber tests', function() {
+        var el;
+
+        setup(function() {
+          el = fixture('basic');
+        });
+
+        test('reconfigure by sets', function() {
+          el.domain = SETS.INTEGER;
+          expect(el.$.slider.step).to.equal(1);
+          expect(el.$.slider.snaps).to.be.true;
+
+          el.$.lowerBound.lowerValue();
+          el.domain = SETS.NATURAL;
+          expect(el.$.slider.step).to.equal(1);
+          expect(el.$.slider.snaps).to.be.true;
+          expect(el.$.lowerBound.fixed).to.be.true;
+          expect(el.$.lowerBound.value).to.equal(0);
+          expect(el.bounds[0]).to.equal(0);
+
+          el.domain = SETS.REAL;
+          expect(el.$.lowerBound.fixed).to.be.false;
+          expect(el.$.slider.step).to.equal(0.01);
+          expect(el.$.slider.snaps).to.be.false;
+        });
+
+        test('bounds kept in sync', function() {
+          el.bounds = [-10, 9];
+          expect(el.bounds).to.deep.equal([-10, 9]);
+          expect(el.$.lowerBound.value).to.equal(-10);
+          expect(el.$.upperBound.value).to.equal(9);
+          expect(el.$.slider.min).to.equal(-10);
+          expect(el.$.slider.max).to.equal(9);
+
+          el.$.lowerBound.lowerValue();
+          el.$.upperBound.raiseValue();
+          expect(el.bounds).to.deep.equal([-100, 10]);
+          expect(el.$.lowerBound.value).to.equal(-100);
+          expect(el.$.upperBound.value).to.equal(10);
+          expect(el.$.slider.min).to.equal(-100);
+          expect(el.$.slider.max).to.equal(10);
+        });
+
+
+        //Change bounds into where the value is; value should become lower/upper bound
+        //Change bounds thru range-end-picker (all 3 sets)
+        //Make sure can't change bounds over or under the other one
+
+        //Hide notches after certain point
+
+
+      });
+    </script>
+  </body>
+</html>

@@ -140,7 +140,7 @@
         if (freeIndex != -1) {
           let pinned = {
             variable: this.scope.freeVariables[freeIndex],
-            bounds: [-5, 5],
+            bounds: [-1, 1],
             value: 0,
           };
           this.push('scope.pinnedVariables', pinned);

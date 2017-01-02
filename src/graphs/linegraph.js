@@ -74,7 +74,7 @@ class LineGraph extends Graph {
 
     this.compiled = compiledFunction;
     let cachedEval = compiledFunction.eval.bind(compiledFunction);
-    let cachedVarName = compiledFunction.freeVariables[0].name;
+    let cachedVarName = compiledFunction.getFreeVariables()[0].name;
     let newExpr = (emit, x) => {
       emit(x, cachedEval({
         [cachedVarName]: x
@@ -112,7 +112,7 @@ class LineGraph extends Graph {
 
   unboundRanges() {
     let ranges = {};
-    let unboundVar = this.compiled.freeVariables[0];
+    let unboundVar = this.compiled.getFreeVariables()[0];
     ranges[unboundVar.name] = this.getFinal('xRange');
     return ranges;
   }

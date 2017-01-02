@@ -78,7 +78,7 @@
 
         test('symbols array is proper', function() {
           el.definition = '2*a*b*c*d';
-          expect(el.compiled.freeVariables).to.deep.equal([
+          expect(el.compiled.variables).to.deep.equal([
             new Variable('a'),
             new Variable('b'),
             new Variable('c'),

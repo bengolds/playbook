@@ -1,0 +1,105 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="range-end-picker">
+  <template>
+    <style include="shared-styles"></style>
+    <style>
+      :host {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #value {
+        font-family: symbola;
+        font-size: 16px;
+        margin-top: 1px;
+        margin-bottom: -1px;
+      }
+      paper-icon-button {
+        width: 16px;
+        height: 16px;
+        padding: 0px;
+      }
+    </style>
+    <paper-icon-button id='up' icon="add" on-tap='raiseValue'></paper-icon-button>
+    <span id='value'>{{value}}</span>
+    <paper-icon-button id='down' icon="remove" on-tap='lowerValue'></paper-icon-button>
+    
+  </template>
+  <script>
+    Polymer({
+      is: 'range-end-picker',
+      properties: {
+        value: {
+          type: Number,
+          notify: true,
+          value: 0
+        },
+        fixed: {
+          type: Boolean,
+          notify: false,
+          value: false,
+          observer: 'fixedChanged'
+        }
+      },
+
+      raiseValue: function() {
+        if (this.value > 0) {
+          let nextExp = Math.floor(Math.log10(this.value)) + 1;
+          this.value = Math.pow(10, nextExp);
+        } 
+        else if (this.value == 0) {
+          this.value = 1;
+        }
+        else {
+          let nextExp = Math.ceil(Math.log10(-this.value)) - 1;
+          if (nextExp >= 0) {
+            this.value = -Math.pow(10, nextExp);
+          }
+          else {
+            this.value = 0;
+          }
+        }
+        this.fire('change');
+      },
+
+      lowerValue: function() {
+        if (this.value > 0) {
+          let nextExp = Math.ceil(Math.log10(this.value)) - 1;
+          if (nextExp >= 0) {
+            this.value = Math.pow(10, nextExp);
+          }
+          else {
+            this.value = 0;
+          }
+        } 
+        else if (this.value == 0) {
+          this.value = -1;
+        }
+        else {
+          let nextExp = Math.floor(Math.log10(-this.value)) + 1;
+          this.value = -Math.pow(10, nextExp);
+        }
+        this.fire('change');
+      },
+
+      fixedChanged: function() {
+        if (this.fixed) {
+          this.$.up.classList.add('hidden');
+          this.$.down.classList.add('hidden');
+        }
+        else {
+          this.$.up.classList.remove('hidden');
+          this.$.down.classList.remove('hidden');
+        }
+      }
+
+    });
+  </script>
+</dom-module>

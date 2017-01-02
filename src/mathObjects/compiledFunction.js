@@ -1,7 +1,7 @@
 class CompiledFunction {
-  constructor(compiled=null, freeVariables=[], globalScope=new Scope()) {
+  constructor(compiled=null, variables=[], globalScope=new Scope()) {
     this.compiled = compiled;
-    this.freeVariables = freeVariables;
+    this.variables = variables;
     this.globalScope = globalScope;
   }
 
@@ -11,7 +11,7 @@ class CompiledFunction {
   }
 
   getDomain() {
-    return this.freeVariables.map((variable) => {
+    return this.getFreeVariables().map((variable) => {
       return variable.set;
     });
   }
@@ -27,14 +27,20 @@ class CompiledFunction {
     };
   }
 
-  getMinMax(unboundRanges, numSamples=200) {
-    this._checkRangesMatchFreeVariables();
+  getFreeVariables() {
+    return this.variables.filter( (variable) => {
+      return this.globalScope.isFree(variable.name);
+    });
+  }
 
-    if (this.freeVariables.length == 0) {
+  getMinMax(unboundRanges, numSamples=200) {
+    this._checkRangesMatchvariables();
+
+    if (this.variables.length == 0) {
       return [this.eval(), this.eval()];
     }
 
-    let variables = this.freeVariables;
+    let variables = this.variables;
     let ranges = unboundRanges;
 
     let iterateSteps = {};
@@ -73,7 +79,7 @@ class CompiledFunction {
     return [minY, maxY];
   }
 
-  _checkRangesMatchFreeVariables(unboundRanges) {
+  _checkRangesMatchvariables(unboundRanges) {
 
   }
 }

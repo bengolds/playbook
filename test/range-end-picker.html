@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>range-end-picker</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/range-end-picker.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template>
+        <range-end-picker></range-end-picker>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('range-end-picker tests', function() {
+        var el;
+
+        setup(function() {
+          el = fixture('basic');
+        });
+
+        let logValues = [-1000, -100, -10, -1, 0, 1, 10, 100, 1000];
+
+        test('raising and lowering normally', function() {
+          let index = 0;
+          el.value = logValues[index];
+
+          let testGoUp = function() {
+            el.$.up.click();
+            index++;
+            expect(el.value).to.equal(logValues[index]);
+          };
+          let testGoDown = function () {
+            el.$.down.click();
+            index--;
+            expect(el.value).to.equal(logValues[index]);
+          };
+
+          testGoUp();
+          testGoUp();
+          testGoUp();
+          testGoUp();
+          testGoUp();
+          testGoUp();
+          testGoUp();
+          testGoUp();
+          testGoDown();
+          testGoDown();
+          testGoDown();
+          testGoDown();
+          testGoDown();
+          testGoDown();
+          testGoDown();
+          testGoDown();
+        });
+
+        test('raising and lowering from weird number', function() {
+          el.value = 3;
+          el.$.up.click();
+          expect(el.value).to.equal(10);
+
+          el.value = -3;
+          el.$.up.click();
+          expect(el.value).to.equal(-1);
+
+          el.value = 3;
+          el.$.down.click();
+          expect(el.value).to.equal(1);
+
+          el.value = .1;
+          el.$.down.click();
+          expect(el.value).to.equal(0);
+        });
+
+        test('holding fixed; buttons should disappear', function() {
+          let expectStyleToBe = function(element, key, value) {
+            let computed = window.getComputedStyle(element);
+            expect(computed[key]).to.equal(value);
+          };
+
+          el.fixed = true;
+          expectStyleToBe(el.$.up, 'opacity', '0');
+          expectStyleToBe(el.$.down, 'opacity', '0');
+        });
+
+      });
+    </script>
+  </body>
+</html>
