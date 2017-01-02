@@ -145,8 +145,8 @@
         actionbar.style.left = middleX + 'px';
         actionbar.style.top = topY + 'px';
 
-        //SHOULD BE PULLED FROM SCOPE.FREE
-        actionbar.variable = new Variable(target.textContent);
+        let index = this.scope.indexOfFreeVar(target.textContent);
+        actionbar.variable = this.scope.freeVariables[index];
       },
 
       hideHoverBar: function() {

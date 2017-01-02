@@ -161,13 +161,15 @@
 
         test('pinning variables', function() {
           el.set('scope.freeVariables', [
-            new Variable('a'),
+            new Variable('a', SETS.INTEGER),
             new Variable('b'),
           ]);
 
           pinVar('a');
           expect(isPinned('a')).to.be.true;
           expect(isPinned('b')).to.be.false;
+          let pinnedVarA = el.scope.pinnedVariables[el.scope.indexOfPinnedVar('a')].variable;
+          expect(pinnedVarA.set).to.equal(SETS.INTEGER);
 
           //Double-pinning shouldn't throw an error
           pinVar('a');
@@ -179,13 +181,15 @@
 
         test('unpinning variables', function() {
           el.set('scope.pinnedVariables', [
-            {variable: new Variable('a')},
+            {variable: new Variable('a', SETS.INTEGER)},
             {variable: new Variable('b')},
           ]);
 
           unpinVar('a');
           expect(isPinned('a')).to.be.false;
           expect(isPinned('b')).to.be.true;
+          let freeVarA = el.scope.freeVariables[el.scope.indexOfFreeVar('a')];
+          expect(freeVarA.set).to.equal(SETS.INTEGER);
 
           unpinVar('a');
           expect(isPinned('a')).to.be.false;

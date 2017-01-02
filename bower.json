@@ -24,7 +24,10 @@
     "paper-slider": "PolymerElements/paper-slider#^1.0.12",
     "iron-icons": "PolymerElements/iron-icons#^1.2.0",
     "jquery": "1.11.0",
-    "paper-fab": "PolymerElements/paper-fab#^1.2.1"
+    "paper-fab": "PolymerElements/paper-fab#^1.2.1",
+    "paper-menu-button": "PolymerElements/paper-menu-button#^1.5.2",
+    "paper-menu": "PolymerElements/paper-menu#^1.2.2",
+    "paper-item": "PolymerElements/paper-item#^1.2.1"
   },
   "devDependencies": {
     "web-component-tester": "^4.0.0"

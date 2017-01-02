@@ -1,6 +1,6 @@
 <link rel="import" href="../bower_components/paper-card/paper-card.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
-<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="domain-picker.html">
 <link rel="import" href="mathquill-element.html">
 <link rel="import" href="playbook-icons.html">
 <link rel="import" href="shared-styles.html">
@@ -30,12 +30,16 @@
       #name {
         --mathquill-font-size: 250%;
       }
+      domain-picker {
+        padding-left:8px;
+      }
     </style>
 
     <paper-card id='card'>
       <div class='topLeftTray'>
         <paper-icon-button icon="playbook-icons:pin" on-tap='unpin' active></paper-icon-button>
         <paper-icon-button icon="speaker-notes"></paper-icon-button>
+        <domain-picker selected='{{variable.set}}'></domain-picker>
       </div>
       <div id='header'>
         <mathquill-element id='name' latex='{{variable.name}}'></mathquill-element>
@@ -50,6 +54,7 @@
         variable: {
           type: Object,
           notify: true,
+          observer: 'variableChanged'
         },
         bounds: {
           type: Array,
@@ -63,6 +68,10 @@
 
       unpin: function() {
         this.fire('unpin-var', this.variable);
+      },
+
+      variableChanged: function(){
+
       }
 
     });

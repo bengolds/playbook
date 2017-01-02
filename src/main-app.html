@@ -138,13 +138,13 @@
 
         let freeIndex = this.scope.indexOfFreeVar(name);
         if (freeIndex != -1) {
-          this.splice('scope.freeVariables', freeIndex, 1);
           let pinned = {
-            variable: new Variable(name),
+            variable: this.scope.freeVariables[freeIndex],
             bounds: [-5, 5],
             value: 0,
           };
           this.push('scope.pinnedVariables', pinned);
+          this.splice('scope.freeVariables', freeIndex, 1);
         }
       },
 
@@ -156,8 +156,10 @@
 
         let pinnedIndex = this.scope.indexOfPinnedVar(name);
         if (pinnedIndex != -1) {
+          let variable = this.scope.pinnedVariables[pinnedIndex].variable;
+
           this.splice('scope.pinnedVariables', pinnedIndex, 1);
-          this.push('scope.freeVariables', e.detail);
+          this.push('scope.freeVariables', variable);
         }
       },
 

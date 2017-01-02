@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>domain-picker</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/domain-picker.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template>
+        <domain-picker></domain-picker>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('domain-picker tests', function() {
+        var el;
+
+        setup(function() {
+          el = fixture('basic');
+        });
+
+        test('selected icon reflects set', function() {
+          el.selected = SETS.NATURAL;
+          expect(el.$.dropdownButton.icon).to.equal('playbook-icons:natural');
+
+          el.selected = SETS.INTEGER;
+          expect(el.$.dropdownButton.icon).to.equal('playbook-icons:integer');
+
+          el.selected = SETS.REAL;
+          expect(el.$.dropdownButton.icon).to.equal('playbook-icons:real');
+
+          el.selected = SETS.COMPLEX;
+          expect(el.$.dropdownButton.icon).to.equal('playbook-icons:complex');
+        });
+
+      });
+    </script>
+  </body>
+</html>

@@ -1,8 +1,8 @@
 SETS = {
-  NATURAL: 1,
-  INTEGER: 2,
-  REAL: 3,
-  COMPLEX: 4
+  NATURAL: 0,
+  INTEGER: 1,
+  REAL: 2,
+  COMPLEX: 3
 };
 
 class Variable {

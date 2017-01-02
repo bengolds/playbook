@@ -93,14 +93,14 @@
       },
 
       compiledChanged: function() {
-        if (this.oldCompiled) {
-          for (let freeVar of this.oldCompiled.freeVariables) {
-            let indexOfVar = this.scope.indexOfFreeVar;
-            if (indexOfVar != -1) {
-              this.splice('scope.freeVariables', indexOfVar, 1);
-            }
-          }
-        }
+        // if (this.oldCompiled) {
+        //   for (let freeVar of this.oldCompiled.freeVariables) {
+        //     let indexOfVar = this.scope.indexOfFreeVar;
+        //     if (indexOfVar = -1) {
+        //       this.splice('scope.freeVariables', indexOfVar, 1);
+        //     }
+        //   }
+        // }
 
         for (let freeVar of this.compiled.freeVariables) {
           if (!this.scope.isVariableInScope(freeVar.name)) {

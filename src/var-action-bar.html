@@ -2,6 +2,7 @@
 <link rel="import" href="arrow-box.html">
 <link rel="import" href="shared-styles.html">
 <link rel="import" href="playbook-icons.html">
+<link rel="import" href="domain-picker.html">
 <link rel="import" href="mathObjects/math-objects-import.html">
 
 <dom-module id="var-action-bar">
@@ -15,12 +16,15 @@
       arrow-box {
         --arrow-box-padding:8px;
       }
+      domain-picker {
+        margin-left: 8px;
+      }
     </style>
   <arrow-box direction='down'>
     <paper-icon-button icon='playbook-icons:pin' id='pin'
       active='{{pinned}}'
       on-click='pinClicked'></paper-icon-button>
-    <paper-icon-button icon='playbook-icons:complex' toggles></paper-icon-button>
+      <domain-picker selected='{{variable.set}}'></domain-picker>
   </arrow-box>
   </template>
 
@@ -30,6 +34,7 @@
       properties: {
         variable: {
           type: Object,
+          notify: true
         },
         pinned: {
           type: Boolean,
