@@ -82,9 +82,16 @@
           expect(el.value).to.equal(1);
         });
 
+        test('can\'t change bounds over or under other one', function() {
+          el.bounds = [0, 1];
+          el.$.lowerBound.raiseValue();
+          expect(el.bounds).to.deep.equal([0, 1]);
 
-        //Change bounds into where the value is; value should become lower/upper bound
-        //Change bounds thru range-end-picker (all 3 sets)
+          el.bounds = [0, 1];
+          el.$.upperBound.lowerValue();
+          expect(el.bounds).to.deep.equal([0, 1]);
+        });
+
         //Make sure can't change bounds over or under the other one
 
         //Hide notches after certain point

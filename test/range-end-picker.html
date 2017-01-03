@@ -91,6 +91,30 @@
           expectStyleToBe(el.$.down, 'opacity', '0');
         });
 
+        test('obey min', function () {
+          el.value = 100;
+          el.min = 10;
+          assert(el.$.down.disabled, 'down button should be disabled');
+
+          el.lowerValue();
+          expect(el.value).to.equal(100);
+
+          el.min = 0;
+          assert(!el.$.down.disabled, 'down button should be enabled');
+        });
+
+        test('obey max', function() {
+          el.value = 1;
+          el.max = 10;
+          assert(el.$.up.disabled, 'up button should be disabled');
+
+          el.raiseValue();
+          expect(el.value).to.equal(1);
+
+          el.max = 100;
+          assert(!el.$.up.disabled, 'up button should be enabled');
+        });
+
       });
     </script>
   </body>

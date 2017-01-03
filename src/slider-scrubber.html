@@ -18,6 +18,9 @@
       }
       paper-slider {
         flex-grow: 1;
+        --paper-slider-knob-start-color: --google-blue-700;
+        --paper-slider-knob-start-border-color: transparent;
+        --paper-slider-pin-start-color: --google-blue-700;
       }
       #bottomTray {
         position: absolute;
@@ -26,14 +29,18 @@
       }
     </style>
 
-    <range-end-picker id='lowerBound' on-change='lowerBoundChanged'></range-end-picker>
+    <range-end-picker id='lowerBound' 
+      max='[[getUpperBound(bounds.*)]]'
+      on-change='lowerBoundChanged'></range-end-picker>
     <paper-slider id='slider' pin
       immediate-value='{{value}}'
       min='[[getLowerBound(bounds.*)]]'
       max='[[getUpperBound(bounds.*)]]'
       max-markers='20'
       ></paper-slider>
-    <range-end-picker id='upperBound' on-change='upperBoundChanged'></range-end-picker>
+    <range-end-picker id='upperBound'
+      min='[[getLowerBound(bounds.*)]]' 
+      on-change='upperBoundChanged'></range-end-picker>
     <div id='bottomTray'>
       <paper-icon-button icon="add"></paper-icon-button>
       <paper-icon-button icon="av:play-circle-filled"></paper-icon-button>
