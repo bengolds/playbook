@@ -54,7 +54,6 @@
           type: Number,
           notify: true,
           value: 0,
-          observer: 'valueChanged'
         },
         bounds: {
           type: Array,
@@ -68,6 +67,7 @@
         if (this.domain == SETS.NATURAL) {
           this.bounds = [0, this.bounds[1]];
         }
+        this.$.slider.value = this.value;
       },
 
       domainChanged: function () {

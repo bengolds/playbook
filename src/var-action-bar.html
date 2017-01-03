@@ -47,12 +47,7 @@
       },
 
       pinClicked: function (e, details) {
-        if (this.pinned) {
-          this.fire('unpin-var', this.variable);
-        } 
-        else {
-          this.fire('pin-var', this.variable);
-        }
+        this.fire('pin-var', this.variable.name);
       },
     });
   </script>

@@ -61,7 +61,6 @@
         variable: {
           type: Object,
           notify: true,
-          observer: 'variableChanged'
         },
         bounds: {
           type: Array,
@@ -70,12 +69,11 @@
         value: {
           type: Number,
           notify: true,
-          observer: 'valueChanged'
         }
       },
 
       unpin: function() {
-        this.fire('unpin-var', this.variable);
+        this.fire('unpin-var', this.variable.name);
       },
 
     });

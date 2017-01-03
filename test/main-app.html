@@ -150,13 +150,13 @@
 
         let pinVar = function(name) {
           let pinEvt = new Event('pin-var');
-          pinEvt.detail = new Variable(name);
+          pinEvt.detail = name;
           el.dispatchEvent(pinEvt);
         };
 
         let unpinVar = function(name) {
           let unpinEvt = new Event('unpin-var');
-          unpinEvt.detail = new Variable(name);
+          unpinEvt.detail = name;
           el.dispatchEvent(unpinEvt);
         };
 
@@ -173,7 +173,7 @@
           pinVar('a');
           expect(isPinned('a')).to.be.true;
 
-          let shouldFail = el.pinVar.bind(el, {detail: new Variable('c')});
+          let shouldFail = el.pinVar.bind(el, {detail: 'c'});
           expect(shouldFail).to.throw('c can\'t be pinned because it doesn\'t exist');
         });
 
@@ -190,17 +190,32 @@
           unpinVar('a');
           expect(isPinned('a')).to.be.false;
 
-          let shouldFail = el.unpinVar.bind(el, {detail: new Variable('c')});
+          let shouldFail = el.unpinVar.bind(el, {detail: 'c'});
           expect(shouldFail).to.throw('c can\'t be unpinned because it doesn\'t exist');
         });
 
-        
+        test('sensible defaults for bounds', function() {
+          let getPinned = function(name) {
+            return el.scope.pinnedVariables.find( (pinned) => {
+              return name === pinned.variable.name;
+            });
+          };
+          el.scope = helper.makeScope(['a','b','c'], [SETS.NATURAL, SETS.INTEGER, SETS.REAL]);
+
+          pinVar('a');
+          expect(getPinned('a').bounds).to.deep.equal([0, 10]);
+          expect(getPinned('a').value).to.equal(5);
+
+          pinVar('b');
+          expect(getPinned('b').bounds).to.deep.equal([-10, 10]);
+          expect(getPinned('b').value).to.equal(0);
+
+          pinVar('c');
+          expect(getPinned('c').bounds).to.deep.equal([-1, 1]);
+          expect(getPinned('c').value).to.equal(0);
+        });        
 
         // test('bounds and domain are remembered when repinning', function() {
-        //   //Test here
-        // });
-
-        // test('pinning free variable preserves domain', function() {
         //   //Test here
         // });
 

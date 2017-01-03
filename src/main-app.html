@@ -131,24 +131,35 @@
       },
 
       pinVar: function(e) {
-        let name = e.detail.name;
+        let name = e.detail;
         if (!this.scope.hasVariable(name)) {
           throw Error(name + ' can\'t be pinned because it doesn\'t exist');
         }
 
-        let freeIndex = this.scope.indexOfFreeVar(name);
-        if (freeIndex != -1) {
+        if (!this.scope.isPinned(name)) {
+          let bounds = [-10, 10];
+          switch (this.scope.getVariable(name).set) {
+          case SETS.NATURAL:
+            bounds = [0, 10];
+            break;
+          case SETS.INTEGER:
+            bounds = [-10, 10];
+            break;
+          case SETS.REAL:
+            bounds = [-1, 1];
+            break;
+          }
           let pinned = {
             variable: this.scope.getVariable(name),
-            bounds: [-1, 1],
-            value: 0,
+            bounds: bounds,
+            value: bounds[0] + (bounds[1]-bounds[0])/2
           };
           this.push('scope.pinnedVariables', pinned);
         }
       },
 
       unpinVar: function(e) {
-        let name = e.detail.name;
+        let name = e.detail;
         if (!this.scope.hasVariable(name)) {
           throw Error(name + ' can\'t be unpinned because it doesn\'t exist');
         }
