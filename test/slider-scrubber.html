@@ -63,6 +63,25 @@
           expect(el.$.slider.max).to.equal(10);
         });
 
+        test('changing bounds past value', function() {
+          el.domain = SETS.REAL;
+
+          el.bounds = [-10, 10];
+          el.value = 4;
+          el.$.upperBound.lowerValue();
+          expect (el.value).to.equal(1);
+
+          el.bounds = [-10, 10];
+          el.value = -4;
+          el.$.lowerBound.raiseValue();
+          expect (el.value).to.equal(-1);
+
+          el.bounds = [-10, 10];
+          el.value = 7;
+          el.bounds = [-10, 1];
+          expect(el.value).to.equal(1);
+        });
+
 
         //Change bounds into where the value is; value should become lower/upper bound
         //Change bounds thru range-end-picker (all 3 sets)

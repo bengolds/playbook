@@ -105,15 +105,18 @@
 
       lowerBoundChanged: function() {
         this.set('bounds.0', this.$.lowerBound.value);
+        this.value = Math.max(this.value, this.bounds[0]);
       },
 
       upperBoundChanged: function() {
         this.set('bounds.1', this.$.upperBound.value);
+        this.value = Math.min(this.value, this.bounds[1]);
       },
 
       boundsChanged: function () {
         this.$.lowerBound.value = this.bounds[0];
         this.$.upperBound.value = this.bounds[1];
+        this.value = Math.min(Math.max(this.value, this.bounds[0]), this.bounds[1]);
       },
       
     });
