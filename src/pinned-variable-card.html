@@ -1,0 +1,81 @@
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="domain-picker.html">
+<link rel="import" href="mathquill-element.html">
+<link rel="import" href="playbook-icons.html">
+<link rel="import" href="slider-scrubber.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="pinned-variable-card">
+  <template>
+  <style include="shared-styles"></style>
+    <style>
+      :host {
+        flex-basis: 384px;
+        flex-grow: 0;
+        height: 136px;
+        padding-left: 8px;
+        padding-right: 8px;
+        padding-top: 16px;
+      }
+      #card {
+        height: 100%;
+        width: 100%;
+        display:block;
+        position:relative;
+      }
+      #header {
+        text-align: center;
+        margin-top: 10px;
+      }
+      #name {
+        --mathquill-font-size: 250%;
+      }
+      domain-picker {
+        padding-left:8px;
+      }
+    </style>
+
+    <paper-card id='card'>
+      <div class='topLeftTray'>
+        <paper-icon-button icon="playbook-icons:pin" on-tap='unpin' active></paper-icon-button>
+        <paper-icon-button icon="speaker-notes"></paper-icon-button>
+        <domain-picker selected='{{variable.set}}'></domain-picker>
+      </div>
+      <div id='header'>
+        <mathquill-element id='name' latex='{{variable.name}}'></mathquill-element>
+      </div>
+      <div id='scrubbers'>
+        <slider-scrubber
+          domain='{{variable.set}}' 
+          value='{{value}}'
+          bounds='{{bounds}}'></slider-scrubber>
+      </div>
+    </paper-card>
+
+  </template>
+  <script>
+    Polymer({
+      is: 'pinned-variable-card',
+      properties: {
+        variable: {
+          type: Object,
+          notify: true,
+        },
+        bounds: {
+          type: Array,
+          notify: true,
+        },
+        value: {
+          type: Number,
+          notify: true,
+        }
+      },
+
+      unpin: function() {
+        this.fire('unpin-var', this.variable.name);
+      },
+
+    });
+  </script>
+</dom-module>
