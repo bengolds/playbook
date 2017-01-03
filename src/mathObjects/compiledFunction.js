@@ -34,20 +34,25 @@ class CompiledFunction {
   }
 
   getMinMax(unboundRanges, numSamples=200) {
-    this._checkRangesMatchvariables();
+    this._checkRangesMatchVariables(unboundRanges);
 
     if (this.variables.length == 0) {
       return [this.eval(), this.eval()];
     }
 
-    let variables = this.variables;
-    let ranges = unboundRanges;
+    let ranges = Object.assign({}, unboundRanges);
+    for (let variable of this.variables) {
+      let pinnedIndex = this.globalScope.indexOfPinnedVar(variable.name);
+      if (pinnedIndex != -1) {
+        ranges[variable.name] = this.globalScope.pinnedVariables[pinnedIndex].bounds;
+      }
+    }
 
     let iterateSteps = {};
-    let numDimensions = variables.length;
+    let numDimensions = this.variables.length;
     let numSamplePoints = Math.round(Math.pow(numSamples, 1/numDimensions));
 
-    for (let variable of variables) {
+    for (let variable of this.variables) {
       let currRange = ranges[variable.name];
       let rangeWidth = currRange[1]-currRange[0];
       iterateSteps[variable.name] = rangeWidth/numSamplePoints;
@@ -63,7 +68,7 @@ class CompiledFunction {
 
     let scope = {};
     let iterate = (dimension) => {
-      let currVar = variables[dimension];
+      let currVar = this.variables[dimension];
       let currRange = ranges[currVar.name];
       let currStep = iterateSteps[currVar.name];
       for (let x = currRange[0]; x < currRange[1]; x+=currStep) {
@@ -79,7 +84,12 @@ class CompiledFunction {
     return [minY, maxY];
   }
 
-  _checkRangesMatchvariables(unboundRanges) {
-
+  _checkRangesMatchVariables(unboundRanges) {
+    for (let variable of this.variables) {
+      if (!(variable.name in unboundRanges) &&
+          !this.globalScope.isPinned(variable.name)) {
+        throw Error('No range found for ' + variable.name);
+      }
+    }
   }
 }

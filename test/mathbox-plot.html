@@ -116,24 +116,17 @@
 
 
         test('changing pinned variables changes graph', function() {
-          let freeVars = [new Variable('a'), new Variable('b')];
-          let scope = new Scope(freeVars) ;
-          let f = new CompiledFunction(math.compile('a*b'), freeVars, scope);
+          el.scope = helper.makeScope(['a','b']);
+          let f = helper.makeFakeCompiled('a*b', ['a','b'], el.scope);
           el.compiledFunction = f;
 
           expect(el.graph.constructor).to.equal(ColorGraph);
 
-          let pin = {
-            variable: new Variable('a'),
-            bounds: [-1, 1],
-            value: 0
-          };
-          el.push('compiledFunction.globalScope.pinnedVariables', pin);
-          el.splice('compiledFunction.globalScope.freeVariables', 0, 1);
+          let pin = helper.makePinnedVar(el.scope, 'a');
+          el.push('scope.pinnedVariables', pin);
           expect(el.graph.constructor).to.equal(LineGraph);
 
-          el.splice('compiledFunction.globalScope.pinnedVariables', 0, 1);
-          el.push('compiledFunction.globalScope.freeVariables', pin.variable);
+          el.splice('scope.pinnedVariables', 0, 1);
           expect(el.graph.constructor).to.equal(ColorGraph);
         });
         //Test changing compiled function

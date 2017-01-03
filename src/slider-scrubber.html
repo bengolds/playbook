@@ -28,7 +28,7 @@
 
     <range-end-picker id='lowerBound' on-change='lowerBoundChanged'></range-end-picker>
     <paper-slider id='slider' pin
-      immediateValue='{{value}}'
+      immediate-value='{{value}}'
       min='[[getLowerBound(bounds.*)]]'
       max='[[getUpperBound(bounds.*)]]'
       max-markers='20'
@@ -53,7 +53,8 @@
         value: {
           type: Number,
           notify: true,
-          value: 0
+          value: 0,
+          observer: 'valueChanged'
         },
         bounds: {
           type: Array,
@@ -113,8 +114,8 @@
       boundsChanged: function () {
         this.$.lowerBound.value = this.bounds[0];
         this.$.upperBound.value = this.bounds[1];
-      }
-
+      },
+      
     });
   </script>
 </dom-module>

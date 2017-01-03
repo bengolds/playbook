@@ -25,7 +25,7 @@ helper = {
   makePinnedVar: function (scope, name, bounds=[-10, 10], value=0) {
     let pinned = {};
     pinned.variable = scope.getVariable(name);
-    pinned.bounds = [-10, 10];
+    pinned.bounds = bounds;
     pinned.value = value;
 
     return pinned;

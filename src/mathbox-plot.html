@@ -58,6 +58,11 @@
           type: Object,
           observer: 'compiledFunctionChanged'
         },
+        scope: {
+          type: Object,
+          notify: false,
+          value: function() {return new Scope();}
+        },
         syncedParameters: {
           type: Object,
           notify: true,
@@ -80,7 +85,7 @@
       },
 
       observers: [
-        'compiledFunctionChanged(compiledFunction.globalScope.pinnedVariables.splices)'
+        'compiledFunctionChanged(scope.pinnedVariables.splices)'
       ],
 
       listeners: {
@@ -169,7 +174,7 @@
       },
 
       compiledFunctionChanged: function() {
-        if (!this.initialized)
+        if (!this.initialized || !this.compiledFunction)
           return;
 
         let newSignature = this.compiledFunction.getSignature();

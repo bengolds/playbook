@@ -79,12 +79,11 @@
           let unboundRanges = {
             a: [-5, 5],
             b: [-2, 2],
-            c: [-3, 3]
           };
 
-          let testMinMax = (funcString, freeVars, expected) => {
-            let scope = helper.makeScope(freeVars);
-            let f = helper.makeFakeCompiled(funcString, freeVars, scope);
+          let testMinMax = (funcString, allVars, expected) => {
+            let scope = helper.makeScope(allVars);
+            let f = helper.makeFakeCompiled(funcString, allVars, scope);
             let minMax = f.getMinMax(unboundRanges);
             expect(minMax[0]).to.be.closeTo(expected[0], 0.1);
             expect(minMax[1]).to.be.closeTo(expected[1], 0.1);
@@ -94,12 +93,25 @@
           testMinMax('a', ['a'], [-5, 5]);
           testMinMax('a^2', ['a'], [0, 25]);
           testMinMax('a*b', ['a', 'b'], [-10, 10]);
-          // Check how it behaves if it doesn't have the right unboundRanges
-          // testMinMax('c', ['c'], [-5, 5]);
+
+          let shouldFail = function() {
+            testMinMax('c', ['c'], [-5, 5]);
+          };
+          expect(shouldFail).to.throw('No range found for c');
         });
 
         test('getMinMax with pinnedVars', function() {
-          //Test here
+          let allVars = ['a','b','c','d'];
+          let scope = helper.makeScope(allVars, null, ['c','d'], [[-4, 4],[-5, 5]]);
+          let unboundRanges = {
+            a: [-2, 2],
+            b: [-3, 3],
+          };
+
+          let f = helper.makeFakeCompiled('a*b*c*d', allVars, scope);
+          let minMax = f.getMinMax(unboundRanges, 1000);
+          expect(minMax[0]).to.be.closeTo(-120, 0.5);
+          expect(minMax[1]).to.be.closeTo(120, 0.5);
         });
 
         // test('compiledFunction shouldn\'t evaluate with incomplete scope', function() {

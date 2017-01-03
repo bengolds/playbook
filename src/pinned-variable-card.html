@@ -69,17 +69,14 @@
         },
         value: {
           type: Number,
-          notify: true
+          notify: true,
+          observer: 'valueChanged'
         }
       },
 
       unpin: function() {
         this.fire('unpin-var', this.variable);
       },
-
-      variableChanged: function(){
-
-      }
 
     });
   </script>
