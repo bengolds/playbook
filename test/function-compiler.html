@@ -129,6 +129,25 @@
           el.definition='2*';
         });
 
+        test('handle factoring correctly', function() {
+          el.definition='x+x^2';
+          let f = (x) => {return x+ x*x;};
+          assertCompiledMatches(f, ['x']);
+        });
+
+        test('insert multipliers behaves properly', function() {
+          let expectTransform = (input, expected) => {
+            let transformed = el.insertMultipliers(input);
+            expect(transformed).to.equal(expected);
+          };
+
+          el.scope.functions.push(new FunctionDefinition('g'));
+          expectTransform('x(x+1)', 'x*(x+1)');
+          expectTransform('a+x(x+1)+b (2+x)', 'a+x*(x+1)+b*(2+x)');
+          expectTransform('g(x+1)', 'g(x+1)');
+          expectTransform('sin(x+1)', 'sin(x+1)');
+        });
+
       });
     </script>
   </body>

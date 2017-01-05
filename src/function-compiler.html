@@ -47,7 +47,8 @@
             throw Error('No function to compile');
           }
           let simplified = Algebrite.simplify(this.definition).toString();
-          let parsed = math.parse(simplified);
+          let processed = this.insertMultipliers(simplified);
+          let parsed = math.parse(processed);
           let symbols = this.getVariables(parsed);
 
           let compiled = new CompiledFunction(parsed.compile(), symbols, this.scope);
@@ -87,6 +88,17 @@
 
         return variables;
       },
+
+      insertMultipliers: function(input) {
+        let re = /([a-z]+)\s*\(/g;
+        return input.replace(re, (match, symbol) => {
+          if (symbol.length > 1 || this.scope.isFunction(symbol)){
+            return match;
+          } else {
+            return symbol+'*(';
+          }
+        });
+      }
 
     });
   </script>

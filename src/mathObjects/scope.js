@@ -51,6 +51,10 @@ class Scope {
     return !this.isPinned(name);
   }
 
+  isFunction(name) {
+    return this.indexOfFunction(name) != -1;
+  }
+
   getVariable(name) {
     return this.variables.find( (variable) => {
       return name === variable.name;
