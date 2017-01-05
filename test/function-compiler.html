@@ -87,6 +87,11 @@
             new Variable('c'),
             new Variable('d')
           ]);
+
+          el.definition = 'x + cos(x) + cos(x)';
+          expect(el.compiled.variables).to.deep.equal([
+            new Variable('x')
+          ]);
         });
 
         test('changing scope recompiles', function() {
