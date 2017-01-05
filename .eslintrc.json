@@ -114,6 +114,7 @@
         "SETS": true,
         "Scope": true,
         "FunctionDefinition": true,
-        "CompiledFunction": true
+        "CompiledFunction": true,
+        "ResizeSensor": false
     }
 }

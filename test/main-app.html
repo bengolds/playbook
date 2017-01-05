@@ -204,15 +204,15 @@
 
           pinVar('a');
           expect(getPinned('a').bounds).to.deep.equal([0, 10]);
-          expect(getPinned('a').value).to.equal(5);
+          expect(getPinned('a').value).to.equal(1);
 
           pinVar('b');
           expect(getPinned('b').bounds).to.deep.equal([-10, 10]);
-          expect(getPinned('b').value).to.equal(0);
+          expect(getPinned('b').value).to.equal(1);
 
           pinVar('c');
           expect(getPinned('c').bounds).to.deep.equal([-1, 1]);
-          expect(getPinned('c').value).to.equal(0);
+          expect(getPinned('c').value).to.equal(1);
         });        
 
         // test('bounds and domain are remembered when repinning', function() {

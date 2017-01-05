@@ -150,6 +150,8 @@ class Graph {
   static get supportedSignatures() {return [];}
   static get syncedParameterNames() {return [];}
   //Mouse events
+  onMouseEnter(e) {}
+  onMouseLeave(e) {}
   onPanStart() {}
   onPan(dx, dy) {}
   onPanStop() {}

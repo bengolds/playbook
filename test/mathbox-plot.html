@@ -34,6 +34,7 @@
           globalScope = new Scope();
         });
 
+
         let dimensionsShouldBe = function(width, height) {
           let innerCanvas = el.mathbox.three.canvas;
           expect(el.offsetWidth).to.equal(width);
@@ -49,14 +50,14 @@
           dimensionsShouldBe(400, 300);
         });
 
-        test('resizing', function() {
+        test('resizing', function(done) {
           outerDiv.style.height = '200px';
-          el.resize();
-          dimensionsShouldBe(400, 200);
-
           outerDiv.style.width = '100px';
-          el.resize();
-          dimensionsShouldBe(100, 200);
+
+          window.setTimeout(() => {
+            dimensionsShouldBe(100, 200);
+            done();
+          }, 100);
         });
 
         test('graph signature finding', function(){

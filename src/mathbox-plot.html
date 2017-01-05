@@ -1,8 +1,10 @@
 <script src="../libs/mathbox/build/mathbox-bundle.js"></script>
+<script src="../bower_components/css-element-queries/src/ResizeSensor.js"></script>
+<script src="../bower_components/css-element-queries/src/ElementQueries.js"></script>
 <link rel="import" href="graphs/graph-import.html">
-<link rel="import" href="../bower_components/iron-resizable-behavior/iron-resizable-behavior.html">
 <link rel="import" href="../bower_components/iron-icon/iron-icon.html">
 <dom-module id="mathbox-plot">
+  <link rel="import" type="css" href="../libs/mathbox/build/mathbox.css"/>
   <template>
     <style is="custom-style">
       :host {
@@ -89,7 +91,8 @@
       ],
 
       listeners: {
-        'resize': 'resize',
+        'mouseenter': 'onMouseEnter',
+        'mouseleave': 'onMouseLeave',
         'down': 'onPanStart',
         'wheel': 'onWheel'
       },
@@ -98,14 +101,11 @@
         this.initialized = true;
         this.supportedGraphs = [LineGraph, ColorGraph];
 
-        var aspectRatio = this.getAspectRatio();
         var options = {
           plugins: ['core', 'cursor', 'mathbox'],
           element: this.$.mathbox,
           camera: {
-            type: 'orthographic',
-            left: -aspectRatio,
-            right: aspectRatio
+            fov: 90
           },
         };
         this.mathbox = mathBox(options);
@@ -116,10 +116,19 @@
           position: [0,0,1]
         });
 
-        this.view = this.mathbox.cartesian();
+        this.view = this.mathbox.cartesian({}, {
+          scale: () => {
+            return [this.getAspectRatio(), 1];
+          },
+        });
 
-        this.resize();
         this._setupGridLines();
+        //For some reason, initializing the mathbox changes the width,
+        //so we need to do this again after the setup
+        this.resize();
+        new ResizeSensor(this.$.mathbox, () => {
+          this.resize();
+        });
 
         this.classList.add('ungrabbed');
       },
@@ -147,11 +156,13 @@
       _setupGridLines: function() {
         this.view.axis({
           axis: 1,
-          width: 4
+          width: 4,
+          end: false
         })
         .axis({
           axis: 2,
-          width: 4
+          width: 4,
+          end: false
         })
         .grid({
           width: 1,
@@ -163,14 +174,11 @@
       resize: function() {
         if (!this.initialized)
           return;
-        this.mathbox.three.canvas.style.width = this.offsetWidth+'px';
-        this.mathbox.three.canvas.style.height = this.offsetHeight+'px';
 
-        let aspectRatio = this.getAspectRatio();
-        //Maybe bind this?
-        this.view.set('scale', [aspectRatio, 1]);
-        this.mathbox.three.camera.left = -aspectRatio;
-        this.mathbox.three.camera.right = aspectRatio;
+        this.mathbox.three.Size.set({
+          width: this.offsetWidth,
+          height: this.offsetHeight
+        });
       },
 
       compiledFunctionChanged: function() {
@@ -240,6 +248,14 @@
         this.unlisten(this, 'track', 'onPan');
         this.unlisten(this, 'up', 'onPanStop');
         document.body.style.cursor = null;
+      },
+
+      onMouseEnter: function (e) {
+        this.graph.onMouseEnter(e);
+      },
+
+      onMouseLeave: function (e) {
+        this.graph.onMouseLeave(e);
       },
 
       onWheel: function (e) {

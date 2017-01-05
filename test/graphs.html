@@ -73,13 +73,23 @@
         let graph;
         let scope;
         let el;
+        let baseMathbox;
 
         setup(function() {
           el = fixture('basic');
           scope = helper.makeScope(['a','b','c']);
+          baseMathbox = el.mathbox.toMarkup();
           graph = new LineGraph(el.mathbox, {}, true);
           graph.setup();
         });
+
+        // This won't work until bug in mathbox with removing html is done
+        // test('setup and teardown', function() {
+        //   el.mathbox.inspect();
+        //   graph.teardown();
+        //   el.mathbox.inspect();
+        //   expect(el.mathbox.toMarkup()).to.equal(baseMathbox);
+        // });
 
         test('show incompatible function', function() {
           let f = new CompiledFunction(null, [new Variable('a'), new Variable('b')]);
@@ -140,7 +150,6 @@
           graph.resetBounds();
           expect(graph.tweeners.yRange._duration).to.equal(expectedDuration);
         });
-
         // test('')
 
       });
