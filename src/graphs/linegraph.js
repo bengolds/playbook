@@ -5,7 +5,7 @@ class LineGraph extends Graph {
 
     this._exprAnimDuration = 500;
     this._resetBoundsDuration = 250;
-    this.labelsVisible = true;
+    this.labelsVisible = false;
   }
 
   static get supportedSignatures() {
@@ -129,10 +129,14 @@ class LineGraph extends Graph {
         outline: 2,
         // color: '#000',
         zIndex: 2,
-      }, {
-        opacity: () => {return this.labelsVisible ? 1: 0;}
       });
     }
+    else {
+      this.mathbox.select('#'+this.domId).unbind('opacity');
+    }
+    this.mathbox.select('#'+this.domId).bind('opacity', () =>{
+      return this.labelsVisible ? 1: 0;
+    });
 
   }
 
