@@ -138,21 +138,25 @@
 
         if (!this.scope.isPinned(name)) {
           let bounds = [-10, 10];
+          let value = 1;
           switch (this.scope.getVariable(name).set) {
           case SETS.NATURAL:
             bounds = [0, 10];
+            value = 1;
             break;
           case SETS.INTEGER:
             bounds = [-10, 10];
+            value = 1;
             break;
           case SETS.REAL:
-            bounds = [-1, 1];
+            bounds = [-10, 10];
+            value = 1;
             break;
           }
           let pinned = {
             variable: this.scope.getVariable(name),
             bounds: bounds,
-            value: bounds[0] + (bounds[1]-bounds[0])/2
+            value: value
           };
           this.push('scope.pinnedVariables', pinned);
         }
