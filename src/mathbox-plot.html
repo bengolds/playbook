@@ -88,7 +88,7 @@
       },
 
       observers: [
-        'compiledFunctionChanged(scope.pinnedVariables.splices)'
+        'pinnedVariablesChanged(scope.pinnedVariables.splices)'
       ],
 
       listeners: {
@@ -186,6 +186,24 @@
         if (!this.initialized || !this.compiledFunction)
           return;
 
+        this.tryChangeGraph();
+        if (!this.noGraphFound) {
+          this.graph.showFunction(this.compiledFunction);
+        }
+      },
+
+      pinnedVariablesChanged: function(_) {
+        if (!this.initialized || !this.compiledFunction)
+          return;
+
+        if (this.tryChangeGraph()) {
+          this.graph.showFunction(this.compiledFunction);
+        } else {
+          this.graph.pinnedVariablesChanged();
+        }
+      },
+
+      tryChangeGraph: function () {
         let newSignature = this.compiledFunction.getSignature();
         if (!this.graph || !this.graph.constructor.isSupported(newSignature)) {
           let graphConstructor = this._getCompatibleGraph();
@@ -197,17 +215,14 @@
             this.graph.setup();
             this._setNoGraphFound(false);
             this.fire('graph-ok');
-            this.graph.showFunction(this.compiledFunction);
+            return true;
           }
           else {
             this._setNoGraphFound(true);
             this.fire('graph-error', 'No graph found with that signature');
           }
         }
-        else {
-          this.graph.showFunction(this.compiledFunction);
-        }
-
+        return false;
       },
 
       _getCompatibleGraph: function() {

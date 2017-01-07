@@ -146,6 +146,7 @@ class Graph {
   setup() {}
   teardown() {}
   showFunction(compiledFunction) {}
+  pinnedVariablesChanged() {}
   unboundRanges() {}
   static get supportedSignatures() {return [];}
   static get syncedParameterNames() {return [];}

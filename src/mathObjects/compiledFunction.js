@@ -6,7 +6,7 @@ class CompiledFunction {
   }
 
   eval(scope) {
-    let combinedScope = Object.assign({}, this.globalScope.getForMathJS(), scope);
+    let combinedScope = Object.assign({}, scope, this.globalScope.getForMathJS());
     return this.compiled.eval(combinedScope);
   }
 

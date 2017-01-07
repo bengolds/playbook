@@ -45,6 +45,8 @@ class LineGraph extends Graph {
     this.displayId = 'display';
     this.animId = 'anim';
     this.domId = 'linedom';
+    this.htmlId = 'htmldom';
+    this.labelPointsId = 'labelpoints';
 
     this.data = view.interval({
       channels: 2,
@@ -68,57 +70,12 @@ class LineGraph extends Graph {
       view.layer({})
       .array({
         width: 4,
-        expr: (emit, i) => {
-          let xWidth = this.width/this.height;
-          switch(i) {
-          case 0:
-            emit(-xWidth, -1);
-            break;
-          case 1:
-            emit(xWidth, -1);
-            break;
-          case 2:
-            emit(xWidth, -1);
-            break;
-          case 3:
-            emit(xWidth, 1);
-            break;
-          }
-        },
+        id: this.labelPointsId,
         channels: 2 
       })
-      .html(    {
+      .html({
         width: 4,
-        expr: (emit, el, i) => {
-          var text = '';
-          var style = {
-            position: 'absolute',
-            'user-select': 'none'
-          };
-          switch(i) {
-          case 0: 
-            text = this.xRange[0].toFixed(1);
-            style.left = '4px';
-            style.bottom = '0px';
-            break;
-          case 1:
-            text = this.xRange[1].toFixed(1);
-            style.right = '24px';
-            style.bottom = '0px';
-            break;
-          case 2:
-            text = this.yRange[0].toFixed(1);
-            style.right = '4px';
-            style.bottom = '16px';
-            break;
-          case 3:
-            text = this.yRange[1].toFixed(1);
-            style.right = '4px';
-            style.top = '0px';
-            break;
-          }
-          emit(el('span', {style: style, innerHTML: text}));
-        },
+        id: this.htmlId,
       })
       .dom({
         id: this.domId,
@@ -138,7 +95,8 @@ class LineGraph extends Graph {
     this.mathbox.select('#'+this.domId).bind('opacity', () =>{
       return this.labelsVisible ? 1: 0;
     });
-
+    this.mathbox.select('#'+this.labelPointsId).set('expr', this.emitLabelPoints.bind(this));
+    this.mathbox.select('#'+this.htmlId).set('expr', this.emitLabelDom.bind(this));
   }
 
   teardown() {
@@ -153,20 +111,13 @@ class LineGraph extends Graph {
       throw Error('The function signature ' + compiledFunction.getSignature() + 'is unsupported');
     }
 
+    this.changeExpr(this.makeExpr(compiledFunction));
     this.compiled = compiledFunction;
-    let cachedEval = compiledFunction.eval.bind(compiledFunction);
-    let freeVars = compiledFunction.freeVariables;
-    let cachedVarName = '_';
-    if (freeVars.length == 1) {
-      cachedVarName = compiledFunction.freeVariables[0].name;
-    }
-    let newExpr = (emit, x) => {
-      emit(x, cachedEval({
-        [cachedVarName]: x
-      }));
-    };
-    this.changeExpr(newExpr);
     this.resetBounds(this._exprAnimDuration, 'easeInOutSine');
+  }
+
+  pinnedVariablesChanged() {
+    this.resetBounds();
   }
 
   changeExpr(newExpr) {
@@ -180,6 +131,70 @@ class LineGraph extends Graph {
     else {
       this.data.set('expr', newExpr);
     }
+  }
+
+  makeExpr(compiledFunction) {
+    let cachedEval = compiledFunction.eval.bind(compiledFunction);
+    let freeVars = compiledFunction.freeVariables;
+    let cachedVarName = '_';
+    if (freeVars.length == 1) {
+      cachedVarName = compiledFunction.freeVariables[0].name;
+    }
+    let newExpr = (emit, x) => {
+      emit(x, cachedEval({
+        [cachedVarName]: x
+      }));
+    };
+    return newExpr;
+  }
+
+  emitLabelPoints(emit, i) {
+    let xWidth = this.width/this.height;
+    switch(i) {
+    case 0:
+      emit(-xWidth, -1);
+      break;
+    case 1:
+      emit(xWidth, -1);
+      break;
+    case 2:
+      emit(xWidth, -1);
+      break;
+    case 3:
+      emit(xWidth, 1);
+      break;
+    }
+  }
+
+  emitLabelDom(emit, el, i) {
+    var text = '';
+    var style = {
+      position: 'absolute',
+      'user-select': 'none'
+    };
+    switch(i) {
+    case 0: 
+      text = this.xRange[0].toFixed(1);
+      style.left = '4px';
+      style.bottom = '0px';
+      break;
+    case 1:
+      text = this.xRange[1].toFixed(1);
+      style.right = '24px';
+      style.bottom = '0px';
+      break;
+    case 2:
+      text = this.yRange[0].toFixed(1);
+      style.right = '4px';
+      style.bottom = '16px';
+      break;
+    case 3:
+      text = this.yRange[1].toFixed(1);
+      style.right = '4px';
+      style.top = '0px';
+      break;
+    }
+    emit(el('span', {style: style, innerHTML: text}));
   }
 
   //Ranges

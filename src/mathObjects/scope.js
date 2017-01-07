@@ -61,4 +61,21 @@ class Scope {
     });
   }
 
+  clone() {
+    let newScope = new Scope();
+    //Variables themselves are copied by reference
+    newScope.variables = this.variables.slice();
+    for (let pinned of this.pinnedVariables) {
+      let copyPinned = {};
+      copyPinned.variable = pinned.variable;
+      copyPinned.bounds = pinned.bounds.slice();
+      copyPinned.value = pinned.value;
+      newScope.pinnedVariables.push(copyPinned);
+    }
+    for(let func of this.functions) {
+      newScope.functions.push(Object.assign({}, func));
+    }
+    return newScope;
+  }
+
 }

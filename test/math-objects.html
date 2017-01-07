@@ -114,6 +114,12 @@
           expect(minMax[1]).to.be.closeTo(120, 0.5);
         });
 
+        test('clone', function() {
+          let scope = helper.makeScope(['a','b','c'], [SETS.INTEGER, SETS.REAL, SETS.COMPLEX], ['b']);
+          scope.functions.push(new FunctionDefinition('g', 'a+a'));
+          expect(scope.clone()).to.deep.equal(scope);
+        });
+
         // test('compiledFunction shouldn\'t evaluate with incomplete scope', function() {
           
         // });
