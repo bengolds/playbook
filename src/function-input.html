@@ -31,6 +31,7 @@
 		</style>
 	<mathquill-element id="quill" editable
     latex='{{latex}}'
+    on-edit='onEdit'
     on-element-mouseover='onElementMouseOver'>
   </mathquill-element>
   <hover-plot class='hidden' id='hoverplot' 
@@ -47,7 +48,6 @@
         type: String,
         notify: true,
         value: '',
-        observer: 'latexChanged'
       },
       definition: {
         type: String,
@@ -60,7 +60,7 @@
     attached: function() {
     },
 
-    latexChanged: function() {
+    onEdit: function() {
       this.tryParseLatex();
     },
 
