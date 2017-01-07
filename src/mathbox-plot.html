@@ -9,6 +9,7 @@
     <style is="custom-style">
       :host {
         position:relative;
+        user-select: none;
         overflow:hidden;
         display: block;
         flex-grow: 1;
@@ -222,6 +223,7 @@
       },
 
       onPanStart: function (e) {
+        e.preventDefault();
         this.classList.remove('ungrabbed');
         this.lastPan = {x:e.detail.x, y:e.detail.y};
         this.listen(this, 'track', 'onPan');
