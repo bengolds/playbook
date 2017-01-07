@@ -201,7 +201,7 @@
           }
           else {
             this._setNoGraphFound(true);
-            this.fire('graph-error');
+            this.fire('graph-error', 'No graph found with that signature');
           }
         }
         else {

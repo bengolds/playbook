@@ -26,10 +26,9 @@
       suite('function-input tests', function() {
         var el;
         var quill;
-        var cosString = '\\cos x';
 
         setup(function() {
-          el = fixture('basic', {definition: 'x^2', latex: cosString});
+          el = fixture('basic', {latex: '\\cos x'});
           quill = el.$.quill;
         });
 
@@ -39,47 +38,19 @@
         };
 
         test('initialization', function() {
-          //Initial values should be ignored
+          //Initial definition should be ignored
           expect(el.definition).to.equal('cos(x)');
           latexShouldEqual('\\cos x');
         });
 
         test('changing latex', function() {
-          el.latex = cosString;
-          latexShouldEqual(cosString);
-          expect(el.definition).to.equal('cos(x)');
+          el.latex = '\\sin x';
+          latexShouldEqual('\\sin x');
+          expect(el.definition).to.equal('sin(x)')  ;
           //TODO: Have behavior for both changing latex imperatively (a la split out)
           //and for changing it just display-wise (subbing numbers in)
         });
 
-        test('input success', function(done) {
-          el.latex = '';
-
-          el.addEventListener('input-ok', function() {
-            latexShouldEqual('x');
-            expect(el.definition).to.equal('x');
-            done();
-          });
-          let fail = (e) => {done(e.detail); };
-          el.addEventListener('input-error', fail);
-          quill.focus();
-          quill.typedText('x');
-        });
-
-        test('input failure', function(done) {
-          el.latex = cosString;
-
-          el.addEventListener('input-ok', function() {
-            done(Error('expected input to throw an error'));
-          });
-          el.addEventListener('input-error', function() {
-            latexShouldEqual(cosString+'+');
-            expect(el.definition).to.equal('cos(x)');
-            done();
-          });
-          quill.focus();
-          quill.typedText('+');
-        });
 
         // test('hover-event fired', function() {
         //   //Set up the mathquill, find the el you want to hover, fire the event 

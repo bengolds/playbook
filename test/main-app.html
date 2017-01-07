@@ -211,7 +211,7 @@
           expect(getPinned('b').value).to.equal(1);
 
           pinVar('c');
-          expect(getPinned('c').bounds).to.deep.equal([-1, 1]);
+          expect(getPinned('c').bounds).to.deep.equal([-10, 10]);
           expect(getPinned('c').value).to.equal(1);
         });        
 

@@ -47,6 +47,46 @@
           expectInSync();
         });
 
+        test('semanticText updates no matter how definition changes', function() {
+          el.latex = '\\cos x';
+          expect(el.semanticText).to.equal('cos(x)');
+          el.latex = '';
+
+          el.editable = true;
+          el.typedText('\\sin x');
+          expect(el.semanticText).to.equal('sin(x)');
+        });
+
+        test('semanticText throws semantic-text-ok', function(done) {
+          el.latex = '';
+          el.editable = true;
+
+          el.addEventListener('semantic-text-ok', function() {
+            expect(el.latex).to.equal('x');
+            expect(el.semanticText).to.equal('x');
+            done();
+          });
+          let fail = (e) => {done(e.detail); };
+          el.addEventListener('semantic-text-error', fail);
+          el.focus();
+          el.typedText('x');
+        });
+
+        test('semanticText throws semantic-text-error', function(done) {
+          el.latex = '\\cos x';
+          el.editable = true;
+
+          el.addEventListener('semantic-text-ok', function() {
+            done(Error('expected mathquill-element to fire a semantic-text-error event'));
+          });
+          el.addEventListener('semantic-text-error', function() {
+            expect(el.latex).to.equal('\\cos x+');
+            expect(el.semanticText).to.equal('cos(x)');
+            done();
+          });
+          el.focus();
+          el.typedText('+');
+        });
         //TODO: ADD TESTS FOR EDITABLE, HANDLERS, AND API
 
       });

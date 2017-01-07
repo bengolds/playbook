@@ -29,6 +29,16 @@
         max-width: 480px;
         height: 100%;
       }
+      #inputContainer {
+        flex-grow: 1;
+        position:relative;
+      }
+      #errorMessage {
+        color: #d40000;
+        font-size: 80%;
+        position: absolute;
+        margin-top: 8px;
+      }
     </style>
     <paper-card id='container'>
       <div class='topLeftTray'>
@@ -36,20 +46,27 @@
         <paper-icon-button icon="speaker-notes"></paper-icon-button>
       </div>
 
-      <function-signature id='signature'
-        name='{{functionDefinition.name}}'
-        parameters='{{compiled.variables}}'
-        scope='{{scope}}'
-        ></function-signature>
-      <function-input id='input'
-        definition='{{functionDefinition.parseableString}}'
-        latex='{{functionDefinition.latex}}'
-        ></function-input>
       <function-compiler id='compiler'
         definition='{{functionDefinition.parseableString}}'
         scope='{{scope}}'
         compiled='{{compiled}}'
         ></function-compiler>
+
+      <function-signature id='signature'
+        name='{{functionDefinition.name}}'
+        parameters='{{compiled.variables}}'
+        scope='{{scope}}'
+        ></function-signature>
+      <div id= 'inputContainer'>
+        <function-input id='input'
+          definition='{{functionDefinition.parseableString}}'
+          latex='{{functionDefinition.latex}}'
+          on-semantic-text-ok='semanticTextOk'
+          on-semantic-text-error='semanticTextError'
+          ></function-input>
+        <div id='errorMessage'
+        >{{errorMessage}}</div>
+      </div>
       <mathbox-plot id='plot' animated
         compiled-function='{{compiled}}'
         scope='{{scope}}'
@@ -80,24 +97,83 @@
         compiled: {
           type: Object,
           notify: false,
-          observer: 'compiledChanged'
+        },
+        errorMessage: {
+          type: String,
+          notify: true,
+          value: ''
         }
       },
 
       listeners: {
-        // 'input-ok': 'inputOk',
-        // 'input-error': 'inputError',
+        'compile-ok': 'compileOk',
+        'compile-error': 'compileError',
+        'graph-ok': 'graphOk',
+        'graph-error': 'graphError',
+      },
+
+      attached: function() {
+        this.isSemanticTextError = false;
+        this.isCompileError = false;
+        this.isGraphError = false;
       },
 
       removeRow: function() {
         this.fire('remove-row', this.functionDefinition.name);
       },
 
-      compiledChanged: function() {
+      semanticTextOk: function() {
+        this.isSemanticTextError = false;
+        this.resetErrorMessage();
       },
 
-      nameChanged: function () {
-        // body...
+      compileOk: function () {
+        this.isCompileError = false;
+        this.resetErrorMessage();
+      },
+
+      graphOk: function () {
+        this.isGraphError = false;
+        this.resetErrorMessage();
+      },
+
+      semanticTextError: function (e) {
+        this.isSemanticTextError = true;
+        this.semanticTextErrorMessage = e.detail;
+        this.resetErrorMessage();
+      },
+
+      compileError: function (e) {
+        this.isCompileError = true;
+        this.compileErrorMessage = e.detail;
+        this.resetErrorMessage();
+      },
+
+      graphError: function (e) {
+        this.isGraphError = true;
+        this.graphErrorMessage = e.detail;
+        this.resetErrorMessage();
+      },
+
+      resetErrorMessage: function () {
+        this.debounce('resetErrorMessage', () => {
+          if (this.isSemanticTextError) {
+            this.errorMessage = this.semanticTextErrorMessage;
+            this.$.plot.showError = true;
+          } 
+          else if (this.isCompileError) {
+            this.$.plot.showError = true;
+            this.errorMessage = this.compileErrorMessage;
+          }
+          else if (this.isGraphError) {
+            this.errorMessage = this.graphErrorMessage;
+            this.$.plot.showError = true;
+          }
+          else {
+            this.errorMessage = '';
+            this.$.plot.showError = false;
+          }
+        }, 500);
       }
 
     });

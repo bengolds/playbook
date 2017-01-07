@@ -43,10 +43,11 @@
 
       recompile: function() {
         try {
+          let definition = this.definition;
           if (!this.definition || this.definition == '') {
-            throw Error('No function to compile');
+            definition = '0';
           }
-          let simplified = Algebrite.simplify(this.definition).toString();
+          let simplified = Algebrite.simplify(definition).toString();
           let processed = this.insertMultipliers(simplified);
           let parsed = math.parse(processed);
           let symbols = this.getVariables(parsed);

@@ -22,9 +22,15 @@
     <script>
       suite('function-row tests', function() {
         var el;
+        let clock;
 
         setup(function() {
           el = fixture('basic');
+          clock = sinon.useFakeTimers();
+        });
+
+        teardown(function() {
+          clock.restore();
         });
         
         test('integration: automatic graph selection', function() {
@@ -86,8 +92,6 @@
         });
 
         test('function compiler recompiles appropriately', function() {
-          expect(el.compiled).to.be.not.ok;
-
           el.functionDefinition = new FunctionDefinition('f', 'x^2');
 
           expect(el.compiled).to.be.ok;
@@ -135,6 +139,59 @@
           el.functionDefinition = g;
           expectVariablesInScope(['a','b','c','x','y','z']);
 
+        });
+
+        test('error detail handling', function() {
+          //Test individual errors
+          el.semanticTextError({detail: 'Semantic Text Error'});
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('Semantic Text Error');
+
+          el.semanticTextOk();
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('');
+
+          el.compileError({detail: 'Compile Error'});
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('Compile Error');
+
+          el.compileOk();
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('');
+
+          el.graphError({detail: 'Graph Error'});
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('Graph Error');
+
+          el.graphOk();
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('');
+        });
+
+        test('error detail prioritization', function() {
+          el.semanticTextError({detail: 'Semantic Text Error'});
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('Semantic Text Error');
+
+          el.compileError({detail: 'Compile Error'});
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('Semantic Text Error');
+
+          el.graphError({detail: 'Graph Error'});
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('Semantic Text Error');
+
+          el.semanticTextOk();
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('Compile Error');
+
+          el.compileOk();
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('Graph Error');
+
+          el.graphOk();
+          clock.tick(510);
+          expect(el.errorMessage).to.equal('');
         });
 
         // test('function requires name', function() {

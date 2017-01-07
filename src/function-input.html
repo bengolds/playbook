@@ -5,17 +5,10 @@
 	<template>
 		<style>
 			:host {
-				flex-grow: 1;
 			}
 			#quill {
         --mathquill-font-size: 200%;
 			}
-      #errorMessage {
-        color: #d40000;
-        font-size: 80%;
-        position: absolute;
-        margin-top: 8px;
-      }
       #outline {
         border-radius: 8px;
         box-shadow: 0 0 5px 5px rgba(0,0,255,0.5);
@@ -31,7 +24,7 @@
 		</style>
 	<mathquill-element id="quill" editable
     latex='{{latex}}'
-    on-edit='onEdit'
+    semantic-text='{{definition}}'
     on-element-mouseover='onElementMouseOver'>
   </mathquill-element>
   <hover-plot class='hidden' id='hoverplot' 
@@ -52,51 +45,12 @@
       definition: {
         type: String,
         notify: true,
-        readOnly: true,
-        value: ''
+        value: '',
       }
     },
 
     attached: function() {
     },
-
-    onEdit: function() {
-      this.tryParseLatex();
-    },
-
-    tryParseLatex: function() {
-      try {
-        let functionString = this.$.quill.semanticText();
-        if (functionString == '') {
-          return;
-        }
-        this._setDefinition(functionString);
-        this.fire('input-ok');
-        // let newFunctor = parser.getFunctor(functionString);
-        // this._matchPinnedVariables(this.functor, newFunctor);
-        // this.functor = newFunctor;
-        // this.$.errorMessage.textContent = '';
-      }
-      catch (e) {
-          // TODO: Move this to function row
-          // this.$.errorMessage.textContent = e.message;
-          // console.log(e.stack);
-        this.fire('input-error', e);
-      }
-    },
-
-    // _matchPinnedVariables(oldFunctor, newFunctor) {
-    //   if (!oldFunctor) {
-    //     return;
-    //   }
-    //   for (let pinnedVar in oldFunctor.boundVars) {
-    //     if (newFunctor.symbols.includes(pinnedVar)) {
-    //       newFunctor.pinVar(pinnedVar, 
-    //         oldFunctor.boundVars[pinnedVar].value, 
-    //         oldFunctor.boundVars[pinnedVar].range);
-    //     }
-    //   }
-    // },
 
     onElementMouseOver: function(e, details) {
       //TODO: REMOVE THIS

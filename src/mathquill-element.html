@@ -30,6 +30,11 @@
           type: String,
           notify: true,
           observer: '_latexChanged'
+        },
+        semanticText: {
+          type: String,
+          notify: true,
+          readOnly: true
         }
       },
 
@@ -41,6 +46,8 @@
         this.scopeSubtree(this.$.quill, true);
         this._MQ = MathQuill.getInterface(2);
         this._initializeMathQuill(this.editable, this.config);
+        this._setSemanticText('');
+        this._tryParseLatex();
       },
 
       _editableChanged: function (val) {
@@ -55,6 +62,7 @@
         this.alreadyChangingLatex = true;
 
         this.mathquill.latex(this.latex);
+        this._tryParseLatex();
 
         this.alreadyChangingLatex = false;
       },
@@ -65,6 +73,7 @@
         this.alreadyChangingLatex = true;
 
         this.latex = this.mathquill.latex();
+        this._tryParseLatex();
 
         this.alreadyChangingLatex = false;
         this.fire('edit', {mathField: mathField});
@@ -112,6 +121,16 @@
           } else {
             this[method] = null;
           }
+        }
+      },
+      _tryParseLatex: function () {
+        try {
+          let parsed = this.mathquill.semanticText();
+          this._setSemanticText(parsed);
+          this.fire('semantic-text-ok');
+        }
+        catch (e) {
+          this.fire('semantic-text-error', e);
         }
       },
       

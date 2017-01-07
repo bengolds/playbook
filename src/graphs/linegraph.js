@@ -11,6 +11,7 @@ class LineGraph extends Graph {
   static get supportedSignatures() {
     return {
       domains: [
+        [],
         [SETS.REAL],
       ],
       ranges: [
@@ -154,7 +155,11 @@ class LineGraph extends Graph {
 
     this.compiled = compiledFunction;
     let cachedEval = compiledFunction.eval.bind(compiledFunction);
-    let cachedVarName = compiledFunction.freeVariables[0].name;
+    let freeVars = compiledFunction.freeVariables;
+    let cachedVarName = '_';
+    if (freeVars.length == 1) {
+      cachedVarName = compiledFunction.freeVariables[0].name;
+    }
     let newExpr = (emit, x) => {
       emit(x, cachedEval({
         [cachedVarName]: x
@@ -193,7 +198,9 @@ class LineGraph extends Graph {
   unboundRanges() {
     let ranges = {};
     let unboundVar = this.compiled.freeVariables[0];
-    ranges[unboundVar.name] = this.getFinal('xRange');
+    if (unboundVar) {
+      ranges[unboundVar.name] = this.getFinal('xRange');
+    } 
     return ranges;
   }
 
