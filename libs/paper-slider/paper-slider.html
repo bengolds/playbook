@@ -8,15 +8,15 @@ Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 -->
 
-<link rel="import" href="../polymer/polymer.html">
-<link rel="import" href="../iron-a11y-keys-behavior/iron-a11y-keys-behavior.html">
-<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
-<link rel="import" href="../iron-form-element-behavior/iron-form-element-behavior.html">
-<link rel="import" href="../iron-range-behavior/iron-range-behavior.html">
-<link rel="import" href="../paper-behaviors/paper-inky-focus-behavior.html">
-<link rel="import" href="../paper-input/paper-input.html">
-<link rel="import" href="../paper-progress/paper-progress.html">
-<link rel="import" href="../paper-styles/color.html">
+<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/iron-a11y-keys-behavior/iron-a11y-keys-behavior.html">
+<link rel="import" href="../../bower_components/iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../../bower_components/iron-form-element-behavior/iron-form-element-behavior.html">
+<link rel="import" href="../../bower_components/iron-range-behavior/iron-range-behavior.html">
+<link rel="import" href="../../bower_components/paper-behaviors/paper-inky-focus-behavior.html">
+<link rel="import" href="../../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../../bower_components/paper-progress/paper-progress.html">
+<link rel="import" href="../../bower_components/paper-styles/color.html">
 
 <!--
 Material design: [Sliders](https://www.google.com/design/spec/components/sliders.html)
@@ -334,7 +334,7 @@ Custom property | Description | Default
         on-up="_resetKnob"
         on-track="_onTrack"
         on-transitionend="_knobTransitionEnd">
-          <div class="slider-knob-inner" value$="[[immediateValue]]"></div>
+          <div class="slider-knob-inner" value$="[[_formatValue(immediateValue)]]"></div>
       </div>
     </div>
 
@@ -726,6 +726,13 @@ Custom property | Description | Default
           }
           this._ripple.holdDown = receivedFocusFromKeyboard;
         }
+      },
+
+      _formatValue: function(immediateValue) {
+        return immediateValue.toLocaleString('en', {
+          useGrouping: false,
+          maximumSignificantDigits: 3
+        });
       }
     });
 
