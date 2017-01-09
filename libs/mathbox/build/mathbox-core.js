@@ -111,13 +111,140 @@ module.exports = {"arrow.position": "uniform float worldUnit;\nuniform float lin
 "view.position": "// Implicit three.js uniform\n// uniform mat4 viewMatrix;\n\nvec4 getViewPosition(vec4 position, inout vec4 stpq) {\n  return (viewMatrix * vec4(position.xyz, 1.0));\n}\n"};
 
 },{}],2:[function(require,module,exports){
+var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+;(function (exports) {
+	'use strict';
+
+  var Arr = (typeof Uint8Array !== 'undefined')
+    ? Uint8Array
+    : Array
+
+	var PLUS   = '+'.charCodeAt(0)
+	var SLASH  = '/'.charCodeAt(0)
+	var NUMBER = '0'.charCodeAt(0)
+	var LOWER  = 'a'.charCodeAt(0)
+	var UPPER  = 'A'.charCodeAt(0)
+	var PLUS_URL_SAFE = '-'.charCodeAt(0)
+	var SLASH_URL_SAFE = '_'.charCodeAt(0)
+
+	function decode (elt) {
+		var code = elt.charCodeAt(0)
+		if (code === PLUS ||
+		    code === PLUS_URL_SAFE)
+			return 62 // '+'
+		if (code === SLASH ||
+		    code === SLASH_URL_SAFE)
+			return 63 // '/'
+		if (code < NUMBER)
+			return -1 //no match
+		if (code < NUMBER + 10)
+			return code - NUMBER + 26 + 26
+		if (code < UPPER + 26)
+			return code - UPPER
+		if (code < LOWER + 26)
+			return code - LOWER + 26
+	}
+
+	function b64ToByteArray (b64) {
+		var i, j, l, tmp, placeHolders, arr
+
+		if (b64.length % 4 > 0) {
+			throw new Error('Invalid string. Length must be a multiple of 4')
+		}
+
+		// the number of equal signs (place holders)
+		// if there are two placeholders, than the two characters before it
+		// represent one byte
+		// if there is only one, then the three characters before it represent 2 bytes
+		// this is just a cheap hack to not do indexOf twice
+		var len = b64.length
+		placeHolders = '=' === b64.charAt(len - 2) ? 2 : '=' === b64.charAt(len - 1) ? 1 : 0
+
+		// base64 is 4/3 + up to two characters of the original data
+		arr = new Arr(b64.length * 3 / 4 - placeHolders)
+
+		// if there are placeholders, only get up to the last complete 4 chars
+		l = placeHolders > 0 ? b64.length - 4 : b64.length
+
+		var L = 0
+
+		function push (v) {
+			arr[L++] = v
+		}
+
+		for (i = 0, j = 0; i < l; i += 4, j += 3) {
+			tmp = (decode(b64.charAt(i)) << 18) | (decode(b64.charAt(i + 1)) << 12) | (decode(b64.charAt(i + 2)) << 6) | decode(b64.charAt(i + 3))
+			push((tmp & 0xFF0000) >> 16)
+			push((tmp & 0xFF00) >> 8)
+			push(tmp & 0xFF)
+		}
+
+		if (placeHolders === 2) {
+			tmp = (decode(b64.charAt(i)) << 2) | (decode(b64.charAt(i + 1)) >> 4)
+			push(tmp & 0xFF)
+		} else if (placeHolders === 1) {
+			tmp = (decode(b64.charAt(i)) << 10) | (decode(b64.charAt(i + 1)) << 4) | (decode(b64.charAt(i + 2)) >> 2)
+			push((tmp >> 8) & 0xFF)
+			push(tmp & 0xFF)
+		}
+
+		return arr
+	}
+
+	function uint8ToBase64 (uint8) {
+		var i,
+			extraBytes = uint8.length % 3, // if we have 1 byte left, pad 2 bytes
+			output = "",
+			temp, length
+
+		function encode (num) {
+			return lookup.charAt(num)
+		}
+
+		function tripletToBase64 (num) {
+			return encode(num >> 18 & 0x3F) + encode(num >> 12 & 0x3F) + encode(num >> 6 & 0x3F) + encode(num & 0x3F)
+		}
+
+		// go through the array every three bytes, we'll deal with trailing stuff later
+		for (i = 0, length = uint8.length - extraBytes; i < length; i += 3) {
+			temp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
+			output += tripletToBase64(temp)
+		}
+
+		// pad the end with zeros, but make sure to not forget the extra bytes
+		switch (extraBytes) {
+			case 1:
+				temp = uint8[uint8.length - 1]
+				output += encode(temp >> 2)
+				output += encode((temp << 4) & 0x3F)
+				output += '=='
+				break
+			case 2:
+				temp = (uint8[uint8.length - 2] << 8) + (uint8[uint8.length - 1])
+				output += encode(temp >> 10)
+				output += encode((temp >> 4) & 0x3F)
+				output += encode((temp << 2) & 0x3F)
+				output += '='
+				break
+		}
+
+		return output
+	}
+
+	exports.toByteArray = b64ToByteArray
+	exports.fromByteArray = uint8ToBase64
+}(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
+
+},{}],3:[function(require,module,exports){
 module.exports = language
 
 var tokenizer = require('./tokenizer')
 
-function language(lookups) {
+function language(lookups, matchComparison) {
   return function(selector) {
-    return parse(selector, remap(lookups))
+    return parse(selector, remap(lookups),
+                 matchComparison || caseSensitiveComparison)
   }
 }
 
@@ -136,7 +263,7 @@ function opt_okay(opts, key) {
   return opts.hasOwnProperty(key) && typeof opts[key] === 'string'
 }
 
-function parse(selector, options) {
+function parse(selector, options, matchComparison) {
   var stream = tokenizer()
     , default_subj = true
     , selectors = [[]]
@@ -187,7 +314,7 @@ function parse(selector, options) {
         token.type === 'attr' ? attr(token) :
         token.type === ':' || token.type === '::' ? pseudo(token) :
         token.type === '*' ? Boolean :
-        matches(token.type, token.data)
+        matches(token.type, token.data, matchComparison)
     )
   }
 
@@ -296,9 +423,9 @@ function parse(selector, options) {
       valid_attr(options.attr, token.data)
   }
 
-  function matches(type, data) {
+  function matches(type, data, matchComparison) {
     return function(node) {
-      return options[type](node) == data
+      return matchComparison(type, options[type](node), data);
     }
   }
 
@@ -356,7 +483,7 @@ function parse(selector, options) {
   }
 
   function pseudo(token) {
-    return valid_pseudo(options, token.data)
+    return valid_pseudo(options, token.data, matchComparison)
   }
 
 }
@@ -365,7 +492,7 @@ function entry(node, next, subj) {
   return next(node, subj) ? node : null
 }
 
-function valid_pseudo(options, match) {
+function valid_pseudo(options, match, matchComparison) {
   switch(match) {
     case 'empty': return valid_empty(options)
     case 'first-child': return valid_first_child(options)
@@ -378,11 +505,15 @@ function valid_pseudo(options, match) {
   }
 
   if(match.indexOf('any') === 0) {
-    return valid_any_match(options, match.slice(4, -1))
+    return valid_any_match(options, match.slice(4, -1), matchComparison)
   }
 
   if(match.indexOf('not') === 0) {
-    return valid_not_match(options, match.slice(4, -1))
+    return valid_not_match(options, match.slice(4, -1), matchComparison)
+  }
+
+  if(match.indexOf('nth-child') === 0) {
+    return valid_nth_child(options, match.slice(10, -1))
   }
 
   return function() {
@@ -390,8 +521,8 @@ function valid_pseudo(options, match) {
   }
 }
 
-function valid_not_match(options, selector) {
-  var fn = parse(selector, options)
+function valid_not_match(options, selector, matchComparison) {
+  var fn = parse(selector, options, matchComparison)
 
   return not_function
 
@@ -400,8 +531,8 @@ function valid_not_match(options, selector) {
   }
 }
 
-function valid_any_match(options, selector) {
-  var fn = parse(selector, options)
+function valid_any_match(options, selector, matchComparison) {
+  var fn = parse(selector, options, matchComparison)
 
   return fn
 }
@@ -458,6 +589,66 @@ function valid_contains(options, contents) {
   }
 }
 
+function valid_nth_child(options, nth) {
+  var test = function(){ return false }
+  if (nth == 'odd') {
+    nth = '2n+1'
+  } else if (nth == 'even') {
+    nth = '2n'
+  }
+  var regexp = /( ?([-|\+])?(\d*)n)? ?((\+|-)? ?(\d+))? ?/
+  var matches = nth.match(regexp)
+  if (matches) {
+    var growth = 0;
+    if (matches[1]) {
+      var positiveGrowth = (matches[2] != '-')
+      growth = parseInt(matches[3] == '' ? 1 : matches[3])
+      growth = growth * (positiveGrowth ? 1 : -1)
+    }
+    var offset = 0
+    if (matches[4]) {
+      offset = parseInt(matches[6])
+      var positiveOffset = (matches[5] != '-')
+      offset = offset * (positiveOffset ? 1 : -1)
+    }
+    if (growth == 0) {
+      if (offset != 0) {
+        test = function(children, node) {
+          return children[offset - 1] === node
+        }
+      }
+    } else {
+      test = function(children, node) {
+        var validPositions = []
+        var len = children.length
+        for (var position=1; position <= len; position++) {
+          var divisible = ((position - offset) % growth) == 0;
+          if (divisible) {
+            if (growth > 0) {
+              validPositions.push(position);
+            } else {
+              if ((position - offset) / growth >= 0) {
+                validPositions.push(position);
+              }
+            }
+          }
+        }
+        for(var i=0; i < validPositions.length; i++) {
+          if (children[validPositions[i] - 1] === node) {
+            return true
+          }
+        }
+        return false
+      }
+    }
+  }
+  return function(node) {
+    var children = options.children(options.parent(node))
+
+    return test(children, node)
+  }
+}
+
 var checkattr = {
     '$': check_end
   , '^': check_beg
@@ -486,119 +677,11 @@ function check_dsh(l, r) {
   return l.split('-').indexOf(r) > -1
 }
 
-},{"./tokenizer":4}],3:[function(require,module,exports){
-(function (process){
-var Stream = require('stream')
-
-// through
-//
-// a stream that does nothing but re-emit the input.
-// useful for aggregating a series of changing but not ending streams into one stream)
-
-exports = module.exports = through
-through.through = through
-
-//create a readable writable stream.
-
-function through (write, end, opts) {
-  write = write || function (data) { this.queue(data) }
-  end = end || function () { this.queue(null) }
-
-  var ended = false, destroyed = false, buffer = [], _ended = false
-  var stream = new Stream()
-  stream.readable = stream.writable = true
-  stream.paused = false
-
-//  stream.autoPause   = !(opts && opts.autoPause   === false)
-  stream.autoDestroy = !(opts && opts.autoDestroy === false)
-
-  stream.write = function (data) {
-    write.call(this, data)
-    return !stream.paused
-  }
-
-  function drain() {
-    while(buffer.length && !stream.paused) {
-      var data = buffer.shift()
-      if(null === data)
-        return stream.emit('end')
-      else
-        stream.emit('data', data)
-    }
-  }
-
-  stream.queue = stream.push = function (data) {
-//    console.error(ended)
-    if(_ended) return stream
-    if(data === null) _ended = true
-    buffer.push(data)
-    drain()
-    return stream
-  }
-
-  //this will be registered as the first 'end' listener
-  //must call destroy next tick, to make sure we're after any
-  //stream piped from here.
-  //this is only a problem if end is not emitted synchronously.
-  //a nicer way to do this is to make sure this is the last listener for 'end'
-
-  stream.on('end', function () {
-    stream.readable = false
-    if(!stream.writable && stream.autoDestroy)
-      process.nextTick(function () {
-        stream.destroy()
-      })
-  })
-
-  function _end () {
-    stream.writable = false
-    end.call(stream)
-    if(!stream.readable && stream.autoDestroy)
-      stream.destroy()
-  }
-
-  stream.end = function (data) {
-    if(ended) return
-    ended = true
-    if(arguments.length) stream.write(data)
-    _end() // will emit or queue
-    return stream
-  }
-
-  stream.destroy = function () {
-    if(destroyed) return
-    destroyed = true
-    ended = true
-    buffer.length = 0
-    stream.writable = stream.readable = false
-    stream.emit('close')
-    return stream
-  }
-
-  stream.pause = function () {
-    if(stream.paused) return
-    stream.paused = true
-    return stream
-  }
-
-  stream.resume = function () {
-    if(stream.paused) {
-      stream.paused = false
-      stream.emit('resume')
-    }
-    drain()
-    //may have become paused again,
-    //as drain emits 'data'.
-    if(!stream.paused)
-      stream.emit('drain')
-    return stream
-  }
-  return stream
+function caseSensitiveComparison(type, pattern, data) {
+  return pattern === data;
 }
 
-
-}).call(this,require("1YiZ5S"))
-},{"1YiZ5S":10,"stream":12}],4:[function(require,module,exports){
+},{"./tokenizer":4}],4:[function(require,module,exports){
 module.exports = tokenize
 
 var through = require('through')
@@ -928,7 +1011,310 @@ function tokenize() {
   }
 }
 
-},{"through":3}],5:[function(require,module,exports){
+},{"through":18}],5:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+function EventEmitter() {
+  this._events = this._events || {};
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+EventEmitter.defaultMaxListeners = 10;
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!isNumber(n) || n < 0 || isNaN(n))
+    throw TypeError('n must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+EventEmitter.prototype.emit = function(type) {
+  var er, handler, len, args, i, listeners;
+
+  if (!this._events)
+    this._events = {};
+
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events.error ||
+        (isObject(this._events.error) && !this._events.error.length)) {
+      er = arguments[1];
+      if (er instanceof Error) {
+        throw er; // Unhandled 'error' event
+      }
+      throw TypeError('Uncaught, unspecified "error" event.');
+    }
+  }
+
+  handler = this._events[type];
+
+  if (isUndefined(handler))
+    return false;
+
+  if (isFunction(handler)) {
+    switch (arguments.length) {
+      // fast cases
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
+      // slower
+      default:
+        len = arguments.length;
+        args = new Array(len - 1);
+        for (i = 1; i < len; i++)
+          args[i - 1] = arguments[i];
+        handler.apply(this, args);
+    }
+  } else if (isObject(handler)) {
+    len = arguments.length;
+    args = new Array(len - 1);
+    for (i = 1; i < len; i++)
+      args[i - 1] = arguments[i];
+
+    listeners = handler.slice();
+    len = listeners.length;
+    for (i = 0; i < len; i++)
+      listeners[i].apply(this, args);
+  }
+
+  return true;
+};
+
+EventEmitter.prototype.addListener = function(type, listener) {
+  var m;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events)
+    this._events = {};
+
+  // To avoid recursion in the case that type === "newListener"! Before
+  // adding it to the listeners, first emit "newListener".
+  if (this._events.newListener)
+    this.emit('newListener', type,
+              isFunction(listener.listener) ?
+              listener.listener : listener);
+
+  if (!this._events[type])
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  else if (isObject(this._events[type]))
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  else
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+
+  // Check for listener leak
+  if (isObject(this._events[type]) && !this._events[type].warned) {
+    var m;
+    if (!isUndefined(this._maxListeners)) {
+      m = this._maxListeners;
+    } else {
+      m = EventEmitter.defaultMaxListeners;
+    }
+
+    if (m && m > 0 && this._events[type].length > m) {
+      this._events[type].warned = true;
+      console.error('(node) warning: possible EventEmitter memory ' +
+                    'leak detected. %d listeners added. ' +
+                    'Use emitter.setMaxListeners() to increase limit.',
+                    this._events[type].length);
+      if (typeof console.trace === 'function') {
+        // not supported in IE 10
+        console.trace();
+      }
+    }
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.once = function(type, listener) {
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  var fired = false;
+
+  function g() {
+    this.removeListener(type, g);
+
+    if (!fired) {
+      fired = true;
+      listener.apply(this, arguments);
+    }
+  }
+
+  g.listener = listener;
+  this.on(type, g);
+
+  return this;
+};
+
+// emits a 'removeListener' event iff the listener was removed
+EventEmitter.prototype.removeListener = function(type, listener) {
+  var list, position, length, i;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events || !this._events[type])
+    return this;
+
+  list = this._events[type];
+  length = list.length;
+  position = -1;
+
+  if (list === listener ||
+      (isFunction(list.listener) && list.listener === listener)) {
+    delete this._events[type];
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+
+  } else if (isObject(list)) {
+    for (i = length; i-- > 0;) {
+      if (list[i] === listener ||
+          (list[i].listener && list[i].listener === listener)) {
+        position = i;
+        break;
+      }
+    }
+
+    if (position < 0)
+      return this;
+
+    if (list.length === 1) {
+      list.length = 0;
+      delete this._events[type];
+    } else {
+      list.splice(position, 1);
+    }
+
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  var key, listeners;
+
+  if (!this._events)
+    return this;
+
+  // not listening for removeListener, no need to emit
+  if (!this._events.removeListener) {
+    if (arguments.length === 0)
+      this._events = {};
+    else if (this._events[type])
+      delete this._events[type];
+    return this;
+  }
+
+  // emit removeListener for all listeners on all events
+  if (arguments.length === 0) {
+    for (key in this._events) {
+      if (key === 'removeListener') continue;
+      this.removeAllListeners(key);
+    }
+    this.removeAllListeners('removeListener');
+    this._events = {};
+    return this;
+  }
+
+  listeners = this._events[type];
+
+  if (isFunction(listeners)) {
+    this.removeListener(type, listeners);
+  } else {
+    // LIFO order
+    while (listeners.length)
+      this.removeListener(type, listeners[listeners.length - 1]);
+  }
+  delete this._events[type];
+
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  var ret;
+  if (!this._events || !this._events[type])
+    ret = [];
+  else if (isFunction(this._events[type]))
+    ret = [this._events[type]];
+  else
+    ret = this._events[type].slice();
+  return ret;
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  var ret;
+  if (!emitter._events || !emitter._events[type])
+    ret = 0;
+  else if (isFunction(emitter._events[type]))
+    ret = 1;
+  else
+    ret = emitter._events[type].length;
+  return ret;
+};
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+
+},{}],6:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -2039,547 +2425,7 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-},{"base64-js":6,"ieee754":7}],6:[function(require,module,exports){
-var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-
-;(function (exports) {
-	'use strict';
-
-  var Arr = (typeof Uint8Array !== 'undefined')
-    ? Uint8Array
-    : Array
-
-	var PLUS   = '+'.charCodeAt(0)
-	var SLASH  = '/'.charCodeAt(0)
-	var NUMBER = '0'.charCodeAt(0)
-	var LOWER  = 'a'.charCodeAt(0)
-	var UPPER  = 'A'.charCodeAt(0)
-	var PLUS_URL_SAFE = '-'.charCodeAt(0)
-	var SLASH_URL_SAFE = '_'.charCodeAt(0)
-
-	function decode (elt) {
-		var code = elt.charCodeAt(0)
-		if (code === PLUS ||
-		    code === PLUS_URL_SAFE)
-			return 62 // '+'
-		if (code === SLASH ||
-		    code === SLASH_URL_SAFE)
-			return 63 // '/'
-		if (code < NUMBER)
-			return -1 //no match
-		if (code < NUMBER + 10)
-			return code - NUMBER + 26 + 26
-		if (code < UPPER + 26)
-			return code - UPPER
-		if (code < LOWER + 26)
-			return code - LOWER + 26
-	}
-
-	function b64ToByteArray (b64) {
-		var i, j, l, tmp, placeHolders, arr
-
-		if (b64.length % 4 > 0) {
-			throw new Error('Invalid string. Length must be a multiple of 4')
-		}
-
-		// the number of equal signs (place holders)
-		// if there are two placeholders, than the two characters before it
-		// represent one byte
-		// if there is only one, then the three characters before it represent 2 bytes
-		// this is just a cheap hack to not do indexOf twice
-		var len = b64.length
-		placeHolders = '=' === b64.charAt(len - 2) ? 2 : '=' === b64.charAt(len - 1) ? 1 : 0
-
-		// base64 is 4/3 + up to two characters of the original data
-		arr = new Arr(b64.length * 3 / 4 - placeHolders)
-
-		// if there are placeholders, only get up to the last complete 4 chars
-		l = placeHolders > 0 ? b64.length - 4 : b64.length
-
-		var L = 0
-
-		function push (v) {
-			arr[L++] = v
-		}
-
-		for (i = 0, j = 0; i < l; i += 4, j += 3) {
-			tmp = (decode(b64.charAt(i)) << 18) | (decode(b64.charAt(i + 1)) << 12) | (decode(b64.charAt(i + 2)) << 6) | decode(b64.charAt(i + 3))
-			push((tmp & 0xFF0000) >> 16)
-			push((tmp & 0xFF00) >> 8)
-			push(tmp & 0xFF)
-		}
-
-		if (placeHolders === 2) {
-			tmp = (decode(b64.charAt(i)) << 2) | (decode(b64.charAt(i + 1)) >> 4)
-			push(tmp & 0xFF)
-		} else if (placeHolders === 1) {
-			tmp = (decode(b64.charAt(i)) << 10) | (decode(b64.charAt(i + 1)) << 4) | (decode(b64.charAt(i + 2)) >> 2)
-			push((tmp >> 8) & 0xFF)
-			push(tmp & 0xFF)
-		}
-
-		return arr
-	}
-
-	function uint8ToBase64 (uint8) {
-		var i,
-			extraBytes = uint8.length % 3, // if we have 1 byte left, pad 2 bytes
-			output = "",
-			temp, length
-
-		function encode (num) {
-			return lookup.charAt(num)
-		}
-
-		function tripletToBase64 (num) {
-			return encode(num >> 18 & 0x3F) + encode(num >> 12 & 0x3F) + encode(num >> 6 & 0x3F) + encode(num & 0x3F)
-		}
-
-		// go through the array every three bytes, we'll deal with trailing stuff later
-		for (i = 0, length = uint8.length - extraBytes; i < length; i += 3) {
-			temp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
-			output += tripletToBase64(temp)
-		}
-
-		// pad the end with zeros, but make sure to not forget the extra bytes
-		switch (extraBytes) {
-			case 1:
-				temp = uint8[uint8.length - 1]
-				output += encode(temp >> 2)
-				output += encode((temp << 4) & 0x3F)
-				output += '=='
-				break
-			case 2:
-				temp = (uint8[uint8.length - 2] << 8) + (uint8[uint8.length - 1])
-				output += encode(temp >> 10)
-				output += encode((temp >> 4) & 0x3F)
-				output += encode((temp << 2) & 0x3F)
-				output += '='
-				break
-		}
-
-		return output
-	}
-
-	exports.toByteArray = b64ToByteArray
-	exports.fromByteArray = uint8ToBase64
-}(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
-
-},{}],7:[function(require,module,exports){
-exports.read = function (buffer, offset, isLE, mLen, nBytes) {
-  var e, m
-  var eLen = nBytes * 8 - mLen - 1
-  var eMax = (1 << eLen) - 1
-  var eBias = eMax >> 1
-  var nBits = -7
-  var i = isLE ? (nBytes - 1) : 0
-  var d = isLE ? -1 : 1
-  var s = buffer[offset + i]
-
-  i += d
-
-  e = s & ((1 << (-nBits)) - 1)
-  s >>= (-nBits)
-  nBits += eLen
-  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8) {}
-
-  m = e & ((1 << (-nBits)) - 1)
-  e >>= (-nBits)
-  nBits += mLen
-  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8) {}
-
-  if (e === 0) {
-    e = 1 - eBias
-  } else if (e === eMax) {
-    return m ? NaN : ((s ? -1 : 1) * Infinity)
-  } else {
-    m = m + Math.pow(2, mLen)
-    e = e - eBias
-  }
-  return (s ? -1 : 1) * m * Math.pow(2, e - mLen)
-}
-
-exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
-  var e, m, c
-  var eLen = nBytes * 8 - mLen - 1
-  var eMax = (1 << eLen) - 1
-  var eBias = eMax >> 1
-  var rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0)
-  var i = isLE ? 0 : (nBytes - 1)
-  var d = isLE ? 1 : -1
-  var s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0
-
-  value = Math.abs(value)
-
-  if (isNaN(value) || value === Infinity) {
-    m = isNaN(value) ? 1 : 0
-    e = eMax
-  } else {
-    e = Math.floor(Math.log(value) / Math.LN2)
-    if (value * (c = Math.pow(2, -e)) < 1) {
-      e--
-      c *= 2
-    }
-    if (e + eBias >= 1) {
-      value += rt / c
-    } else {
-      value += rt * Math.pow(2, 1 - eBias)
-    }
-    if (value * c >= 2) {
-      e++
-      c /= 2
-    }
-
-    if (e + eBias >= eMax) {
-      m = 0
-      e = eMax
-    } else if (e + eBias >= 1) {
-      m = (value * c - 1) * Math.pow(2, mLen)
-      e = e + eBias
-    } else {
-      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
-      e = 0
-    }
-  }
-
-  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
-
-  e = (e << mLen) | m
-  eLen += mLen
-  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
-
-  buffer[offset + i - d] |= s * 128
-}
-
-},{}],8:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-function EventEmitter() {
-  this._events = this._events || {};
-  this._maxListeners = this._maxListeners || undefined;
-}
-module.exports = EventEmitter;
-
-// Backwards-compat with node 0.10.x
-EventEmitter.EventEmitter = EventEmitter;
-
-EventEmitter.prototype._events = undefined;
-EventEmitter.prototype._maxListeners = undefined;
-
-// By default EventEmitters will print a warning if more than 10 listeners are
-// added to it. This is a useful default which helps finding memory leaks.
-EventEmitter.defaultMaxListeners = 10;
-
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-EventEmitter.prototype.setMaxListeners = function(n) {
-  if (!isNumber(n) || n < 0 || isNaN(n))
-    throw TypeError('n must be a positive number');
-  this._maxListeners = n;
-  return this;
-};
-
-EventEmitter.prototype.emit = function(type) {
-  var er, handler, len, args, i, listeners;
-
-  if (!this._events)
-    this._events = {};
-
-  // If there is no 'error' event listener then throw.
-  if (type === 'error') {
-    if (!this._events.error ||
-        (isObject(this._events.error) && !this._events.error.length)) {
-      er = arguments[1];
-      if (er instanceof Error) {
-        throw er; // Unhandled 'error' event
-      }
-      throw TypeError('Uncaught, unspecified "error" event.');
-    }
-  }
-
-  handler = this._events[type];
-
-  if (isUndefined(handler))
-    return false;
-
-  if (isFunction(handler)) {
-    switch (arguments.length) {
-      // fast cases
-      case 1:
-        handler.call(this);
-        break;
-      case 2:
-        handler.call(this, arguments[1]);
-        break;
-      case 3:
-        handler.call(this, arguments[1], arguments[2]);
-        break;
-      // slower
-      default:
-        len = arguments.length;
-        args = new Array(len - 1);
-        for (i = 1; i < len; i++)
-          args[i - 1] = arguments[i];
-        handler.apply(this, args);
-    }
-  } else if (isObject(handler)) {
-    len = arguments.length;
-    args = new Array(len - 1);
-    for (i = 1; i < len; i++)
-      args[i - 1] = arguments[i];
-
-    listeners = handler.slice();
-    len = listeners.length;
-    for (i = 0; i < len; i++)
-      listeners[i].apply(this, args);
-  }
-
-  return true;
-};
-
-EventEmitter.prototype.addListener = function(type, listener) {
-  var m;
-
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  if (!this._events)
-    this._events = {};
-
-  // To avoid recursion in the case that type === "newListener"! Before
-  // adding it to the listeners, first emit "newListener".
-  if (this._events.newListener)
-    this.emit('newListener', type,
-              isFunction(listener.listener) ?
-              listener.listener : listener);
-
-  if (!this._events[type])
-    // Optimize the case of one listener. Don't need the extra array object.
-    this._events[type] = listener;
-  else if (isObject(this._events[type]))
-    // If we've already got an array, just append.
-    this._events[type].push(listener);
-  else
-    // Adding the second element, need to change to array.
-    this._events[type] = [this._events[type], listener];
-
-  // Check for listener leak
-  if (isObject(this._events[type]) && !this._events[type].warned) {
-    var m;
-    if (!isUndefined(this._maxListeners)) {
-      m = this._maxListeners;
-    } else {
-      m = EventEmitter.defaultMaxListeners;
-    }
-
-    if (m && m > 0 && this._events[type].length > m) {
-      this._events[type].warned = true;
-      console.error('(node) warning: possible EventEmitter memory ' +
-                    'leak detected. %d listeners added. ' +
-                    'Use emitter.setMaxListeners() to increase limit.',
-                    this._events[type].length);
-      if (typeof console.trace === 'function') {
-        // not supported in IE 10
-        console.trace();
-      }
-    }
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.once = function(type, listener) {
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  var fired = false;
-
-  function g() {
-    this.removeListener(type, g);
-
-    if (!fired) {
-      fired = true;
-      listener.apply(this, arguments);
-    }
-  }
-
-  g.listener = listener;
-  this.on(type, g);
-
-  return this;
-};
-
-// emits a 'removeListener' event iff the listener was removed
-EventEmitter.prototype.removeListener = function(type, listener) {
-  var list, position, length, i;
-
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  if (!this._events || !this._events[type])
-    return this;
-
-  list = this._events[type];
-  length = list.length;
-  position = -1;
-
-  if (list === listener ||
-      (isFunction(list.listener) && list.listener === listener)) {
-    delete this._events[type];
-    if (this._events.removeListener)
-      this.emit('removeListener', type, listener);
-
-  } else if (isObject(list)) {
-    for (i = length; i-- > 0;) {
-      if (list[i] === listener ||
-          (list[i].listener && list[i].listener === listener)) {
-        position = i;
-        break;
-      }
-    }
-
-    if (position < 0)
-      return this;
-
-    if (list.length === 1) {
-      list.length = 0;
-      delete this._events[type];
-    } else {
-      list.splice(position, 1);
-    }
-
-    if (this._events.removeListener)
-      this.emit('removeListener', type, listener);
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.removeAllListeners = function(type) {
-  var key, listeners;
-
-  if (!this._events)
-    return this;
-
-  // not listening for removeListener, no need to emit
-  if (!this._events.removeListener) {
-    if (arguments.length === 0)
-      this._events = {};
-    else if (this._events[type])
-      delete this._events[type];
-    return this;
-  }
-
-  // emit removeListener for all listeners on all events
-  if (arguments.length === 0) {
-    for (key in this._events) {
-      if (key === 'removeListener') continue;
-      this.removeAllListeners(key);
-    }
-    this.removeAllListeners('removeListener');
-    this._events = {};
-    return this;
-  }
-
-  listeners = this._events[type];
-
-  if (isFunction(listeners)) {
-    this.removeListener(type, listeners);
-  } else {
-    // LIFO order
-    while (listeners.length)
-      this.removeListener(type, listeners[listeners.length - 1]);
-  }
-  delete this._events[type];
-
-  return this;
-};
-
-EventEmitter.prototype.listeners = function(type) {
-  var ret;
-  if (!this._events || !this._events[type])
-    ret = [];
-  else if (isFunction(this._events[type]))
-    ret = [this._events[type]];
-  else
-    ret = this._events[type].slice();
-  return ret;
-};
-
-EventEmitter.listenerCount = function(emitter, type) {
-  var ret;
-  if (!emitter._events || !emitter._events[type])
-    ret = 0;
-  else if (isFunction(emitter._events[type]))
-    ret = 1;
-  else
-    ret = emitter._events[type].length;
-  return ret;
-};
-
-function isFunction(arg) {
-  return typeof arg === 'function';
-}
-
-function isNumber(arg) {
-  return typeof arg === 'number';
-}
-
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
-}
-
-function isUndefined(arg) {
-  return arg === void 0;
-}
-
-},{}],9:[function(require,module,exports){
-if (typeof Object.create === 'function') {
-  // implementation from standard node.js 'util' module
-  module.exports = function inherits(ctor, superCtor) {
-    ctor.super_ = superCtor
-    ctor.prototype = Object.create(superCtor.prototype, {
-      constructor: {
-        value: ctor,
-        enumerable: false,
-        writable: true,
-        configurable: true
-      }
-    });
-  };
-} else {
-  // old school shim for old browsers
-  module.exports = function inherits(ctor, superCtor) {
-    ctor.super_ = superCtor
-    var TempCtor = function () {}
-    TempCtor.prototype = superCtor.prototype
-    ctor.prototype = new TempCtor()
-    ctor.prototype.constructor = ctor
-  }
-}
-
-},{}],10:[function(require,module,exports){
+},{"base64-js":2,"ieee754":16}],7:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2644,7 +2490,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],11:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -2718,7 +2564,7 @@ function onend() {
   });
 }
 
-},{"./readable.js":15,"./writable.js":17,"inherits":9,"process/browser.js":13}],12:[function(require,module,exports){
+},{"./readable.js":12,"./writable.js":14,"inherits":17,"process/browser.js":10}],9:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -2847,7 +2693,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"./duplex.js":11,"./passthrough.js":14,"./readable.js":15,"./transform.js":16,"./writable.js":17,"events":8,"inherits":9}],13:[function(require,module,exports){
+},{"./duplex.js":8,"./passthrough.js":11,"./readable.js":12,"./transform.js":13,"./writable.js":14,"events":5,"inherits":17}],10:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2902,7 +2748,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],14:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -2945,7 +2791,7 @@ PassThrough.prototype._transform = function(chunk, encoding, cb) {
   cb(null, chunk);
 };
 
-},{"./transform.js":16,"inherits":9}],15:[function(require,module,exports){
+},{"./transform.js":13,"inherits":17}],12:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -3881,8 +3727,8 @@ function indexOf (xs, x) {
   return -1;
 }
 
-}).call(this,require("1YiZ5S"))
-},{"./index.js":12,"1YiZ5S":10,"buffer":5,"events":8,"inherits":9,"process/browser.js":13,"string_decoder":18}],16:[function(require,module,exports){
+}).call(this,require("7YKIPe"))
+},{"./index.js":9,"7YKIPe":7,"buffer":6,"events":5,"inherits":17,"process/browser.js":10,"string_decoder":15}],13:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4088,7 +3934,7 @@ function done(stream, er) {
   return stream.push(null);
 }
 
-},{"./duplex.js":11,"inherits":9}],17:[function(require,module,exports){
+},{"./duplex.js":8,"inherits":17}],14:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4476,7 +4322,7 @@ function endWritable(stream, state, cb) {
   state.ended = true;
 }
 
-},{"./index.js":12,"buffer":5,"inherits":9,"process/browser.js":13}],18:[function(require,module,exports){
+},{"./index.js":9,"buffer":6,"inherits":17,"process/browser.js":10}],15:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4669,2166 +4515,230 @@ function base64DetectIncompleteChar(buffer) {
   return incomplete;
 }
 
-},{"buffer":5}],19:[function(require,module,exports){
-var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+},{"buffer":6}],16:[function(require,module,exports){
+exports.read = function (buffer, offset, isLE, mLen, nBytes) {
+  var e, m
+  var eLen = nBytes * 8 - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var nBits = -7
+  var i = isLE ? (nBytes - 1) : 0
+  var d = isLE ? -1 : 1
+  var s = buffer[offset + i]
 
-exports.setOrigin = function(vec, dimensions, origin) {
-  var w, x, y, z;
-  if (+dimensions === dimensions) {
-    dimensions = [dimensions];
-  }
-  x = indexOf.call(dimensions, 1) >= 0 ? 0 : origin.x;
-  y = indexOf.call(dimensions, 2) >= 0 ? 0 : origin.y;
-  z = indexOf.call(dimensions, 3) >= 0 ? 0 : origin.z;
-  w = indexOf.call(dimensions, 4) >= 0 ? 0 : origin.w;
-  return vec.set(x, y, z, w);
-};
+  i += d
 
-exports.addOrigin = (function() {
-  var v;
-  v = new THREE.Vector4;
-  return function(vec, dimension, origin) {
-    exports.setOrigin(v, dimension, origin);
-    return vec.add(v);
-  };
-})();
+  e = s & ((1 << (-nBits)) - 1)
+  s >>= (-nBits)
+  nBits += eLen
+  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8) {}
 
-exports.setDimension = function(vec, dimension) {
-  var w, x, y, z;
-  x = dimension === 1 ? 1 : 0;
-  y = dimension === 2 ? 1 : 0;
-  z = dimension === 3 ? 1 : 0;
-  w = dimension === 4 ? 1 : 0;
-  return vec.set(x, y, z, w);
-};
+  m = e & ((1 << (-nBits)) - 1)
+  e >>= (-nBits)
+  nBits += mLen
+  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8) {}
 
-exports.setDimensionNormal = function(vec, dimension) {
-  var w, x, y, z;
-  x = dimension === 1 ? 1 : 0;
-  y = dimension === 2 ? 1 : 0;
-  z = dimension === 3 ? 1 : 0;
-  w = dimension === 4 ? 1 : 0;
-  return vec.set(y, z + x, w, 0);
-};
-
-exports.recenterAxis = (function() {
-  var axis;
-  axis = [0, 0];
-  return function(x, dx, bend, f) {
-    var abs, fabs, max, min, x1, x2;
-    if (f == null) {
-      f = 0;
-    }
-    if (bend > 0) {
-      x1 = x;
-      x2 = x + dx;
-      abs = Math.max(Math.abs(x1), Math.abs(x2));
-      fabs = abs * f;
-      min = Math.min(x1, x2);
-      max = Math.max(x1, x2);
-      x = min + (-abs + fabs - min) * bend;
-      dx = max + (abs + fabs - max) * bend - x;
-    }
-    axis[0] = x;
-    axis[1] = dx;
-    return axis;
-  };
-})();
-
-
-
-},{}],20:[function(require,module,exports){
-var getSizes;
-
-exports.getSizes = getSizes = function(data) {
-  var array, sizes;
-  sizes = [];
-  array = data;
-  while (typeof array !== 'string' && ((array != null ? array.length : void 0) != null)) {
-    sizes.push(array.length);
-    array = array[0];
-  }
-  return sizes;
-};
-
-exports.getDimensions = function(data, spec) {
-  var channels, depth, dims, height, items, levels, n, nesting, ref, ref1, ref2, ref3, ref4, sizes, width;
-  if (spec == null) {
-    spec = {};
-  }
-  items = spec.items, channels = spec.channels, width = spec.width, height = spec.height, depth = spec.depth;
-  dims = {};
-  if (!data || !data.length) {
-    return {
-      items: items,
-      channels: channels,
-      width: width != null ? width : 0,
-      height: height != null ? height : 0,
-      depth: depth != null ? depth : 0
-    };
-  }
-  sizes = getSizes(data);
-  nesting = sizes.length;
-  dims.channels = channels !== 1 && sizes.length > 1 ? sizes.pop() : channels;
-  dims.items = items !== 1 && sizes.length > 1 ? sizes.pop() : items;
-  dims.width = width !== 1 && sizes.length > 1 ? sizes.pop() : width;
-  dims.height = height !== 1 && sizes.length > 1 ? sizes.pop() : height;
-  dims.depth = depth !== 1 && sizes.length > 1 ? sizes.pop() : depth;
-  levels = nesting;
-  if (channels === 1) {
-    levels++;
-  }
-  if (items === 1 && levels > 1) {
-    levels++;
-  }
-  if (width === 1 && levels > 2) {
-    levels++;
-  }
-  if (height === 1 && levels > 3) {
-    levels++;
-  }
-  n = (ref = sizes.pop()) != null ? ref : 1;
-  if (levels <= 1) {
-    n /= (ref1 = dims.channels) != null ? ref1 : 1;
-  }
-  if (levels <= 2) {
-    n /= (ref2 = dims.items) != null ? ref2 : 1;
-  }
-  if (levels <= 3) {
-    n /= (ref3 = dims.width) != null ? ref3 : 1;
-  }
-  if (levels <= 4) {
-    n /= (ref4 = dims.height) != null ? ref4 : 1;
-  }
-  n = Math.floor(n);
-  if (dims.width == null) {
-    dims.width = n;
-    n = 1;
-  }
-  if (dims.height == null) {
-    dims.height = n;
-    n = 1;
-  }
-  if (dims.depth == null) {
-    dims.depth = n;
-    n = 1;
-  }
-  return dims;
-};
-
-exports.repeatCall = function(call, times) {
-  switch (times) {
-    case 0:
-      return function() {
-        return true;
-      };
-    case 1:
-      return function() {
-        return call();
-      };
-    case 2:
-      return function() {
-        call();
-        return call();
-      };
-    case 3:
-      return function() {
-        call();
-        call();
-        call();
-        return call();
-      };
-    case 4:
-      return function() {
-        call();
-        call();
-        call();
-        return call();
-      };
-    case 6:
-      return function() {
-        call();
-        call();
-        call();
-        call();
-        call();
-        return call();
-      };
-    case 8:
-      return function() {
-        call();
-        call();
-        call();
-        call();
-        call();
-        return call();
-      };
-  }
-};
-
-exports.makeEmitter = function(thunk, items, channels) {
-  var inner, n, next, outer;
-  inner = (function() {
-    switch (channels) {
-      case 0:
-        return function() {
-          return true;
-        };
-      case 1:
-        return function(emit) {
-          return emit(thunk());
-        };
-      case 2:
-        return function(emit) {
-          return emit(thunk(), thunk());
-        };
-      case 3:
-        return function(emit) {
-          return emit(thunk(), thunk(), thunk());
-        };
-      case 4:
-        return function(emit) {
-          return emit(thunk(), thunk(), thunk(), thunk());
-        };
-      case 6:
-        return function(emit) {
-          return emit(thunk(), thunk(), thunk(), thunk(), thunk(), thunk());
-        };
-      case 8:
-        return function(emit) {
-          return emit(thunk(), thunk(), thunk(), thunk(), thunk(), thunk(), thunk(), thunk());
-        };
-    }
-  })();
-  next = null;
-  while (items > 0) {
-    n = Math.min(items, 8);
-    outer = (function() {
-      switch (n) {
-        case 1:
-          return function(emit) {
-            return inner(emit);
-          };
-        case 2:
-          return function(emit) {
-            inner(emit);
-            return inner(emit);
-          };
-        case 3:
-          return function(emit) {
-            inner(emit);
-            inner(emit);
-            return inner(emit);
-          };
-        case 4:
-          return function(emit) {
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            return inner(emit);
-          };
-        case 5:
-          return function(emit) {
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            return inner(emit);
-          };
-        case 6:
-          return function(emit) {
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            return inner(emit);
-          };
-        case 7:
-          return function(emit) {
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            return inner(emit);
-          };
-        case 8:
-          return function(emit) {
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            inner(emit);
-            return inner(emit);
-          };
-      }
-    })();
-    if (next != null) {
-      next = (function(outer, next) {
-        return function(emit) {
-          outer(emit);
-          return next(emit);
-        };
-      })(outer, next);
-    } else {
-      next = outer;
-    }
-    items -= n;
-  }
-  outer = next != null ? next : function() {
-    return true;
-  };
-  outer.reset = thunk.reset;
-  outer.rebind = thunk.rebind;
-  return outer;
-};
-
-exports.getThunk = function(data) {
-  var a, b, c, d, done, first, fourth, i, j, k, l, m, nesting, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, second, sizes, third, thunk;
-  sizes = getSizes(data);
-  nesting = sizes.length;
-  a = sizes.pop();
-  b = sizes.pop();
-  c = sizes.pop();
-  d = sizes.pop();
-  done = false;
-  switch (nesting) {
-    case 0:
-      thunk = function() {
-        return 0;
-      };
-      thunk.reset = function() {};
-      break;
-    case 1:
-      i = 0;
-      thunk = function() {
-        return data[i++];
-      };
-      thunk.reset = function() {
-        return i = 0;
-      };
-      break;
-    case 2:
-      i = j = 0;
-      first = (ref = data[j]) != null ? ref : [];
-      thunk = function() {
-        var ref1, x;
-        x = first[i++];
-        if (i === a) {
-          i = 0;
-          j++;
-          first = (ref1 = data[j]) != null ? ref1 : [];
-        }
-        return x;
-      };
-      thunk.reset = function() {
-        var ref1;
-        i = j = 0;
-        first = (ref1 = data[j]) != null ? ref1 : [];
-      };
-      break;
-    case 3:
-      i = j = k = 0;
-      second = (ref1 = data[k]) != null ? ref1 : [];
-      first = (ref2 = second[j]) != null ? ref2 : [];
-      thunk = function() {
-        var ref3, ref4, x;
-        x = first[i++];
-        if (i === a) {
-          i = 0;
-          j++;
-          if (j === b) {
-            j = 0;
-            k++;
-            second = (ref3 = data[k]) != null ? ref3 : [];
-          }
-          first = (ref4 = second[j]) != null ? ref4 : [];
-        }
-        return x;
-      };
-      thunk.reset = function() {
-        var ref3, ref4;
-        i = j = k = 0;
-        second = (ref3 = data[k]) != null ? ref3 : [];
-        first = (ref4 = second[j]) != null ? ref4 : [];
-      };
-      break;
-    case 4:
-      i = j = k = l = 0;
-      third = (ref3 = data[l]) != null ? ref3 : [];
-      second = (ref4 = third[k]) != null ? ref4 : [];
-      first = (ref5 = second[j]) != null ? ref5 : [];
-      thunk = function() {
-        var ref6, ref7, ref8, x;
-        x = first[i++];
-        if (i === a) {
-          i = 0;
-          j++;
-          if (j === b) {
-            j = 0;
-            k++;
-            if (k === c) {
-              k = 0;
-              l++;
-              third = (ref6 = data[l]) != null ? ref6 : [];
-            }
-            second = (ref7 = third[k]) != null ? ref7 : [];
-          }
-          first = (ref8 = second[j]) != null ? ref8 : [];
-        }
-        return x;
-      };
-      thunk.reset = function() {
-        var ref6, ref7, ref8;
-        i = j = k = l = 0;
-        third = (ref6 = data[l]) != null ? ref6 : [];
-        second = (ref7 = third[k]) != null ? ref7 : [];
-        first = (ref8 = second[j]) != null ? ref8 : [];
-      };
-      break;
-    case 5:
-      i = j = k = l = m = 0;
-      fourth = (ref6 = data[m]) != null ? ref6 : [];
-      third = (ref7 = fourth[l]) != null ? ref7 : [];
-      second = (ref8 = third[k]) != null ? ref8 : [];
-      first = (ref9 = second[j]) != null ? ref9 : [];
-      thunk = function() {
-        var ref10, ref11, ref12, ref13, x;
-        x = first[i++];
-        if (i === a) {
-          i = 0;
-          j++;
-          if (j === b) {
-            j = 0;
-            k++;
-            if (k === c) {
-              k = 0;
-              l++;
-              if (l === d) {
-                l = 0;
-                m++;
-                fourth = (ref10 = data[m]) != null ? ref10 : [];
-              }
-              third = (ref11 = fourth[l]) != null ? ref11 : [];
-            }
-            second = (ref12 = third[k]) != null ? ref12 : [];
-          }
-          first = (ref13 = second[j]) != null ? ref13 : [];
-        }
-        return x;
-      };
-      thunk.reset = function() {
-        var ref10, ref11, ref12, ref13;
-        i = j = k = l = m = 0;
-        fourth = (ref10 = data[m]) != null ? ref10 : [];
-        third = (ref11 = fourth[l]) != null ? ref11 : [];
-        second = (ref12 = third[k]) != null ? ref12 : [];
-        first = (ref13 = second[j]) != null ? ref13 : [];
-      };
-  }
-  thunk.rebind = function(d) {
-    data = d;
-    sizes = getSizes(data);
-    if (sizes.length) {
-      a = sizes.pop();
-    }
-    if (sizes.length) {
-      b = sizes.pop();
-    }
-    if (sizes.length) {
-      c = sizes.pop();
-    }
-    if (sizes.length) {
-      return d = sizes.pop();
-    }
-  };
-  return thunk;
-};
-
-exports.getStreamer = function(array, samples, channels, items) {
-  var consume, count, done, emit, i, j, limit, reset, skip;
-  limit = i = j = 0;
-  reset = function() {
-    limit = samples * channels * items;
-    return i = j = 0;
-  };
-  count = function() {
-    return j;
-  };
-  done = function() {
-    return limit - i <= 0;
-  };
-  skip = (function() {
-    switch (channels) {
-      case 1:
-        return function(n) {
-          i += n;
-          j += n;
-        };
-      case 2:
-        return function(n) {
-          i += n * 2;
-          j += n;
-        };
-      case 3:
-        return function(n) {
-          i += n * 3;
-          j += n;
-        };
-      case 4:
-        return function(n) {
-          i += n * 4;
-          j += n;
-        };
-    }
-  })();
-  consume = (function() {
-    switch (channels) {
-      case 1:
-        return function(emit) {
-          emit(array[i++]);
-          ++j;
-        };
-      case 2:
-        return function(emit) {
-          emit(array[i++], array[i++]);
-          ++j;
-        };
-      case 3:
-        return function(emit) {
-          emit(array[i++], array[i++], array[i++]);
-          ++j;
-        };
-      case 4:
-        return function(emit) {
-          emit(array[i++], array[i++], array[i++], array[i++]);
-          ++j;
-        };
-    }
-  })();
-  emit = (function() {
-    switch (channels) {
-      case 1:
-        return function(x) {
-          array[i++] = x;
-          ++j;
-        };
-      case 2:
-        return function(x, y) {
-          array[i++] = x;
-          array[i++] = y;
-          ++j;
-        };
-      case 3:
-        return function(x, y, z) {
-          array[i++] = x;
-          array[i++] = y;
-          array[i++] = z;
-          ++j;
-        };
-      case 4:
-        return function(x, y, z, w) {
-          array[i++] = x;
-          array[i++] = y;
-          array[i++] = z;
-          array[i++] = w;
-          ++j;
-        };
-    }
-  })();
-  consume.reset = reset;
-  emit.reset = reset;
-  reset();
-  return {
-    emit: emit,
-    consume: consume,
-    skip: skip,
-    count: count,
-    done: done,
-    reset: reset
-  };
-};
-
-exports.getLerpEmitter = function(expr1, expr2) {
-  var args, emit1, emit2, emitter, lerp1, lerp2, p, q, r, s, scratch;
-  scratch = new Float32Array(4096);
-  lerp1 = lerp2 = 0.5;
-  p = q = r = s = 0;
-  emit1 = function(x, y, z, w) {
-    r++;
-    scratch[p++] = x * lerp1;
-    scratch[p++] = y * lerp1;
-    scratch[p++] = z * lerp1;
-    return scratch[p++] = w * lerp1;
-  };
-  emit2 = function(x, y, z, w) {
-    s++;
-    scratch[q++] += x * lerp2;
-    scratch[q++] += y * lerp2;
-    scratch[q++] += z * lerp2;
-    return scratch[q++] += w * lerp2;
-  };
-  args = Math.max(expr1.length, expr2.length);
-  if (args <= 3) {
-    emitter = function(emit, x, i) {
-      var k, l, n, o, ref, results;
-      p = q = r = s = 0;
-      expr1(emit1, x, i);
-      expr2(emit2, x, i);
-      n = Math.min(r, s);
-      l = 0;
-      results = [];
-      for (k = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; k = 0 <= ref ? ++o : --o) {
-        results.push(emit(scratch[l++], scratch[l++], scratch[l++], scratch[l++]));
-      }
-      return results;
-    };
-  } else if (args <= 5) {
-    emitter = function(emit, x, y, i, j) {
-      var k, l, n, o, ref, results;
-      p = q = r = s = 0;
-      expr1(emit1, x, y, i, j);
-      expr2(emit2, x, y, i, j);
-      n = Math.min(r, s);
-      l = 0;
-      results = [];
-      for (k = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; k = 0 <= ref ? ++o : --o) {
-        results.push(emit(scratch[l++], scratch[l++], scratch[l++], scratch[l++]));
-      }
-      return results;
-    };
-  } else if (args <= 7) {
-    emitter = function(emit, x, y, z, i, j, k) {
-      var l, n, o, ref, results;
-      p = q = r = s = 0;
-      expr1(emit1, x, y, z, i, j, k);
-      expr2(emit2, x, y, z, i, j, k);
-      n = Math.min(r, s);
-      l = 0;
-      results = [];
-      for (k = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; k = 0 <= ref ? ++o : --o) {
-        results.push(emit(scratch[l++], scratch[l++], scratch[l++], scratch[l++]));
-      }
-      return results;
-    };
-  } else if (args <= 9) {
-    emitter = function(emit, x, y, z, w, i, j, k, l) {
-      var n, o, ref, results;
-      p = q = r = s = 0;
-      expr1(emit1, x, y, z, w, i, j, k, l);
-      expr2(emit2, x, y, z, w, i, j, k, l);
-      n = Math.min(r, s);
-      l = 0;
-      results = [];
-      for (k = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; k = 0 <= ref ? ++o : --o) {
-        results.push(emit(scratch[l++], scratch[l++], scratch[l++], scratch[l++]));
-      }
-      return results;
-    };
+  if (e === 0) {
+    e = 1 - eBias
+  } else if (e === eMax) {
+    return m ? NaN : ((s ? -1 : 1) * Infinity)
   } else {
-    emitter = function(emit, x, y, z, w, i, j, k, l, d, t) {
-      var n, o, ref, results;
-      p = q = 0;
-      expr1(emit1, x, y, z, w, i, j, k, l, d, t);
-      expr2(emit2, x, y, z, w, i, j, k, l, d, t);
-      n = Math.min(r, s);
-      l = 0;
-      results = [];
-      for (k = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; k = 0 <= ref ? ++o : --o) {
-        results.push(emit(scratch[l++], scratch[l++], scratch[l++], scratch[l++]));
-      }
-      return results;
-    };
+    m = m + Math.pow(2, mLen)
+    e = e - eBias
   }
-  emitter.lerp = function(f) {
-    var ref;
-    return ref = [1 - f, f], lerp1 = ref[0], lerp2 = ref[1], ref;
-  };
-  return emitter;
-};
-
-exports.getLerpThunk = function(data1, data2) {
-  var n, n1, n2, scratch, thunk1, thunk2;
-  n1 = exports.getSizes(data1).reduce(function(a, b) {
-    return a * b;
-  });
-  n2 = exports.getSizes(data2).reduce(function(a, b) {
-    return a * b;
-  });
-  n = Math.min(n1, n2);
-  thunk1 = exports.getThunk(data1);
-  thunk2 = exports.getThunk(data2);
-  scratch = new Float32Array(n);
-  scratch.lerp = function(f) {
-    var a, b, i, results;
-    thunk1.reset();
-    thunk2.reset();
-    i = 0;
-    results = [];
-    while (i < n) {
-      a = thunk1();
-      b = thunk2();
-      results.push(scratch[i++] = a + (b - a) * f);
-    }
-    return results;
-  };
-  return scratch;
-};
-
-
-
-},{}],21:[function(require,module,exports){
-var ease, π;
-
-π = Math.PI;
-
-ease = {
-  clamp: function(x, a, b) {
-    return Math.max(a, Math.min(b, x));
-  },
-  cosine: function(x) {
-    return .5 - .5 * Math.cos(ease.clamp(x, 0, 1) * π);
-  },
-  binary: function(x) {
-    return +(x >= .5);
-  },
-  hold: function(x) {
-    return +(x >= 1);
-  }
-};
-
-module.exports = ease;
-
-
-
-},{}],22:[function(require,module,exports){
-var index, letters, parseOrder, toFloatString, toType,
-  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
-
-letters = 'xyzw'.split('');
-
-index = {
-  0: -1,
-  x: 0,
-  y: 1,
-  z: 2,
-  w: 3
-};
-
-parseOrder = function(order) {
-  if (order === "" + order) {
-    order = order.split('');
-  }
-  if (order === +order) {
-    order = [order];
-  }
-  return order;
-};
-
-toType = function(type) {
-  if (type === +type) {
-    type = 'vec' + type;
-  }
-  if (type === 'vec1') {
-    type = 'float';
-  }
-  return type;
-};
-
-toFloatString = function(value) {
-  value = "" + value;
-  if (value.indexOf('.') < 0) {
-    return value += '.0';
-  }
-};
-
-exports.mapByte2FloatOffset = function(stretch) {
-  var factor;
-  if (stretch == null) {
-    stretch = 4;
-  }
-  factor = toFloatString(stretch);
-  return "vec4 float2ByteIndex(vec4 xyzw, out float channelIndex) {\n  float relative = xyzw.w / " + factor + ";\n  float w = floor(relative);\n  channelIndex = (relative - w) * " + factor + ";\n  return vec4(xyzw.xyz, w);\n}";
-};
-
-exports.sample2DArray = function(textures) {
-  var body, divide;
-  divide = function(a, b) {
-    var mid, out;
-    if (a === b) {
-      out = "return texture2D(dataTextures[" + a + "], uv);";
-    } else {
-      mid = Math.ceil(a + (b - a) / 2);
-      out = "if (z < " + (mid - .5) + ") {\n  " + (divide(a, mid - 1)) + "\n}\nelse {\n  " + (divide(mid, b)) + "\n}";
-    }
-    return out = out.replace(/\n/g, "\n  ");
-  };
-  body = divide(0, textures - 1);
-  return "uniform sampler2D dataTextures[" + textures + "];\n\nvec4 sample2DArray(vec2 uv, float z) {\n  " + body + "\n}";
-};
-
-exports.binaryOperator = function(type, op, curry) {
-  type = toType(type);
-  if (curry != null) {
-    return type + " binaryOperator(" + type + " a) {\n  return a " + op + " " + curry + ";\n}";
-  } else {
-    return type + " binaryOperator(" + type + " a, " + type + " b) {\n  return a " + op + " b;\n}";
-  }
-};
-
-exports.extendVec = function(from, to, value) {
-  var ctor, diff, k, parts, results;
-  if (value == null) {
-    value = 0;
-  }
-  if (from > to) {
-    return exports.truncateVec(from, to);
-  }
-  diff = to - from;
-  from = toType(from);
-  to = toType(to);
-  value = toFloatString(value);
-  parts = (function() {
-    results = [];
-    for (var k = 0; 0 <= diff ? k <= diff : k >= diff; 0 <= diff ? k++ : k--){ results.push(k); }
-    return results;
-  }).apply(this).map(function(x) {
-    if (x) {
-      return value;
-    } else {
-      return 'v';
-    }
-  });
-  ctor = parts.join(',');
-  return to + " extendVec(" + from + " v) { return " + to + "(" + ctor + "); }";
-};
-
-exports.truncateVec = function(from, to) {
-  var swizzle;
-  if (from < to) {
-    return exports.extendVec(from, to);
-  }
-  swizzle = '.' + ('xyzw'.substr(0, to));
-  from = toType(from);
-  to = toType(to);
-  return to + " truncateVec(" + from + " v) { return v" + swizzle + "; }";
-};
-
-exports.injectVec4 = function(order) {
-  var args, channel, i, k, len, mask, swizzler;
-  swizzler = ['0.0', '0.0', '0.0', '0.0'];
-  order = parseOrder(order);
-  order = order.map(function(v) {
-    if (v === "" + v) {
-      return index[v];
-    } else {
-      return v;
-    }
-  });
-  for (i = k = 0, len = order.length; k < len; i = ++k) {
-    channel = order[i];
-    swizzler[channel] = ['a', 'b', 'c', 'd'][i];
-  }
-  mask = swizzler.slice(0, 4).join(', ');
-  args = ['float a', 'float b', 'float c', 'float d'].slice(0, order.length);
-  return "vec4 inject(" + args + ") {\n  return vec4(" + mask + ");\n}";
-};
-
-exports.swizzleVec4 = function(order, size) {
-  var lookup, mask;
-  if (size == null) {
-    size = null;
-  }
-  lookup = ['0.0', 'xyzw.x', 'xyzw.y', 'xyzw.z', 'xyzw.w'];
-  if (size == null) {
-    size = order.length;
-  }
-  order = parseOrder(order);
-  order = order.map(function(v) {
-    var ref;
-    if (ref = +v, indexOf.call([0, 1, 2, 3, 4], ref) >= 0) {
-      v = +v;
-    }
-    if (v === "" + v) {
-      v = index[v] + 1;
-    }
-    return lookup[v];
-  });
-  while (order.length < size) {
-    order.push('0.0');
-  }
-  mask = order.join(', ');
-  return ("vec" + size + " swizzle(vec4 xyzw) {\n  return vec" + size + "(" + mask + ");\n}").replace(/vec1/g, 'float');
-};
-
-exports.invertSwizzleVec4 = function(order) {
-  var i, j, k, len, letter, mask, src, swizzler;
-  swizzler = ['0.0', '0.0', '0.0', '0.0'];
-  order = parseOrder(order);
-  order = order.map(function(v) {
-    if (v === +v) {
-      return letters[v - 1];
-    } else {
-      return v;
-    }
-  });
-  for (i = k = 0, len = order.length; k < len; i = ++k) {
-    letter = order[i];
-    src = letters[i];
-    j = index[letter];
-    swizzler[j] = "xyzw." + src;
-  }
-  mask = swizzler.join(', ');
-  return "vec4 invertSwizzle(vec4 xyzw) {\n  return vec4(" + mask + ");\n}";
-};
-
-exports.identity = function(type) {
-  var args;
-  args = [].slice.call(arguments);
-  if (args.length > 1) {
-    args = args.map(function(t, i) {
-      return ['inout', t, String.fromCharCode(97 + i)].join(' ');
-    });
-    args = args.join(', ');
-    return "void identity(" + args + ") { }";
-  } else {
-    return type + " identity(" + type + " x) {\n  return x;\n}";
-  }
-};
-
-exports.constant = function(type, value) {
-  return type + " constant() {\n  return " + value + ";\n}";
-};
-
-exports.toType = toType;
-
-
-
-},{}],23:[function(require,module,exports){
-exports.Axis = require('./axis');
-
-exports.Data = require('./data');
-
-exports.Ease = require('./ease');
-
-exports.GLSL = require('./glsl');
-
-exports.JS = require('./js');
-
-exports.Pretty = require('./pretty');
-
-exports.Three = require('./three');
-
-exports.Ticks = require('./ticks');
-
-exports.VDOM = require('./vdom');
-
-
-
-},{"./axis":19,"./data":20,"./ease":21,"./glsl":22,"./js":24,"./pretty":25,"./three":26,"./ticks":27,"./vdom":28}],24:[function(require,module,exports){
-exports.merge = function() {
-  var i, k, len, obj, v, x;
-  x = {};
-  for (i = 0, len = arguments.length; i < len; i++) {
-    obj = arguments[i];
-    for (k in obj) {
-      v = obj[k];
-      x[k] = v;
-    }
-  }
-  return x;
-};
-
-exports.clone = function(o) {
-  return JSON.parse(JSON.serialize(o));
-};
-
-exports.parseQuoted = function(str) {
-  var accum, char, chunk, i, len, list, munch, quote, token, unescape;
-  accum = "";
-  unescape = function(str) {
-    return str = str.replace(/\\/g, '');
-  };
-  munch = function(next) {
-    if (accum.length) {
-      list.push(unescape(accum));
-    }
-    return accum = next != null ? next : "";
-  };
-  str = str.split(/(?=(?:\\.|["' ,]))/g);
-  quote = false;
-  list = [];
-  for (i = 0, len = str.length; i < len; i++) {
-    chunk = str[i];
-    char = chunk[0];
-    token = chunk.slice(1);
-    switch (char) {
-      case '"':
-      case "'":
-        if (quote) {
-          if (quote === char) {
-            quote = false;
-            munch(token);
-          } else {
-            accum += chunk;
-          }
-        } else {
-          if (accum !== '') {
-            throw new Error("ParseError: String `" + str + "` does not contain comma-separated quoted tokens.");
-          }
-          quote = char;
-          accum += token;
-        }
-        break;
-      case ' ':
-      case ',':
-        if (!quote) {
-          munch(token);
-        } else {
-          accum += chunk;
-        }
-        break;
-      default:
-        accum += chunk;
-    }
-  }
-  munch();
-  return list;
-};
-
-
-
-},{}],25:[function(require,module,exports){
-var NUMBER_PRECISION, NUMBER_THRESHOLD, checkFactor, checkUnit, escapeHTML, formatFactors, formatFraction, formatMultiple, formatPrimes, prettyFormat, prettyJSXBind, prettyJSXPair, prettyJSXProp, prettyMarkup, prettyNumber, prettyPrint;
-
-NUMBER_PRECISION = 5;
-
-NUMBER_THRESHOLD = 0.0001;
-
-checkFactor = function(v, f) {
-  return Math.abs(v / f - Math.round(v / f)) < NUMBER_THRESHOLD;
-};
-
-checkUnit = function(v) {
-  return checkFactor(v, 1);
-};
-
-formatMultiple = function(v, f, k, compact) {
-  var d;
-  d = Math.round(v / f);
-  if (d === 1) {
-    return "" + k;
-  }
-  if (d === -1) {
-    return "-" + k;
-  }
-  if (k === '1') {
-    return "" + d;
-  }
-  if (compact) {
-    return "" + d + k;
-  } else {
-    return d + "*" + k;
-  }
-};
-
-formatFraction = function(v, f, k, compact) {
-  var d;
-  d = Math.round(v * f);
-  if (Math.abs(d) === 1) {
-    d = d < 0 ? "-" : "";
-    d += k;
-  } else if (k !== '1') {
-    d += compact ? "" + k : "*" + k;
-  }
-  return d + "/" + f;
-};
-
-formatFactors = [
-  {
-    1: 1
-  }, {
-    1: 1,
-    τ: Math.PI * 2
-  }, {
-    1: 1,
-    π: Math.PI
-  }, {
-    1: 1,
-    τ: Math.PI * 2,
-    π: Math.PI
-  }, {
-    1: 1,
-    e: Math.E
-  }, {
-    1: 1,
-    τ: Math.PI * 2,
-    e: Math.E
-  }, {
-    1: 1,
-    π: Math.PI,
-    e: Math.E
-  }, {
-    1: 1,
-    τ: Math.PI * 2,
-    π: Math.PI,
-    e: Math.E
-  }
-];
-
-formatPrimes = [[2 * 2 * 3 * 5 * 7, [2, 3, 5, 7]], [2 * 2 * 2 * 3 * 3 * 5 * 5 * 7 * 7, [2, 3, 5, 7]], [2 * 2 * 3 * 5 * 7 * 11 * 13, [2, 3, 5, 7, 11, 13]], [2 * 2 * 17 * 19 * 23 * 29, [2, 17, 19, 23, 29]], [256 * 256, [2]], [1000000, [2, 5]]];
-
-prettyNumber = function(options) {
-  var cache, cacheIndex, compact, e, formatIndex, numberCache, pi, precision, tau, threshold;
-  if (options) {
-    cache = options.cache, compact = options.compact, tau = options.tau, pi = options.pi, e = options.e, threshold = options.threshold, precision = options.precision;
-  }
-  compact = +(!!(compact != null ? compact : true));
-  tau = +(!!(tau != null ? tau : true));
-  pi = +(!!(pi != null ? pi : true));
-  e = +(!!(e != null ? e : true));
-  cache = +(!!(cache != null ? cache : true));
-  threshold = +(threshold != null ? threshold : NUMBER_THRESHOLD);
-  precision = +(precision != null ? precision : NUMBER_PRECISION);
-  formatIndex = tau + pi * 2 + e * 4;
-  cacheIndex = formatIndex + threshold + precision;
-  numberCache = cache ? {} : null;
-  return function(v) {
-    var best, cached, d, denom, f, i, j, k, len, len1, list, match, n, numer, out, p, ref, ref1;
-    if (numberCache != null) {
-      if ((cached = numberCache[v]) != null) {
-        return cached;
-      }
-      if (v === Math.round(v)) {
-        return numberCache[v] = "" + v;
-      }
-    }
-    out = "" + v;
-    best = out.length + out.indexOf('.') + 2;
-    match = function(x) {
-      var d;
-      d = x.length;
-      if (d <= best) {
-        out = "" + x;
-        return best = d;
-      }
-    };
-    ref = formatFactors[formatIndex];
-    for (k in ref) {
-      f = ref[k];
-      if (checkUnit(v / f)) {
-        match("" + (formatMultiple(v / f, 1, k, compact)));
-      } else {
-        for (i = 0, len = formatPrimes.length; i < len; i++) {
-          ref1 = formatPrimes[i], denom = ref1[0], list = ref1[1];
-          numer = v / f * denom;
-          if (checkUnit(numer)) {
-            for (j = 0, len1 = list.length; j < len1; j++) {
-              p = list[j];
-              while (checkUnit(n = numer / p) && checkUnit(d = denom / p)) {
-                numer = n;
-                denom = d;
-              }
-            }
-            match("" + (formatFraction(v / f, denom, k, compact)));
-            break;
-          }
-        }
-      }
-    }
-    if (("" + v).length > NUMBER_PRECISION) {
-      match("" + (v.toPrecision(NUMBER_PRECISION)));
-    }
-    if (numberCache != null) {
-      numberCache[v] = out;
-    }
-    return out;
-  };
-};
-
-prettyPrint = function(markup, level) {
-  if (level == null) {
-    level = 'info';
-  }
-  markup = prettyMarkup(markup);
-  return console[level].apply(console, markup);
-};
-
-prettyMarkup = function(markup) {
-  var args, attr, nested, obj, quoted, str, tag, txt;
-  tag = 'color:rgb(128,0,128)';
-  attr = 'color:rgb(144,64,0)';
-  str = 'color:rgb(0,0,192)';
-  obj = 'color:rgb(0,70,156)';
-  txt = 'color:inherit';
-  quoted = false;
-  nested = 0;
-  args = [];
-  markup = markup.replace(/(\\[<={}> "'])|(=>|[<={}> "'])/g, function(_, escape, char) {
-    var res;
-    if (escape != null ? escape.length : void 0) {
-      return escape;
-    }
-    if (quoted && (char !== '"' && char !== "'")) {
-      return char;
-    }
-    if (nested && (char !== '"' && char !== "'" && char !== '{' && char !== "}")) {
-      return char;
-    }
-    return res = (function() {
-      switch (char) {
-        case '<':
-          args.push(tag);
-          return "%c<";
-        case '>':
-          args.push(tag);
-          args.push(txt);
-          return "%c>%c";
-        case ' ':
-          args.push(attr);
-          return " %c";
-        case '=':
-        case '=>':
-          args.push(tag);
-          return "%c" + char;
-        case '"':
-        case "'":
-          quoted = !quoted;
-          if (quoted) {
-            args.push(nested ? attr : str);
-            return char + "%c";
-          } else {
-            args.push(nested ? obj : tag);
-            return "%c" + char;
-          }
-          break;
-        case '{':
-          if (nested++ === 0) {
-            args.push(obj);
-            return "%c" + char;
-          } else {
-            return char;
-          }
-          break;
-        case '}':
-          if (--nested === 0) {
-            args.push(tag);
-            return char + "%c";
-          } else {
-            return char;
-          }
-          break;
-        default:
-          return char;
-      }
-    })();
-  });
-  return [markup].concat(args);
-};
-
-prettyJSXProp = function(k, v) {
-  return prettyJSXPair(k, v, '=');
-};
-
-prettyJSXBind = function(k, v) {
-  return prettyJSXPair(k, v, '=>');
-};
-
-prettyJSXPair = (function() {
-  var formatNumber;
-  formatNumber = prettyNumber({
-    compact: false
-  });
-  return function(k, v, op) {
-    var key, value, wrap;
-    key = function(k) {
-      if ((k === "" + +k) || k.match(/^[A-Za-z_][A-Za-z0-9]*$/)) {
-        return k;
-      } else {
-        return JSON.stringify(k);
-      }
-    };
-    wrap = function(v) {
-      if (v.match('\n*"')) {
-        return v;
-      } else {
-        return "{" + v + "}";
-      }
-    };
-    value = function(v) {
-      var kk, vv;
-      if (v instanceof Array) {
-        return "[" + (v.map(value).join(', ')) + "]";
-      }
-      switch (typeof v) {
-        case 'string':
-          if (v.match("\n")) {
-            return "\"\n" + v + "\"\n";
-          } else {
-            return "\"" + v + "\"";
-          }
-          break;
-        case 'function':
-          v = "" + v;
-          if (v.match("\n")) {
-            "\n" + v + "\n";
-          } else {
-            "" + v;
-          }
-          v = v.replace(/^function (\([^)]+\))/, "$1 =>");
-          return v = v.replace(/^(\([^)]+\)) =>\s*{\s*return\s*([^}]+)\s*;\s*}/, "$1 => $2");
-        case 'number':
-          return formatNumber(v);
-        default:
-          if ((v != null) && v !== !!v) {
-            if (v._up != null) {
-              return value(v.map(function(v) {
-                return v;
-              }));
-            }
-            if (v.toMarkup) {
-              return v.toString();
-            } else {
-              return "{" + ((function() {
-                var results;
-                results = [];
-                for (kk in v) {
-                  vv = v[kk];
-                  if (v.hasOwnProperty(kk)) {
-                    results.push((key(kk)) + ": " + (value(vv)));
-                  }
-                }
-                return results;
-              })()).join(", ") + "}";
-            }
-          } else {
-            return "" + (JSON.stringify(v));
-          }
-      }
-    };
-    return [k, op, wrap(value(v))].join('');
-  };
-})();
-
-escapeHTML = function(str) {
-  str = str.replace(/&/g, '&amp;');
-  str = str.replace(/</g, '&lt;');
-  return str = str.replace(/"/g, '&quot;');
-};
-
-prettyFormat = function(str) {
-  var arg, args, i, len, out;
-  args = [].slice.call(arguments);
-  args.shift();
-  out = "<span>";
-  str = escapeHTML(str);
-  for (i = 0, len = args.length; i < len; i++) {
-    arg = args[i];
-    str = str.replace(/%([a-z])/, function(_, f) {
-      var v;
-      v = args.shift();
-      switch (f) {
-        case 'c':
-          return "</span><span style=\"" + (escapeHTML(v)) + "\">";
-        default:
-          return escapeHTML(v);
-      }
-    });
-  }
-  out += str;
-  return out += "</span>";
-};
-
-module.exports = {
-  markup: prettyMarkup,
-  number: prettyNumber,
-  print: prettyPrint,
-  format: prettyFormat,
-  JSX: {
-    prop: prettyJSXProp,
-    bind: prettyJSXBind
-  }
-};
-
-
-/*
-for x in [1, 2, 1/2, 3, 1/3, Math.PI, Math.PI / 2, Math.PI * 2, Math.PI * 3, Math.PI * 4, Math.PI * 3 / 4, Math.E * 100, Math.E / 100]
-  console.log prettyNumber({})(x)
- */
-
-
-
-},{}],26:[function(require,module,exports){
-exports.paramToGL = function(gl, p) {
-  if (p === THREE.RepeatWrapping) {
-    return gl.REPEAT;
-  }
-  if (p === THREE.ClampToEdgeWrapping) {
-    return gl.CLAMP_TO_EDGE;
-  }
-  if (p === THREE.MirroredRepeatWrapping) {
-    return gl.MIRRORED_REPEAT;
-  }
-  if (p === THREE.NearestFilter) {
-    return gl.NEAREST;
-  }
-  if (p === THREE.NearestMipMapNearestFilter) {
-    return gl.NEAREST_MIPMAP_NEAREST;
-  }
-  if (p === THREE.NearestMipMapLinearFilter) {
-    return gl.NEAREST_MIPMAP_LINEAR;
-  }
-  if (p === THREE.LinearFilter) {
-    return gl.LINEAR;
-  }
-  if (p === THREE.LinearMipMapNearestFilter) {
-    return gl.LINEAR_MIPMAP_NEAREST;
-  }
-  if (p === THREE.LinearMipMapLinearFilter) {
-    return gl.LINEAR_MIPMAP_LINEAR;
-  }
-  if (p === THREE.UnsignedByteType) {
-    return gl.UNSIGNED_BYTE;
-  }
-  if (p === THREE.UnsignedShort4444Type) {
-    return gl.UNSIGNED_SHORT_4_4_4_4;
-  }
-  if (p === THREE.UnsignedShort5551Type) {
-    return gl.UNSIGNED_SHORT_5_5_5_1;
-  }
-  if (p === THREE.UnsignedShort565Type) {
-    return gl.UNSIGNED_SHORT_5_6_5;
-  }
-  if (p === THREE.ByteType) {
-    return gl.BYTE;
-  }
-  if (p === THREE.ShortType) {
-    return gl.SHORT;
-  }
-  if (p === THREE.UnsignedShortType) {
-    return gl.UNSIGNED_SHORT;
-  }
-  if (p === THREE.IntType) {
-    return gl.INT;
-  }
-  if (p === THREE.UnsignedIntType) {
-    return gl.UNSIGNED_INT;
-  }
-  if (p === THREE.FloatType) {
-    return gl.FLOAT;
-  }
-  if (p === THREE.AlphaFormat) {
-    return gl.ALPHA;
-  }
-  if (p === THREE.RGBFormat) {
-    return gl.RGB;
-  }
-  if (p === THREE.RGBAFormat) {
-    return gl.RGBA;
-  }
-  if (p === THREE.LuminanceFormat) {
-    return gl.LUMINANCE;
-  }
-  if (p === THREE.LuminanceAlphaFormat) {
-    return gl.LUMINANCE_ALPHA;
-  }
-  if (p === THREE.AddEquation) {
-    return gl.FUNC_ADD;
-  }
-  if (p === THREE.SubtractEquation) {
-    return gl.FUNC_SUBTRACT;
-  }
-  if (p === THREE.ReverseSubtractEquation) {
-    return gl.FUNC_REVERSE_SUBTRACT;
-  }
-  if (p === THREE.ZeroFactor) {
-    return gl.ZERO;
-  }
-  if (p === THREE.OneFactor) {
-    return gl.ONE;
-  }
-  if (p === THREE.SrcColorFactor) {
-    return gl.SRC_COLOR;
-  }
-  if (p === THREE.OneMinusSrcColorFactor) {
-    return gl.ONE_MINUS_SRC_COLOR;
-  }
-  if (p === THREE.SrcAlphaFactor) {
-    return gl.SRC_ALPHA;
-  }
-  if (p === THREE.OneMinusSrcAlphaFactor) {
-    return gl.ONE_MINUS_SRC_ALPHA;
-  }
-  if (p === THREE.DstAlphaFactor) {
-    return gl.DST_ALPHA;
-  }
-  if (p === THREE.OneMinusDstAlphaFactor) {
-    return gl.ONE_MINUS_DST_ALPHA;
-  }
-  if (p === THREE.DstColorFactor) {
-    return gl.DST_COLOR;
-  }
-  if (p === THREE.OneMinusDstColorFactor) {
-    return gl.ONE_MINUS_DST_COLOR;
-  }
-  if (p === THREE.SrcAlphaSaturateFactor) {
-    return gl.SRC_ALPHA_SATURATE;
-  }
-  return 0;
-};
-
-exports.paramToArrayStorage = function(type) {
-  switch (type) {
-    case THREE.UnsignedByteType:
-      return Uint8Array;
-    case THREE.ByteType:
-      return Int8Array;
-    case THREE.ShortType:
-      return Int16Array;
-    case THREE.UnsignedShortType:
-      return Uint16Array;
-    case THREE.IntType:
-      return Int32Array;
-    case THREE.UnsignedIntType:
-      return Uint32Array;
-    case THREE.FloatType:
-      return Float32Array;
-  }
-};
-
-exports.swizzleToEulerOrder = function(swizzle) {
-  return swizzle.map(function(i) {
-    return ['', 'X', 'Y', 'Z'][i];
-  }).join('');
-};
-
-exports.transformComposer = function() {
-  var euler, pos, quat, scl, transform;
-  euler = new THREE.Euler;
-  quat = new THREE.Quaternion;
-  pos = new THREE.Vector3;
-  scl = new THREE.Vector3;
-  transform = new THREE.Matrix4;
-  return function(position, rotation, quaternion, scale, matrix, eulerOrder) {
-    if (eulerOrder == null) {
-      eulerOrder = 'XYZ';
-    }
-    if (rotation != null) {
-      if (eulerOrder instanceof Array) {
-        eulerOrder = exports.swizzleToEulerOrder(eulerOrder);
-      }
-      euler.setFromVector3(rotation, eulerOrder);
-      quat.setFromEuler(euler);
-    } else {
-      quat.set(0, 0, 0, 1);
-    }
-    if (quaternion != null) {
-      quat.multiply(quaternion);
-    }
-    if (position != null) {
-      pos.copy(position);
-    } else {
-      pos.set(0, 0, 0);
-    }
-    if (scale != null) {
-      scl.copy(scale);
-    } else {
-      scl.set(1, 1, 1);
-    }
-    transform.compose(pos, quat, scl);
-    if (matrix != null) {
-      transform.multiplyMatrices(transform, matrix);
-    }
-    return transform;
-  };
-};
-
-
-
-},{}],27:[function(require,module,exports){
-
-/*
- Generate equally spaced ticks in a range at sensible positions.
- 
- @param min/max - Minimum and maximum of range
- @param n - Desired number of ticks in range
- @param unit - Base unit of scale (e.g. 1 or π).
- @param scale - Division scale (e.g. 2 = binary division, or 10 = decimal division).
- @param bias - Integer to bias divisions one or more levels up or down (to create nested scales)
- @param start - Whether to include a tick at the start
- @param end - Whether to include a tick at the end
- @param zero - Whether to include zero as a tick
- @param nice - Whether to round to a more reasonable interval
- */
-var LINEAR, LOG, linear, log, make;
-
-linear = function(min, max, n, unit, base, factor, start, end, zero, nice) {
-  var distance, f, factors, i, ideal, ref, span, step, steps, ticks;
-  if (nice == null) {
-    nice = true;
-  }
-  n || (n = 10);
-  unit || (unit = 1);
-  base || (base = 10);
-  factor || (factor = 1);
-  span = max - min;
-  ideal = span / n;
-  if (!nice) {
-    ticks = (function() {
-      var j, ref1, results;
-      results = [];
-      for (i = j = 0, ref1 = n; 0 <= ref1 ? j <= ref1 : j >= ref1; i = 0 <= ref1 ? ++j : --j) {
-        results.push(min + i * ideal);
-      }
-      return results;
-    })();
-    if (!start) {
-      ticks.shift();
-    }
-    if (!end) {
-      ticks.pop();
-    }
-    if (!zero) {
-      ticks = ticks.filter(function(x) {
-        return x !== 0;
-      });
-    }
-    return ticks;
-  }
-  unit || (unit = 1);
-  base || (base = 10);
-  ref = unit * (Math.pow(base, Math.floor(Math.log(ideal / unit) / Math.log(base))));
-  factors = base % 2 === 0 ? [base / 2, 1, 1 / 2] : base % 3 === 0 ? [base / 3, 1, 1 / 3] : [1];
-  steps = (function() {
-    var j, len, results;
-    results = [];
-    for (j = 0, len = factors.length; j < len; j++) {
-      f = factors[j];
-      results.push(ref * f);
-    }
-    return results;
-  })();
-  distance = Infinity;
-  step = steps.reduce(function(ref, step) {
-    var d;
-    f = step / ideal;
-    d = Math.max(f, 1 / f);
-    if (d < distance) {
-      distance = d;
-      return step;
-    } else {
-      return ref;
-    }
-  }, ref);
-  step *= factor;
-  min = (Math.ceil((min / step) + +(!start))) * step;
-  max = (Math.floor(max / step) - +(!end)) * step;
-  n = Math.ceil((max - min) / step);
-  ticks = (function() {
-    var j, ref1, results;
-    results = [];
-    for (i = j = 0, ref1 = n; 0 <= ref1 ? j <= ref1 : j >= ref1; i = 0 <= ref1 ? ++j : --j) {
-      results.push(min + i * step);
-    }
-    return results;
-  })();
-  if (!zero) {
-    ticks = ticks.filter(function(x) {
-      return x !== 0;
-    });
-  }
-  return ticks;
-};
-
-
-/*
- Generate logarithmically spaced ticks in a range at sensible positions.
- */
-
-log = function(min, max, n, unit, base, bias, start, end, zero, nice) {
-  throw new Error("Log ticks not yet implemented.");
-};
-
-LINEAR = 0;
-
-LOG = 1;
-
-make = function(type, min, max, n, unit, base, bias, start, end, zero, nice) {
-  switch (type) {
-    case LINEAR:
-      return linear(min, max, n, unit, base, bias, start, end, zero, nice);
-    case LOG:
-      return log(min, max, n, unit, base, bias, start, end, zero, nice);
-  }
-};
-
-exports.make = make;
-
-exports.linear = linear;
-
-exports.log = log;
-
-
-
-},{}],28:[function(require,module,exports){
-var HEAP, Types, apply, createClass, descriptor, element, hint, id, j, key, len, map, mount, prop, recycle, ref1, set, unmount, unset;
-
-HEAP = [];
-
-id = 0;
-
-Types = {
-
-  /*
-   * el('example', props, children);
-  example: MathBox.DOM.createClass({
-    render: (el, props, children) ->
-       * VDOM node
-      return el('span', { className: "foo" }, "Hello World")
-  })
-   */
-};
-
-descriptor = function() {
-  return {
-    id: id++,
-    type: null,
-    props: null,
-    children: null,
-    rendered: null,
-    instance: null
-  };
-};
-
-hint = function(n) {
-  var i, j, ref1, results;
-  n *= 2;
-  n = Math.max(0, HEAP.length - n);
-  results = [];
-  for (i = j = 0, ref1 = n; 0 <= ref1 ? j < ref1 : j > ref1; i = 0 <= ref1 ? ++j : --j) {
-    results.push(HEAP.push(descriptor()));
-  }
-  return results;
-};
-
-element = function(type, props, children) {
-  var el;
-  el = HEAP.length ? HEAP.pop() : descriptor();
-  el.type = type != null ? type : 'div';
-  el.props = props != null ? props : null;
-  el.children = children != null ? children : null;
-  return el;
-};
-
-recycle = function(el) {
-  var child, children, j, len;
-  if (!el.type) {
-    return;
-  }
-  children = el.children;
-  el.type = el.props = el.children = el.instance = null;
-  HEAP.push(el);
-  if (children != null) {
-    for (j = 0, len = children.length; j < len; j++) {
-      child = children[j];
-      recycle(child);
-    }
-  }
-};
-
-apply = function(el, last, node, parent, index) {
-  var base, child, childNodes, children, comp, dirty, i, j, k, key, l, len, len1, nextChildren, nextProps, nextState, prevProps, prevState, props, ref, ref1, ref2, ref3, ref4, ref5, same, should, type, v, value;
-  if (el != null) {
-    if (last == null) {
-      return mount(el, parent, index);
-    } else {
-      if (el instanceof Node) {
-        same = el === last;
-        if (same) {
-          return;
-        }
-      } else {
-        same = typeof el === typeof last && last !== null && el !== null && el.type === last.type;
-      }
-      if (!same) {
-        unmount(last.instance, node);
-        node.remove();
-        return mount(el, parent, index);
-      } else {
-        el.instance = last.instance;
-        type = ((ref1 = el.type) != null ? ref1.isComponentClass : void 0) ? el.type : Types[el.type];
-        props = last != null ? last.props : void 0;
-        nextProps = el.props;
-        children = (ref2 = last != null ? last.children : void 0) != null ? ref2 : null;
-        nextChildren = el.children;
-        if (nextProps != null) {
-          nextProps.children = nextChildren;
-        }
-        if (type != null) {
-          dirty = node._COMPONENT_DIRTY;
-          if ((props != null) !== (nextProps != null)) {
-            dirty = true;
-          }
-          if (children !== nextChildren) {
-            dirty = true;
-          }
-          if ((props != null) && (nextProps != null)) {
-            if (!dirty) {
-              for (key in props) {
-                if (!nextProps.hasOwnProperty(key)) {
-                  dirty = true;
-                }
-              }
-            }
-            if (!dirty) {
-              for (key in nextProps) {
-                value = nextProps[key];
-                if ((ref = props[key]) !== value) {
-                  dirty = true;
-                }
-              }
-            }
-          }
-          if (dirty) {
-            comp = last.instance;
-            if (el.props == null) {
-              el.props = {};
-            }
-            ref3 = comp.defaultProps;
-            for (k in ref3) {
-              v = ref3[k];
-              if ((base = el.props)[k] == null) {
-                base[k] = v;
-              }
-            }
-            el.props.children = el.children;
-            if (typeof comp.willReceiveProps === "function") {
-              comp.willReceiveProps(el.props);
-            }
-            should = node._COMPONENT_FORCE || ((ref4 = typeof comp.shouldUpdate === "function" ? comp.shouldUpdate(el.props) : void 0) != null ? ref4 : true);
-            if (should) {
-              nextState = comp.getNextState();
-              if (typeof comp.willUpdate === "function") {
-                comp.willUpdate(el.props, nextState);
-              }
-            }
-            prevProps = comp.props;
-            prevState = comp.applyNextState();
-            comp.props = el.props;
-            comp.children = el.children;
-            if (should) {
-              el = el.rendered = typeof comp.render === "function" ? comp.render(element, el.props, el.children) : void 0;
-              apply(el, last.rendered, node, parent, index);
-              if (typeof comp.didUpdate === "function") {
-                comp.didUpdate(prevProps, prevState);
-              }
-            }
-          }
-          return;
-        } else {
-          if (props != null) {
-            for (key in props) {
-              if (!nextProps.hasOwnProperty(key)) {
-                unset(node, key, props[key]);
-              }
-            }
-          }
-          if (nextProps != null) {
-            for (key in nextProps) {
-              value = nextProps[key];
-              if ((ref = props[key]) !== value && key !== 'children') {
-                set(node, key, value, ref);
-              }
-            }
-          }
-          if (nextChildren != null) {
-            if ((ref5 = typeof nextChildren) === 'string' || ref5 === 'number') {
-              if (nextChildren !== children) {
-                node.textContent = nextChildren;
-              }
-            } else {
-              if (nextChildren.type != null) {
-                apply(nextChildren, children, node.childNodes[0], node, 0);
-              } else {
-                childNodes = node.childNodes;
-                if (children != null) {
-                  for (i = j = 0, len = nextChildren.length; j < len; i = ++j) {
-                    child = nextChildren[i];
-                    apply(child, children[i], childNodes[i], node, i);
-                  }
-                } else {
-                  for (i = l = 0, len1 = nextChildren.length; l < len1; i = ++l) {
-                    child = nextChildren[i];
-                    apply(child, null, childNodes[i], node, i);
-                  }
-                }
-              }
-            }
-          } else if (children != null) {
-            unmount(null, node);
-            node.innerHTML = '';
-          }
-        }
-        return;
-      }
-    }
-  }
-  if (last != null) {
-    unmount(last.instance, node);
-    return last.node.remove();
-  }
-};
-
-mount = function(el, parent, index) {
-  var base, child, children, comp, ctor, i, j, k, key, len, node, ref1, ref2, ref3, ref4, ref5, ref6, type, v, value;
-  if (index == null) {
-    index = 0;
-  }
-  type = ((ref1 = el.type) != null ? ref1.isComponentClass : void 0) ? el.type : Types[el.type];
-  if (el instanceof Node) {
-    node = el;
-  } else {
-    if (type != null) {
-      ctor = ((ref2 = el.type) != null ? ref2.isComponentClass : void 0) ? el.type : Types[el.type];
-      if (!ctor) {
-        el = el.rendered = element('noscript');
-        node = mount(el, parent, index);
-        return node;
-      }
-      el.instance = comp = new ctor(parent);
-      if (el.props == null) {
-        el.props = {};
-      }
-      ref3 = comp.defaultProps;
-      for (k in ref3) {
-        v = ref3[k];
-        if ((base = el.props)[k] == null) {
-          base[k] = v;
-        }
-      }
-      el.props.children = el.children;
-      comp.props = el.props;
-      comp.children = el.children;
-      comp.setState(typeof comp.getInitialState === "function" ? comp.getInitialState() : void 0);
-      if (typeof comp.willMount === "function") {
-        comp.willMount();
-      }
-      el = el.rendered = typeof comp.render === "function" ? comp.render(element, el.props, el.children) : void 0;
-      node = mount(el, parent, index);
-      if (typeof comp.didMount === "function") {
-        comp.didMount(el);
-      }
-      node._COMPONENT = comp;
-      return node;
-    } else if ((ref4 = typeof el) === 'string' || ref4 === 'number') {
-      node = document.createTextNode(el);
-    } else {
-      node = document.createElement(el.type);
-      ref5 = el.props;
-      for (key in ref5) {
-        value = ref5[key];
-        set(node, key, value);
-      }
-    }
-    children = el.children;
-    if (children != null) {
-      if ((ref6 = typeof children) === 'string' || ref6 === 'number') {
-        node.textContent = children;
-      } else {
-        if (children.type != null) {
-          mount(children, node, 0);
-        } else {
-          for (i = j = 0, len = children.length; j < len; i = ++j) {
-            child = children[i];
-            mount(child, node, i);
-          }
-        }
-      }
-    }
-  }
-  parent.insertBefore(node, parent.childNodes[index]);
-  return node;
-};
-
-unmount = function(comp, node) {
-  var child, j, k, len, ref1, results;
-  if (comp) {
-    if (typeof comp.willUnmount === "function") {
-      comp.willUnmount();
-    }
-    for (k in comp) {
-      delete comp[k];
-    }
-  }
-  ref1 = node.childNodes;
-  results = [];
-  for (j = 0, len = ref1.length; j < len; j++) {
-    child = ref1[j];
-    unmount(child._COMPONENT, child);
-    results.push(delete child._COMPONENT);
-  }
-  return results;
-};
-
-prop = function(key) {
-  var j, len, prefix, prefixes;
-  if (typeof document === 'undefined') {
-    return true;
-  }
-  if (document.documentElement.style[key] != null) {
-    return key;
-  }
-  key = key[0].toUpperCase() + key.slice(1);
-  prefixes = ['webkit', 'moz', 'ms', 'o'];
-  for (j = 0, len = prefixes.length; j < len; j++) {
-    prefix = prefixes[j];
-    if (document.documentElement.style[prefix + key] != null) {
-      return prefix + key;
-    }
-  }
-};
-
-map = {};
-
-ref1 = ['transform'];
-for (j = 0, len = ref1.length; j < len; j++) {
-  key = ref1[j];
-  map[key] = prop(key);
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen)
 }
 
-set = function(node, key, value, orig) {
-  var k, ref2, v;
-  if (key === 'style') {
-    for (k in value) {
-      v = value[k];
-      if ((orig != null ? orig[k] : void 0) !== v) {
-        node.style[(ref2 = map[k]) != null ? ref2 : k] = v;
+exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
+  var e, m, c
+  var eLen = nBytes * 8 - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0)
+  var i = isLE ? 0 : (nBytes - 1)
+  var d = isLE ? 1 : -1
+  var s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0
+
+  value = Math.abs(value)
+
+  if (isNaN(value) || value === Infinity) {
+    m = isNaN(value) ? 1 : 0
+    e = eMax
+  } else {
+    e = Math.floor(Math.log(value) / Math.LN2)
+    if (value * (c = Math.pow(2, -e)) < 1) {
+      e--
+      c *= 2
+    }
+    if (e + eBias >= 1) {
+      value += rt / c
+    } else {
+      value += rt * Math.pow(2, 1 - eBias)
+    }
+    if (value * c >= 2) {
+      e++
+      c /= 2
+    }
+
+    if (e + eBias >= eMax) {
+      m = 0
+      e = eMax
+    } else if (e + eBias >= 1) {
+      m = (value * c - 1) * Math.pow(2, mLen)
+      e = e + eBias
+    } else {
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
+      e = 0
+    }
+  }
+
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
+
+  e = (e << mLen) | m
+  eLen += mLen
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
+
+  buffer[offset + i - d] |= s * 128
+}
+
+},{}],17:[function(require,module,exports){
+if (typeof Object.create === 'function') {
+  // implementation from standard node.js 'util' module
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor
+    ctor.prototype = Object.create(superCtor.prototype, {
+      constructor: {
+        value: ctor,
+        enumerable: false,
+        writable: true,
+        configurable: true
       }
-    }
-    return;
-  }
-  if (node[key] != null) {
-    node[key] = value;
-    return;
-  }
-  if (node instanceof Node) {
-    node.setAttribute(key, value);
-  }
-};
-
-unset = function(node, key, orig) {
-  var k, ref2, v;
-  if (key === 'style') {
-    for (k in orig) {
-      v = orig[k];
-      node.style[(ref2 = map[k]) != null ? ref2 : k] = '';
-    }
-    return;
-  }
-  if (node[key] != null) {
-    node[key] = void 0;
-  }
-  if (node instanceof Node) {
-    node.removeAttribute(key);
-  }
-};
-
-createClass = function(prototype) {
-  var Component, a, aliases, b, ref2;
-  aliases = {
-    willMount: 'componentWillMount',
-    didMount: 'componentDidMount',
-    willReceiveProps: 'componentWillReceiveProps',
-    shouldUpdate: 'shouldComponentUpdate',
-    willUpdate: 'componentWillUpdate',
-    didUpdate: 'componentDidUpdate',
-    willUnmount: 'componentWillUnmount'
+    });
   };
-  for (a in aliases) {
-    b = aliases[a];
-    if (prototype[a] == null) {
-      prototype[a] = prototype[b];
+} else {
+  // old school shim for old browsers
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor
+    var TempCtor = function () {}
+    TempCtor.prototype = superCtor.prototype
+    ctor.prototype = new TempCtor()
+    ctor.prototype.constructor = ctor
+  }
+}
+
+},{}],18:[function(require,module,exports){
+(function (process){
+var Stream = require('stream')
+
+// through
+//
+// a stream that does nothing but re-emit the input.
+// useful for aggregating a series of changing but not ending streams into one stream)
+
+exports = module.exports = through
+through.through = through
+
+//create a readable writable stream.
+
+function through (write, end, opts) {
+  write = write || function (data) { this.queue(data) }
+  end = end || function () { this.queue(null) }
+
+  var ended = false, destroyed = false, buffer = [], _ended = false
+  var stream = new Stream()
+  stream.readable = stream.writable = true
+  stream.paused = false
+
+//  stream.autoPause   = !(opts && opts.autoPause   === false)
+  stream.autoDestroy = !(opts && opts.autoDestroy === false)
+
+  stream.write = function (data) {
+    write.call(this, data)
+    return !stream.paused
+  }
+
+  function drain() {
+    while(buffer.length && !stream.paused) {
+      var data = buffer.shift()
+      if(null === data)
+        return stream.emit('end')
+      else
+        stream.emit('data', data)
     }
   }
-  Component = (function() {
-    function Component(node, props1, state1, children1) {
-      var bind, k, nextState, v;
-      this.props = props1 != null ? props1 : {};
-      this.state = state1 != null ? state1 : null;
-      this.children = children1 != null ? children1 : null;
-      bind = function(f, self) {
-        if (typeof f === 'function') {
-          return f.bind(self);
-        } else {
-          return f;
-        }
-      };
-      for (k in prototype) {
-        v = prototype[k];
-        this[k] = bind(v, this);
-      }
-      nextState = null;
-      this.setState = function(state) {
-        if (nextState == null) {
-          nextState = state ? nextState != null ? nextState : {} : null;
-        }
-        for (k in state) {
-          v = state[k];
-          nextState[k] = v;
-        }
-        node._COMPONENT_DIRTY = true;
-      };
-      this.forceUpdate = function() {
-        var el, results;
-        node._COMPONENT_FORCE = node._COMPONENT_DIRTY = true;
-        el = node;
-        results = [];
-        while (el = el.parentNode) {
-          if (el._COMPONENT) {
-            results.push(el._COMPONENT_FORCE = true);
-          } else {
-            results.push(void 0);
-          }
-        }
-        return results;
-      };
-      this.getNextState = function() {
-        return nextState;
-      };
-      this.applyNextState = function() {
-        var prevState, ref2;
-        node._COMPONENT_FORCE = node._COMPONENT_DIRTY = false;
-        prevState = this.state;
-        ref2 = [null, nextState], nextState = ref2[0], this.state = ref2[1];
-        return prevState;
-      };
-      return;
+
+  stream.queue = stream.push = function (data) {
+//    console.error(ended)
+    if(_ended) return stream
+    if(data === null) _ended = true
+    buffer.push(data)
+    drain()
+    return stream
+  }
+
+  //this will be registered as the first 'end' listener
+  //must call destroy next tick, to make sure we're after any
+  //stream piped from here.
+  //this is only a problem if end is not emitted synchronously.
+  //a nicer way to do this is to make sure this is the last listener for 'end'
+
+  stream.on('end', function () {
+    stream.readable = false
+    if(!stream.writable && stream.autoDestroy)
+      process.nextTick(function () {
+        stream.destroy()
+      })
+  })
+
+  function _end () {
+    stream.writable = false
+    end.call(stream)
+    if(!stream.readable && stream.autoDestroy)
+      stream.destroy()
+  }
+
+  stream.end = function (data) {
+    if(ended) return
+    ended = true
+    if(arguments.length) stream.write(data)
+    _end() // will emit or queue
+    return stream
+  }
+
+  stream.destroy = function () {
+    if(destroyed) return
+    destroyed = true
+    ended = true
+    buffer.length = 0
+    stream.writable = stream.readable = false
+    stream.emit('close')
+    return stream
+  }
+
+  stream.pause = function () {
+    if(stream.paused) return
+    stream.paused = true
+    return stream
+  }
+
+  stream.resume = function () {
+    if(stream.paused) {
+      stream.paused = false
+      stream.emit('resume')
     }
-
-    return Component;
-
-  })();
-  Component.isComponentClass = true;
-  Component.prototype.defaultProps = (ref2 = typeof prototype.getDefaultProps === "function" ? prototype.getDefaultProps() : void 0) != null ? ref2 : {};
-  return Component;
-};
-
-module.exports = {
-  element: element,
-  recycle: recycle,
-  apply: apply,
-  hint: hint,
-  Types: Types,
-  createClass: createClass
-};
+    drain()
+    //may have become paused again,
+    //as drain emits 'data'.
+    if(!stream.paused)
+      stream.emit('drain')
+    return stream
+  }
+  return stream
+}
 
 
-
-},{}],29:[function(require,module,exports){
+}).call(this,require("7YKIPe"))
+},{"7YKIPe":7,"stream":9}],19:[function(require,module,exports){
 var Context, Model, Overlay, Primitives, Render, Shaders, Stage, Util;
 
 Model = require('./model');
@@ -7030,7 +4940,7 @@ module.exports = Context;
 
 
 
-},{"./model":34,"./overlay":40,"./primitives":43,"./render":149,"./shaders":164,"./stage":169,"./util":175}],30:[function(require,module,exports){
+},{"./model":24,"./overlay":30,"./primitives":33,"./render":139,"./shaders":154,"./stage":159,"./util":165}],20:[function(require,module,exports){
 var Context, k, mathBox, ref, v;
 
 mathBox = function(options) {
@@ -7228,7 +5138,7 @@ THREE.Bootstrap.registerPlugin('mathbox', {
 
 
 
-},{"./context":29,"./splash":165}],31:[function(require,module,exports){
+},{"./context":19,"./splash":155}],21:[function(require,module,exports){
 
 /*
  Custom attribute model
@@ -7744,7 +5654,7 @@ module.exports = Attributes;
 
 
 
-},{}],32:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 var Group, Node,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -7819,7 +5729,7 @@ module.exports = Group;
 
 
 
-},{"./node":36}],33:[function(require,module,exports){
+},{"./node":26}],23:[function(require,module,exports){
 var Guard;
 
 Guard = (function() {
@@ -7848,7 +5758,7 @@ module.exports = Guard;
 
 
 
-},{}],34:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 exports.Attributes = require('./attributes');
 
 exports.Group = require('./group');
@@ -7861,7 +5771,7 @@ exports.Node = require('./node');
 
 
 
-},{"./attributes":31,"./group":32,"./guard":33,"./model":35,"./node":36}],35:[function(require,module,exports){
+},{"./attributes":21,"./group":22,"./guard":23,"./model":25,"./node":26}],25:[function(require,module,exports){
 var ALL, AUTO, CLASS, ID, Model, TRAIT, TYPE, cssauron, language,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -8342,7 +6252,7 @@ module.exports = Model;
 
 
 
-},{"cssauron":2}],36:[function(require,module,exports){
+},{"cssauron":3}],26:[function(require,module,exports){
 var Binder, Node, Util, nodeIndex;
 
 Util = require('../util');
@@ -8426,7 +6336,7 @@ Node = (function() {
     }
     this.index = index;
     this.path = path = index != null ? ((ref = parent != null ? parent.path : void 0) != null ? ref : []).concat([index]) : null;
-    this.order = path != null ? this._encode(path) : Infinity;
+    this.order = path != null ? this._encode(path) : 2e308;
     if (this.root != null) {
       return this.trigger({
         type: 'reindex'
@@ -8575,7 +6485,7 @@ module.exports = Node;
 
 
 
-},{"../util":175,"../util/binder":171}],37:[function(require,module,exports){
+},{"../util":165,"../util/binder":161}],27:[function(require,module,exports){
 var Classes;
 
 Classes = {
@@ -8586,7 +6496,7 @@ module.exports = Classes;
 
 
 
-},{"./dom":38}],38:[function(require,module,exports){
+},{"./dom":28}],28:[function(require,module,exports){
 var DOM, Overlay, VDOM,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -8668,7 +6578,7 @@ module.exports = DOM;
 
 
 
-},{"../util":175,"./overlay":41}],39:[function(require,module,exports){
+},{"../util":165,"./overlay":31}],29:[function(require,module,exports){
 var OverlayFactory;
 
 OverlayFactory = (function() {
@@ -8712,7 +6622,7 @@ module.exports = OverlayFactory;
 
 
 
-},{}],40:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 exports.Factory = require('./factory');
 
 exports.Classes = require('./classes');
@@ -8721,7 +6631,7 @@ exports.Overlay = require('./overlay');
 
 
 
-},{"./classes":37,"./factory":39,"./overlay":41}],41:[function(require,module,exports){
+},{"./classes":27,"./factory":29,"./overlay":31}],31:[function(require,module,exports){
 var Overlay;
 
 Overlay = (function() {
@@ -8742,7 +6652,7 @@ module.exports = Overlay;
 
 
 
-},{}],42:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 var PrimitiveFactory, Util;
 
 Util = require('../util');
@@ -8783,7 +6693,7 @@ module.exports = PrimitiveFactory;
 
 
 
-},{"../util":175}],43:[function(require,module,exports){
+},{"../util":165}],33:[function(require,module,exports){
 exports.Factory = require('./factory');
 
 exports.Primitive = require('./primitive');
@@ -8792,7 +6702,7 @@ exports.Types = require('./types');
 
 
 
-},{"./factory":42,"./primitive":44,"./types":72}],44:[function(require,module,exports){
+},{"./factory":32,"./primitive":34,"./types":62}],34:[function(require,module,exports){
 var Binder, Model, Primitive,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -8891,7 +6801,7 @@ Primitive = (function() {
   };
 
   Primitive.prototype._added = function() {
-    var e, error, error1, ref, ref1, ref2;
+    var e, ref, ref1, ref2;
     this._parent = (ref = this.node.parent) != null ? ref.controller : void 0;
     this._root = (ref1 = this.node.root) != null ? ref1.controller : void 0;
     this.node.clock = (ref2 = this._inherit('clock')) != null ? ref2 : this._root;
@@ -8906,11 +6816,11 @@ Primitive = (function() {
         console.error(e);
         throw e;
       }
-    } catch (error1) {
-      e = error1;
+    } catch (error) {
+      e = error;
       try {
         return this._removed();
-      } catch (undefined) {}
+      } catch (error) {}
     }
   };
 
@@ -9169,7 +7079,7 @@ module.exports = Primitive;
 
 
 
-},{"../model":34,"../util/binder":171}],45:[function(require,module,exports){
+},{"../model":24,"../util/binder":161}],35:[function(require,module,exports){
 var Group, Parent,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -9203,7 +7113,7 @@ module.exports = Group;
 
 
 
-},{"./parent":47}],46:[function(require,module,exports){
+},{"./parent":37}],36:[function(require,module,exports){
 var Inherit, Parent,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty,
@@ -9248,7 +7158,7 @@ module.exports = Inherit;
 
 
 
-},{"./parent":47}],47:[function(require,module,exports){
+},{"./parent":37}],37:[function(require,module,exports){
 var Parent, Primitive,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -9274,7 +7184,7 @@ module.exports = Parent;
 
 
 
-},{"../../primitive":44}],48:[function(require,module,exports){
+},{"../../primitive":34}],38:[function(require,module,exports){
 var Parent, Root, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -9445,7 +7355,7 @@ module.exports = Root;
 
 
 
-},{"../../../util":175,"./parent":47}],49:[function(require,module,exports){
+},{"../../../util":165,"./parent":37}],39:[function(require,module,exports){
 var Primitive, Source, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -9506,7 +7416,7 @@ module.exports = Source;
 
 
 
-},{"../../../util":175,"../../primitive":44}],50:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],40:[function(require,module,exports){
 var Parent, Unit, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -9548,7 +7458,7 @@ module.exports = Unit;
 
 
 
-},{"../../../util":175,"./parent":47}],51:[function(require,module,exports){
+},{"../../../util":165,"./parent":37}],41:[function(require,module,exports){
 var Camera, Primitive, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -9622,7 +7532,7 @@ module.exports = Camera;
 
 
 
-},{"../../../util":175,"../../primitive":44}],52:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],42:[function(require,module,exports){
 var Classes;
 
 Classes = {
@@ -9697,7 +7607,7 @@ module.exports = Classes;
 
 
 
-},{"./base/group":45,"./base/inherit":46,"./base/root":48,"./base/unit":50,"./camera/camera":51,"./data/area":53,"./data/array":54,"./data/interval":57,"./data/matrix":58,"./data/scale":59,"./data/volume":60,"./data/voxel":61,"./draw/axis":62,"./draw/face":63,"./draw/grid":64,"./draw/line":65,"./draw/point":66,"./draw/strip":67,"./draw/surface":68,"./draw/ticks":69,"./draw/vector":70,"./operator/clamp":73,"./operator/grow":74,"./operator/join":75,"./operator/lerp":76,"./operator/memo":77,"./operator/readback":79,"./operator/repeat":80,"./operator/resample":81,"./operator/slice":82,"./operator/split":83,"./operator/spread":84,"./operator/subdivide":85,"./operator/swizzle":86,"./operator/transpose":87,"./overlay/dom":88,"./overlay/html":89,"./present/move":90,"./present/play":91,"./present/present":92,"./present/reveal":93,"./present/slide":94,"./present/step":95,"./rtt/compose":98,"./rtt/rtt":99,"./shader/shader":100,"./text/format":101,"./text/label":102,"./text/retext":103,"./text/text":104,"./time/clock":105,"./time/now":106,"./transform/fragment":108,"./transform/layer":109,"./transform/mask":110,"./transform/transform3":112,"./transform/transform4":113,"./transform/vertex":114,"./view/cartesian":116,"./view/cartesian4":117,"./view/polar":118,"./view/spherical":119,"./view/stereographic":120,"./view/stereographic4":121,"./view/view":122}],53:[function(require,module,exports){
+},{"./base/group":35,"./base/inherit":36,"./base/root":38,"./base/unit":40,"./camera/camera":41,"./data/area":43,"./data/array":44,"./data/interval":47,"./data/matrix":48,"./data/scale":49,"./data/volume":50,"./data/voxel":51,"./draw/axis":52,"./draw/face":53,"./draw/grid":54,"./draw/line":55,"./draw/point":56,"./draw/strip":57,"./draw/surface":58,"./draw/ticks":59,"./draw/vector":60,"./operator/clamp":63,"./operator/grow":64,"./operator/join":65,"./operator/lerp":66,"./operator/memo":67,"./operator/readback":69,"./operator/repeat":70,"./operator/resample":71,"./operator/slice":72,"./operator/split":73,"./operator/spread":74,"./operator/subdivide":75,"./operator/swizzle":76,"./operator/transpose":77,"./overlay/dom":78,"./overlay/html":79,"./present/move":80,"./present/play":81,"./present/present":82,"./present/reveal":83,"./present/slide":84,"./present/step":85,"./rtt/compose":88,"./rtt/rtt":89,"./shader/shader":90,"./text/format":91,"./text/label":92,"./text/retext":93,"./text/text":94,"./time/clock":95,"./time/now":96,"./transform/fragment":98,"./transform/layer":99,"./transform/mask":100,"./transform/transform3":102,"./transform/transform4":103,"./transform/vertex":104,"./view/cartesian":106,"./view/cartesian4":107,"./view/polar":108,"./view/spherical":109,"./view/stereographic":110,"./view/stereographic4":111,"./view/view":112}],43:[function(require,module,exports){
 var Area, Matrix, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -9796,7 +7706,7 @@ module.exports = Area;
 
 
 
-},{"../../../util":175,"./matrix":58}],54:[function(require,module,exports){
+},{"../../../util":165,"./matrix":48}],44:[function(require,module,exports){
 var Array_, Buffer, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -9947,12 +7857,12 @@ Array_ = (function(superClass) {
   };
 
   Array_.prototype.update = function() {
-    var data, filled, l, space, used;
+    var data, filled, l, ref, space, used;
     if (!this.buffer) {
       return;
     }
     data = this.props.data;
-    space = this.space, used = this.used;
+    ref = this, space = ref.space, used = ref.used;
     l = used.width;
     filled = this.buffer.getFilled();
     this.syncBuffer((function(_this) {
@@ -9993,7 +7903,7 @@ module.exports = Array_;
 
 
 
-},{"../../../util":175,"./buffer":55}],55:[function(require,module,exports){
+},{"../../../util":165,"./buffer":45}],45:[function(require,module,exports){
 var Buffer, Data, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -10118,7 +8028,7 @@ module.exports = Buffer;
 
 
 
-},{"../../../util":175,"./data":56}],56:[function(require,module,exports){
+},{"../../../util":165,"./data":46}],46:[function(require,module,exports){
 var Data, Source, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -10199,7 +8109,7 @@ module.exports = Data;
 
 
 
-},{"../../../util":175,"../base/source":49}],57:[function(require,module,exports){
+},{"../../../util":165,"../base/source":39}],47:[function(require,module,exports){
 var Interval, Util, _Array,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -10281,7 +8191,7 @@ module.exports = Interval;
 
 
 
-},{"../../../util":175,"./array":54}],58:[function(require,module,exports){
+},{"../../../util":165,"./array":44}],48:[function(require,module,exports){
 var Buffer, Matrix, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -10445,12 +8355,12 @@ Matrix = (function(superClass) {
   };
 
   Matrix.prototype.update = function() {
-    var data, filled, h, space, used, w;
+    var data, filled, h, ref, space, used, w;
     if (!this.buffer) {
       return;
     }
     data = this.props.data;
-    space = this.space, used = this.used;
+    ref = this, space = ref.space, used = ref.used;
     w = used.width;
     h = used.height;
     filled = this.buffer.getFilled();
@@ -10498,7 +8408,7 @@ module.exports = Matrix;
 
 
 
-},{"../../../util":175,"./buffer":55}],59:[function(require,module,exports){
+},{"../../../util":165,"./buffer":45}],49:[function(require,module,exports){
 var Scale, Source, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -10611,7 +8521,7 @@ module.exports = Scale;
 
 
 
-},{"../../../util":175,"../base/source":49}],60:[function(require,module,exports){
+},{"../../../util":165,"../base/source":39}],50:[function(require,module,exports){
 var Util, Volume, Voxel,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -10727,7 +8637,7 @@ module.exports = Volume;
 
 
 
-},{"../../../util":175,"./voxel":61}],61:[function(require,module,exports){
+},{"../../../util":165,"./voxel":51}],51:[function(require,module,exports){
 var Buffer, Util, Voxel,
   bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -10888,12 +8798,12 @@ Voxel = (function(superClass) {
   };
 
   Voxel.prototype.update = function() {
-    var d, data, filled, h, space, used, w;
+    var d, data, filled, h, ref, space, used, w;
     if (!this.buffer) {
       return;
     }
     data = this.props.data;
-    space = this.space, used = this.used;
+    ref = this, space = ref.space, used = ref.used;
     w = used.width;
     h = used.height;
     d = used.depth;
@@ -10948,7 +8858,7 @@ module.exports = Voxel;
 
 
 
-},{"../../../util":175,"./buffer":55}],62:[function(require,module,exports){
+},{"../../../util":165,"./buffer":45}],52:[function(require,module,exports){
 var Axis, Primitive, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -11070,7 +8980,7 @@ module.exports = Axis;
 
 
 
-},{"../../../util":175,"../../primitive":44}],63:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],53:[function(require,module,exports){
 var Face, Primitive, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -11219,7 +9129,7 @@ module.exports = Face;
 
 
 
-},{"../../../util":175,"../../primitive":44}],64:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],54:[function(require,module,exports){
 var Grid, Primitive, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -11383,7 +9293,7 @@ module.exports = Grid;
 
 
 
-},{"../../../util":175,"../../primitive":44}],65:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],55:[function(require,module,exports){
 var Line, Primitive, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -11535,7 +9445,7 @@ module.exports = Line;
 
 
 
-},{"../../../util":175,"../../primitive":44}],66:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],56:[function(require,module,exports){
 var Point, Primitive, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -11647,7 +9557,7 @@ module.exports = Point;
 
 
 
-},{"../../../util":175,"../../primitive":44}],67:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],57:[function(require,module,exports){
 var Primitive, Strip, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -11797,7 +9707,7 @@ module.exports = Strip;
 
 
 
-},{"../../../util":175,"../../primitive":44}],68:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],58:[function(require,module,exports){
 var Primitive, Surface, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -11999,7 +9909,7 @@ module.exports = Surface;
 
 
 
-},{"../../../util":175,"../../primitive":44}],69:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],59:[function(require,module,exports){
 var Primitive, Ticks, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -12119,7 +10029,7 @@ module.exports = Ticks;
 
 
 
-},{"../../../util":175,"../../primitive":44}],70:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],60:[function(require,module,exports){
 var Primitive, Util, Vector,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -12276,7 +10186,7 @@ module.exports = Vector;
 
 
 
-},{"../../../util":175,"../../primitive":44}],71:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],61:[function(require,module,exports){
 var Util, View, helpers,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -12798,7 +10708,7 @@ module.exports = function(object, traits) {
 
 
 
-},{"../../util":175,"./view/view":122}],72:[function(require,module,exports){
+},{"../../util":165,"./view/view":112}],62:[function(require,module,exports){
 var Model;
 
 Model = require('../../model');
@@ -12813,7 +10723,7 @@ exports.Helpers = require('./helpers');
 
 
 
-},{"../../model":34,"./classes":52,"./helpers":71,"./traits":107,"./types":115}],73:[function(require,module,exports){
+},{"../../model":24,"./classes":42,"./helpers":61,"./traits":97,"./types":105}],63:[function(require,module,exports){
 var Clamp, Operator,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -12881,7 +10791,7 @@ module.exports = Clamp;
 
 
 
-},{"./operator":78}],74:[function(require,module,exports){
+},{"./operator":68}],64:[function(require,module,exports){
 var Grow, Operator,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -12963,7 +10873,7 @@ module.exports = Grow;
 
 
 
-},{"./operator":78}],75:[function(require,module,exports){
+},{"./operator":68}],65:[function(require,module,exports){
 var Join, Operator, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -13129,7 +11039,7 @@ module.exports = Join;
 
 
 
-},{"../../../util":175,"./operator":78}],76:[function(require,module,exports){
+},{"../../../util":165,"./operator":68}],66:[function(require,module,exports){
 var Lerp, Operator, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -13366,7 +11276,7 @@ module.exports = Lerp;
 
 
 
-},{"../../../util":175,"./operator":78}],77:[function(require,module,exports){
+},{"../../../util":165,"./operator":68}],67:[function(require,module,exports){
 var Memo, Operator, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -13468,7 +11378,7 @@ module.exports = Memo;
 
 
 
-},{"../../../util":175,"./operator":78}],78:[function(require,module,exports){
+},{"../../../util":165,"./operator":68}],68:[function(require,module,exports){
 var Operator, Source,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -13547,7 +11457,7 @@ module.exports = Operator;
 
 
 
-},{"../base/source":49}],79:[function(require,module,exports){
+},{"../base/source":39}],69:[function(require,module,exports){
 var Primitive, Readback, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -13691,7 +11601,7 @@ module.exports = Readback;
 
 
 
-},{"../../../util":175,"../../primitive":44}],80:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],70:[function(require,module,exports){
 var Operator, Repeat,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -13797,7 +11707,7 @@ module.exports = Repeat;
 
 
 
-},{"./operator":78}],81:[function(require,module,exports){
+},{"./operator":68}],71:[function(require,module,exports){
 var Operator, Resample, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -14085,7 +11995,7 @@ module.exports = Resample;
 
 
 
-},{"../../../util":175,"./operator":78}],82:[function(require,module,exports){
+},{"../../../util":165,"./operator":68}],72:[function(require,module,exports){
 var Operator, Slice, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -14193,7 +12103,7 @@ module.exports = Slice;
 
 
 
-},{"../../../util":175,"./operator":78}],83:[function(require,module,exports){
+},{"../../../util":165,"./operator":68}],73:[function(require,module,exports){
 var Operator, Split, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -14364,7 +12274,7 @@ module.exports = Split;
 
 
 
-},{"../../../util":175,"./operator":78}],84:[function(require,module,exports){
+},{"../../../util":165,"./operator":68}],74:[function(require,module,exports){
 var Operator, Spread,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -14474,7 +12384,7 @@ module.exports = Spread;
 
 
 
-},{"./operator":78}],85:[function(require,module,exports){
+},{"./operator":68}],75:[function(require,module,exports){
 var Operator, Subdivide, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -14632,7 +12542,7 @@ module.exports = Subdivide;
 
 
 
-},{"../../../util":175,"./operator":78}],86:[function(require,module,exports){
+},{"../../../util":165,"./operator":68}],76:[function(require,module,exports){
 var Operator, Swizzle, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -14689,7 +12599,7 @@ module.exports = Swizzle;
 
 
 
-},{"../../../util":175,"./operator":78}],87:[function(require,module,exports){
+},{"../../../util":165,"./operator":68}],77:[function(require,module,exports){
 var Operator, Transpose, Util, labels,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -14790,7 +12700,7 @@ module.exports = Transpose;
 
 
 
-},{"../../../util":175,"./operator":78}],88:[function(require,module,exports){
+},{"../../../util":165,"./operator":68}],78:[function(require,module,exports){
 var DOM, Primitive, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -15028,7 +12938,7 @@ module.exports = DOM;
 
 
 
-},{"../../../util":175,"../../primitive":44}],89:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],79:[function(require,module,exports){
 var HTML, Util, Voxel,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -15110,7 +13020,7 @@ module.exports = HTML;
 
 
 
-},{"../../../util":175,"../data/voxel":61}],90:[function(require,module,exports){
+},{"../../../util":165,"../data/voxel":51}],80:[function(require,module,exports){
 var Move, Transition,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -15155,7 +13065,7 @@ module.exports = Move;
 
 
 
-},{"./transition":97}],91:[function(require,module,exports){
+},{"./transition":87}],81:[function(require,module,exports){
 var Play, Track,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -15249,7 +13159,7 @@ module.exports = Play;
 
 
 
-},{"./track":96}],92:[function(require,module,exports){
+},{"./track":86}],82:[function(require,module,exports){
 var Parent, Present, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -15611,7 +13521,7 @@ module.exports = Present;
 
 
 
-},{"../../../util":175,"../base/parent":47}],93:[function(require,module,exports){
+},{"../../../util":165,"../base/parent":37}],83:[function(require,module,exports){
 var Reveal, Transition, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -15655,7 +13565,7 @@ module.exports = Reveal;
 
 
 
-},{"../../../util":175,"./transition":97}],94:[function(require,module,exports){
+},{"../../../util":165,"./transition":87}],84:[function(require,module,exports){
 var Parent, Slide,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -15736,7 +13646,7 @@ module.exports = Slide;
 
 
 
-},{"../base/parent":47}],95:[function(require,module,exports){
+},{"../base/parent":37}],85:[function(require,module,exports){
 var Step, Track,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -15862,7 +13772,7 @@ module.exports = Step;
 
 
 
-},{"./track":96}],96:[function(require,module,exports){
+},{"./track":86}],86:[function(require,module,exports){
 var Ease, Primitive, Track, deepCopy,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -15961,7 +13871,7 @@ Track = (function(superClass) {
   };
 
   Track.prototype._process = function(object, script) {
-    var end, error, i, j, k, key, l, last, len, len1, message, props, ref, ref1, ref2, result, s, start, step, v, values;
+    var end, i, j, k, key, l, last, len, len1, message, props, ref, ref1, ref2, result, s, start, step, v, values;
     if (script instanceof Array) {
       s = {};
       for (i = j = 0, len = script.length; j < len; i = ++j) {
@@ -16067,9 +13977,9 @@ Track = (function(superClass) {
   };
 
   Track.prototype.update = function() {
-    var clock, ease, easeMethod, end, expr, find, from, getLerpFactor, getPlayhead, k, live, node, playhead, ref, script, section, seek, start, to;
-    playhead = this.playhead, script = this.script;
-    ref = this.props, ease = ref.ease, seek = ref.seek;
+    var clock, ease, easeMethod, end, expr, find, from, getLerpFactor, getPlayhead, k, live, node, playhead, ref, ref1, script, section, seek, start, to;
+    ref = this, playhead = ref.playhead, script = ref.script;
+    ref1 = this.props, ease = ref1.ease, seek = ref1.seek;
     node = this.targetNode;
     if (seek != null) {
       playhead = seek;
@@ -16225,7 +14135,7 @@ module.exports = Track;
 
 
 
-},{"../../../util":175,"../../primitive":44}],97:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],87:[function(require,module,exports){
 var Parent, Transition, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -16445,7 +14355,7 @@ module.exports = Transition;
 
 
 
-},{"../../../util":175,"../base/parent":47}],98:[function(require,module,exports){
+},{"../../../util":165,"../base/parent":37}],88:[function(require,module,exports){
 var Compose, Primitive, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -16547,7 +14457,7 @@ module.exports = Compose;
 
 
 
-},{"../../../util":175,"../../primitive":44}],99:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],89:[function(require,module,exports){
 var Parent, RTT, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -16795,7 +14705,7 @@ module.exports = RTT;
 
 
 
-},{"../../../util":175,"../base/parent":47}],100:[function(require,module,exports){
+},{"../../../util":165,"../base/parent":37}],90:[function(require,module,exports){
 var Primitive, Shader, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -16935,7 +14845,7 @@ module.exports = Shader;
 
 
 
-},{"../../../util":175,"../../primitive":44}],101:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],91:[function(require,module,exports){
 var Format, Operator, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -17114,7 +15024,7 @@ module.exports = Format;
 
 
 
-},{"../../../util":175,"../operator/operator":78}],102:[function(require,module,exports){
+},{"../../../util":165,"../operator/operator":68}],92:[function(require,module,exports){
 var Label, Primitive, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -17249,7 +15159,7 @@ module.exports = Label;
 
 
 
-},{"../../../util":175,"../../primitive":44}],103:[function(require,module,exports){
+},{"../../../util":165,"../../primitive":34}],93:[function(require,module,exports){
 var Resample, Retext, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -17298,7 +15208,7 @@ module.exports = Retext;
 
 
 
-},{"../../../util":175,"../operator/resample":81}],104:[function(require,module,exports){
+},{"../../../util":165,"../operator/resample":71}],94:[function(require,module,exports){
 var Buffer, Text, Util, Voxel,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -17435,7 +15345,7 @@ module.exports = Text;
 
 
 
-},{"../../../util":175,"../data/buffer":55,"../data/voxel":61}],105:[function(require,module,exports){
+},{"../../../util":165,"../data/buffer":45,"../data/voxel":51}],95:[function(require,module,exports){
 var Clock, Parent,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -17504,7 +15414,7 @@ module.exports = Clock;
 
 
 
-},{"../base/parent":47}],106:[function(require,module,exports){
+},{"../base/parent":37}],96:[function(require,module,exports){
 var Now, Parent,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -17573,7 +15483,7 @@ module.exports = Now;
 
 
 
-},{"../base/parent":47}],107:[function(require,module,exports){
+},{"../base/parent":37}],97:[function(require,module,exports){
 var Traits, Types;
 
 Types = require('./types');
@@ -17760,7 +15670,7 @@ Traits = {
     depth: Types.positive(Types.number(1)),
     join: Types.join(),
     stroke: Types.stroke(),
-    proximity: Types.nullable(Types.number(Infinity)),
+    proximity: Types.nullable(Types.number(2e308)),
     closed: Types.bool(false)
   },
   mesh: {
@@ -17996,7 +15906,7 @@ Traits = {
     pace: Types.number(1),
     speed: Types.number(1),
     from: Types.number(0),
-    to: Types.number(Infinity),
+    to: Types.number(2e308),
     realtime: Types.bool(false),
     loop: Types.bool(false)
   },
@@ -18012,7 +15922,7 @@ module.exports = Traits;
 
 
 
-},{"./types":115}],108:[function(require,module,exports){
+},{"./types":105}],98:[function(require,module,exports){
 var Fragment, Transform,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -18073,7 +15983,7 @@ module.exports = Fragment;
 
 
 
-},{"./transform":111}],109:[function(require,module,exports){
+},{"./transform":101}],99:[function(require,module,exports){
 var Layer, Transform, π,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -18149,7 +16059,7 @@ module.exports = Layer;
 
 
 
-},{"./transform":111}],110:[function(require,module,exports){
+},{"./transform":101}],100:[function(require,module,exports){
 var Mask, Parent,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -18215,7 +16125,7 @@ module.exports = Mask;
 
 
 
-},{"../base/parent":47}],111:[function(require,module,exports){
+},{"../base/parent":37}],101:[function(require,module,exports){
 var Parent, Transform,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -18249,7 +16159,7 @@ module.exports = Transform;
 
 
 
-},{"../base/parent":47}],112:[function(require,module,exports){
+},{"../base/parent":37}],102:[function(require,module,exports){
 var Transform, Transform3, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -18310,7 +16220,7 @@ module.exports = Transform3;
 
 
 
-},{"../../../util":175,"./transform":111}],113:[function(require,module,exports){
+},{"../../../util":165,"./transform":101}],103:[function(require,module,exports){
 var Transform, Transform4,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -18368,7 +16278,7 @@ module.exports = Transform4;
 
 
 
-},{"./transform":111}],114:[function(require,module,exports){
+},{"./transform":101}],104:[function(require,module,exports){
 var Transform, Vertex,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -18421,7 +16331,7 @@ module.exports = Vertex;
 
 
 
-},{"./transform":111}],115:[function(require,module,exports){
+},{"./transform":101}],105:[function(require,module,exports){
 var Types, Util, decorate,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -19645,7 +17555,6 @@ Types = {
         return stringArray.make();
       },
       validate: function(value, target, invalid) {
-        var error;
         try {
           if (!(value instanceof Array)) {
             value = parse(value);
@@ -19721,7 +17630,7 @@ module.exports = decorate(Types);
 
 
 
-},{"../../util":175}],116:[function(require,module,exports){
+},{"../../util":165}],106:[function(require,module,exports){
 var Cartesian, Util, View,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -19800,7 +17709,7 @@ module.exports = Cartesian;
 
 
 
-},{"../../../util":175,"./view":122}],117:[function(require,module,exports){
+},{"../../../util":165,"./view":112}],107:[function(require,module,exports){
 var Cartesian4, View,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -19882,7 +17791,7 @@ module.exports = Cartesian4;
 
 
 
-},{"./view":122}],118:[function(require,module,exports){
+},{"./view":112}],108:[function(require,module,exports){
 var Polar, Util, View,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -19993,7 +17902,7 @@ module.exports = Polar;
 
 
 
-},{"../../../util":175,"./view":122}],119:[function(require,module,exports){
+},{"../../../util":165,"./view":112}],109:[function(require,module,exports){
 var Spherical, Util, View,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -20116,7 +18025,7 @@ module.exports = Spherical;
 
 
 
-},{"../../../util":175,"./view":122}],120:[function(require,module,exports){
+},{"../../../util":165,"./view":112}],110:[function(require,module,exports){
 var Stereographic, Util, View,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -20201,7 +18110,7 @@ module.exports = Stereographic;
 
 
 
-},{"../../../util":175,"./view":122}],121:[function(require,module,exports){
+},{"../../../util":165,"./view":112}],111:[function(require,module,exports){
 var Stereographic4, Util, View,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -20288,7 +18197,7 @@ module.exports = Stereographic4;
 
 
 
-},{"../../../util":175,"./view":122}],122:[function(require,module,exports){
+},{"../../../util":165,"./view":112}],112:[function(require,module,exports){
 var Transform, View,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -20324,7 +18233,7 @@ module.exports = View;
 
 
 
-},{"../transform/transform":111}],123:[function(require,module,exports){
+},{"../transform/transform":101}],113:[function(require,module,exports){
 var ArrayBuffer_, DataBuffer, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -20425,7 +18334,7 @@ module.exports = ArrayBuffer_;
 
 
 
-},{"../../util":175,"./databuffer":126}],124:[function(require,module,exports){
+},{"../../util":165,"./databuffer":116}],114:[function(require,module,exports){
 var Atlas, BackedTexture, DataTexture, Renderable, Row, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -20620,7 +18529,7 @@ module.exports = Atlas;
 
 
 
-},{"../../util":175,"../renderable":161,"./texture/backedtexture":133,"./texture/datatexture":134}],125:[function(require,module,exports){
+},{"../../util":165,"../renderable":151,"./texture/backedtexture":123,"./texture/datatexture":124}],115:[function(require,module,exports){
 var Buffer, Renderable, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -20686,7 +18595,7 @@ module.exports = Buffer;
 
 
 
-},{"../../util":175,"../renderable":161}],126:[function(require,module,exports){
+},{"../../util":165,"../renderable":151}],116:[function(require,module,exports){
 var Buffer, DataBuffer, DataTexture, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -20843,7 +18752,7 @@ module.exports = DataBuffer;
 
 
 
-},{"../../util":175,"./buffer":125,"./texture/datatexture":134}],127:[function(require,module,exports){
+},{"../../util":165,"./buffer":115,"./texture/datatexture":124}],117:[function(require,module,exports){
 var DataBuffer, MatrixBuffer, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -20997,7 +18906,7 @@ module.exports = MatrixBuffer;
 
 
 
-},{"../../util":175,"./databuffer":126}],128:[function(require,module,exports){
+},{"../../util":165,"./databuffer":116}],118:[function(require,module,exports){
 var Memo, RenderToTexture, Renderable, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -21068,7 +18977,7 @@ module.exports = Memo;
 
 
 
-},{"../../util":175,"../renderable":161,"./rendertotexture":131}],129:[function(require,module,exports){
+},{"../../util":165,"../renderable":151,"./rendertotexture":121}],119:[function(require,module,exports){
 var Buffer, PushBuffer, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -21197,7 +19106,7 @@ module.exports = PushBuffer;
 
 
 
-},{"../../util":175,"./buffer":125}],130:[function(require,module,exports){
+},{"../../util":165,"./buffer":115}],120:[function(require,module,exports){
 var Buffer, Memo, MemoScreen, Readback, Renderable, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -21258,11 +19167,11 @@ Readback = (function(superClass) {
   }
 
   Readback.prototype.build = function(options) {
-    var channels, depth, encoder, h, height, indexer, isIndexed, items, map, sampler, stpq, stretch, w, width;
+    var channels, depth, encoder, h, height, indexer, isIndexed, items, map, ref, sampler, stpq, stretch, w, width;
     map = options.map;
     indexer = options.indexer;
     isIndexed = (indexer != null) && !indexer.empty();
-    items = this.items, width = this.width, height = this.height, depth = this.depth, stpq = this.stpq;
+    ref = this, items = ref.items, width = ref.width, height = ref.height, depth = ref.depth, stpq = ref.stpq;
     sampler = map;
     if (isIndexed) {
       this._adopt({
@@ -21533,7 +19442,7 @@ module.exports = Readback;
 
 
 
-},{"../../util":175,"../meshes/memoscreen":155,"../renderable":161,"./buffer":125,"./memo":128}],131:[function(require,module,exports){
+},{"../../util":165,"../meshes/memoscreen":145,"../renderable":151,"./buffer":115,"./memo":118}],121:[function(require,module,exports){
 var RenderTarget, RenderToTexture, Renderable, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -21691,7 +19600,7 @@ module.exports = RenderToTexture;
 
 
 
-},{"../../util":175,"../renderable":161,"./texture/rendertarget":135}],132:[function(require,module,exports){
+},{"../../util":165,"../renderable":151,"./texture/rendertarget":125}],122:[function(require,module,exports){
 var Atlas, SCRATCH_SIZE, TextAtlas,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -21912,12 +19821,12 @@ module.exports = TextAtlas;
 
 
 
-},{"./atlas":124}],133:[function(require,module,exports){
+},{"./atlas":114}],123:[function(require,module,exports){
 var BackedTexture, DataTexture, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
-Util = require('../../../Util');
+Util = require('../../../util');
 
 DataTexture = require('./datatexture');
 
@@ -21998,10 +19907,10 @@ module.exports = BackedTexture;
 
 
 
-},{"../../../Util":23,"./datatexture":134}],134:[function(require,module,exports){
+},{"../../../util":165,"./datatexture":124}],124:[function(require,module,exports){
 var DataTexture, Util;
 
-Util = require('../../../Util');
+Util = require('../../../util');
 
 
 /*
@@ -22068,7 +19977,7 @@ DataTexture = (function() {
     gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    return gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, w, h, this.format, this.type, data);
+    return gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, this.width, h, this.format, this.type, data);
   };
 
   DataTexture.prototype.dispose = function() {
@@ -22086,7 +19995,7 @@ module.exports = DataTexture;
 
 
 
-},{"../../../Util":23}],135:[function(require,module,exports){
+},{"../../../util":165}],125:[function(require,module,exports){
 
 /*
 Virtual RenderTarget that cycles through multiple frames
@@ -22215,7 +20124,7 @@ module.exports = RenderTarget;
 
 
 
-},{}],136:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 var DataBuffer, Util, VoxelBuffer,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -22360,7 +20269,7 @@ module.exports = VoxelBuffer;
 
 
 
-},{"../../util":175,"./databuffer":126}],137:[function(require,module,exports){
+},{"../../util":165,"./databuffer":116}],127:[function(require,module,exports){
 var Classes;
 
 Classes = {
@@ -22391,7 +20300,7 @@ module.exports = Classes;
 
 
 
-},{"./buffer/arraybuffer":123,"./buffer/atlas":124,"./buffer/databuffer":126,"./buffer/matrixbuffer":127,"./buffer/memo":128,"./buffer/pushbuffer":129,"./buffer/readback":130,"./buffer/rendertotexture":131,"./buffer/textatlas":132,"./buffer/voxelbuffer":136,"./meshes/arrow":150,"./meshes/debug":152,"./meshes/face":153,"./meshes/line":154,"./meshes/memoscreen":155,"./meshes/point":156,"./meshes/screen":157,"./meshes/sprite":158,"./meshes/strip":159,"./meshes/surface":160,"./scene":162}],138:[function(require,module,exports){
+},{"./buffer/arraybuffer":113,"./buffer/atlas":114,"./buffer/databuffer":116,"./buffer/matrixbuffer":117,"./buffer/memo":118,"./buffer/pushbuffer":119,"./buffer/readback":120,"./buffer/rendertotexture":121,"./buffer/textatlas":122,"./buffer/voxelbuffer":126,"./meshes/arrow":140,"./meshes/debug":142,"./meshes/face":143,"./meshes/line":144,"./meshes/memoscreen":145,"./meshes/point":146,"./meshes/screen":147,"./meshes/sprite":148,"./meshes/strip":149,"./meshes/surface":150,"./scene":152}],128:[function(require,module,exports){
 var RenderFactory;
 
 RenderFactory = (function() {
@@ -22417,7 +20326,7 @@ module.exports = RenderFactory;
 
 
 
-},{}],139:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 var ArrowGeometry, ClipGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -22548,7 +20457,7 @@ module.exports = ArrowGeometry;
 
 
 
-},{"./clipgeometry":140}],140:[function(require,module,exports){
+},{"./clipgeometry":130}],130:[function(require,module,exports){
 var ClipGeometry, Geometry, debug, tick,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -22633,7 +20542,7 @@ module.exports = ClipGeometry;
 
 
 
-},{"./geometry":142}],141:[function(require,module,exports){
+},{"./geometry":132}],131:[function(require,module,exports){
 var ClipGeometry, FaceGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -22727,7 +20636,7 @@ module.exports = FaceGeometry;
 
 
 
-},{"./clipgeometry":140}],142:[function(require,module,exports){
+},{"./clipgeometry":130}],132:[function(require,module,exports){
 var Geometry, debug, tick,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -22939,7 +20848,7 @@ module.exports = Geometry;
 
 
 
-},{}],143:[function(require,module,exports){
+},{}],133:[function(require,module,exports){
 exports.Geometry = require('./geometry');
 
 exports.ArrowGeometry = require('./arrowgeometry');
@@ -22958,7 +20867,7 @@ exports.SurfaceGeometry = require('./surfacegeometry');
 
 
 
-},{"./arrowgeometry":139,"./facegeometry":141,"./geometry":142,"./linegeometry":144,"./screengeometry":145,"./spritegeometry":146,"./stripgeometry":147,"./surfacegeometry":148}],144:[function(require,module,exports){
+},{"./arrowgeometry":129,"./facegeometry":131,"./geometry":132,"./linegeometry":134,"./screengeometry":135,"./spritegeometry":136,"./stripgeometry":137,"./surfacegeometry":138}],134:[function(require,module,exports){
 var ClipGeometry, LineGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -22980,7 +20889,7 @@ LineGeometry = (function(superClass) {
   extend(LineGeometry, superClass);
 
   function LineGeometry(options) {
-    var aa, ab, base, closed, detail, edge, edger, i, index, j, joint, joints, k, l, layers, line, lines, m, n, o, p, points, position, q, quads, r, ref, ref1, ref10, ref11, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, ribbons, s, samples, segments, strip, strips, t, triangles, u, v, vertices, w, wrap, x, y, z;
+    var base, closed, detail, edge, edger, i, i1, index, j, j1, joint, joints, k, l, layers, line, lines, m, n, o, p, points, position, q, quads, r, ref, ref1, ref10, ref11, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, ribbons, s, samples, segments, strip, strips, t, triangles, u, v, vertices, w, wrap, x, y, z;
     LineGeometry.__super__.constructor.call(this, options);
     this._clipUniforms();
     this.closed = closed = options.closed || false;
@@ -23075,8 +20984,8 @@ LineGeometry = (function(superClass) {
     } else {
       for (l = v = 0, ref8 = layers; 0 <= ref8 ? v < ref8 : v > ref8; l = 0 <= ref8 ? ++v : --v) {
         for (z = w = 0, ref9 = ribbons; 0 <= ref9 ? w < ref9 : w > ref9; z = 0 <= ref9 ? ++w : --w) {
-          for (y = aa = 0, ref10 = strips; 0 <= ref10 ? aa < ref10 : aa > ref10; y = 0 <= ref10 ? ++aa : --aa) {
-            for (x = ab = 0, ref11 = samples; 0 <= ref11 ? ab < ref11 : ab > ref11; x = 0 <= ref11 ? ++ab : --ab) {
+          for (y = i1 = 0, ref10 = strips; 0 <= ref10 ? i1 < ref10 : i1 > ref10; y = 0 <= ref10 ? ++i1 : --i1) {
+            for (x = j1 = 0, ref11 = samples; 0 <= ref11 ? j1 < ref11 : j1 > ref11; x = 0 <= ref11 ? ++j1 : --j1) {
               if (closed) {
                 x = x % wrap;
               }
@@ -23126,7 +21035,7 @@ module.exports = LineGeometry;
 
 
 
-},{"./clipgeometry":140}],145:[function(require,module,exports){
+},{"./clipgeometry":130}],135:[function(require,module,exports){
 var ScreenGeometry, SurfaceGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -23204,7 +21113,7 @@ module.exports = ScreenGeometry;
 
 
 
-},{"./surfacegeometry":148}],146:[function(require,module,exports){
+},{"./surfacegeometry":138}],136:[function(require,module,exports){
 var ClipGeometry, SpriteGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -23303,7 +21212,7 @@ module.exports = SpriteGeometry;
 
 
 
-},{"./clipgeometry":140}],147:[function(require,module,exports){
+},{"./clipgeometry":130}],137:[function(require,module,exports){
 var ClipGeometry, StripGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -23414,7 +21323,7 @@ module.exports = StripGeometry;
 
 
 
-},{"./clipgeometry":140}],148:[function(require,module,exports){
+},{"./clipgeometry":130}],138:[function(require,module,exports){
 var ClipGeometry, SurfaceGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -23570,7 +21479,7 @@ module.exports = SurfaceGeometry;
 
 
 
-},{"./clipgeometry":140}],149:[function(require,module,exports){
+},{"./clipgeometry":130}],139:[function(require,module,exports){
 exports.Scene = require('./scene');
 
 exports.Factory = require('./factory');
@@ -23581,7 +21490,7 @@ exports.Classes = require('./classes');
 
 
 
-},{"./classes":137,"./factory":138,"./scene":162}],150:[function(require,module,exports){
+},{"./classes":127,"./factory":128,"./scene":152}],140:[function(require,module,exports){
 var Arrow, ArrowGeometry, Base,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -23643,7 +21552,7 @@ module.exports = Arrow;
 
 
 
-},{"../geometry":143,"./base":151}],151:[function(require,module,exports){
+},{"../geometry":133,"./base":141}],141:[function(require,module,exports){
 var Base, Renderable, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -23896,7 +21805,7 @@ module.exports = Base;
 
 
 
-},{"../../util":175,"../renderable":161}],152:[function(require,module,exports){
+},{"../../util":165,"../renderable":151}],142:[function(require,module,exports){
 var Base, Debug,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -23938,7 +21847,7 @@ module.exports = Debug;
 
 
 
-},{"./base":151}],153:[function(require,module,exports){
+},{"./base":141}],143:[function(require,module,exports){
 var Base, Face, FaceGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -24005,7 +21914,7 @@ module.exports = Face;
 
 
 
-},{"../geometry":143,"./base":151}],154:[function(require,module,exports){
+},{"../geometry":133,"./base":141}],144:[function(require,module,exports){
 var Base, Line, LineGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -24098,7 +22007,7 @@ module.exports = Line;
 
 
 
-},{"../geometry":143,"./base":151}],155:[function(require,module,exports){
+},{"../geometry":133,"./base":141}],145:[function(require,module,exports){
 var MemoScreen, Screen, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -24191,7 +22100,7 @@ module.exports = MemoScreen;
 
 
 
-},{"../../util":175,"./screen":157}],156:[function(require,module,exports){
+},{"../../util":165,"./screen":147}],146:[function(require,module,exports){
 var Base, Point, SpriteGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -24294,7 +22203,7 @@ module.exports = Point;
 
 
 
-},{"../geometry":143,"./base":151}],157:[function(require,module,exports){
+},{"../geometry":133,"./base":141}],147:[function(require,module,exports){
 var Base, Screen, ScreenGeometry, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -24356,7 +22265,7 @@ module.exports = Screen;
 
 
 
-},{"../../util":175,"../geometry":143,"./base":151}],158:[function(require,module,exports){
+},{"../../util":165,"../geometry":133,"./base":141}],148:[function(require,module,exports){
 var Base, Sprite, SpriteGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -24434,7 +22343,7 @@ module.exports = Sprite;
 
 
 
-},{"../geometry":143,"./base":151}],159:[function(require,module,exports){
+},{"../geometry":133,"./base":141}],149:[function(require,module,exports){
 var Base, Strip, StripGeometry,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -24501,7 +22410,7 @@ module.exports = Strip;
 
 
 
-},{"../geometry":143,"./base":151}],160:[function(require,module,exports){
+},{"../geometry":133,"./base":141}],150:[function(require,module,exports){
 var Base, Surface, SurfaceGeometry, Util,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -24578,7 +22487,7 @@ module.exports = Surface;
 
 
 
-},{"../../util":175,"../geometry":143,"./base":151}],161:[function(require,module,exports){
+},{"../../util":165,"../geometry":133,"./base":141}],151:[function(require,module,exports){
 var Renderable;
 
 Renderable = (function() {
@@ -24621,7 +22530,7 @@ module.exports = Renderable;
 
 
 
-},{}],162:[function(require,module,exports){
+},{}],152:[function(require,module,exports){
 var MathBox, Renderable, Scene,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty,
@@ -24763,7 +22672,7 @@ module.exports = Scene;
 
 
 
-},{"./renderable":161}],163:[function(require,module,exports){
+},{"./renderable":151}],153:[function(require,module,exports){
 var Factory, ShaderGraph;
 
 ShaderGraph = require('../../vendor/shadergraph/src');
@@ -24793,14 +22702,14 @@ module.exports = Factory;
 
 
 
-},{"../../vendor/shadergraph/src":208}],164:[function(require,module,exports){
+},{"../../vendor/shadergraph/src":194}],154:[function(require,module,exports){
 exports.Factory = require('./factory');
 
 exports.Snippets = require('../../build/shaders');
 
 
 
-},{"../../build/shaders":1,"./factory":163}],165:[function(require,module,exports){
+},{"../../build/shaders":1,"./factory":153}],155:[function(require,module,exports){
 THREE.Bootstrap.registerPlugin('splash', {
   defaults: {
     color: 'mono',
@@ -24888,7 +22797,7 @@ THREE.Bootstrap.registerPlugin('splash', {
 
 
 
-},{}],166:[function(require,module,exports){
+},{}],156:[function(require,module,exports){
 var Animation, Animator, Ease;
 
 Ease = require('../util').Ease;
@@ -25095,16 +23004,16 @@ Animation = (function() {
   };
 
   Animation.prototype.update = function(time1) {
-    var active, base, clock, complete, ease, end, f, from, method, queue, ref, stage, start, step, to, value;
+    var active, base, clock, complete, ease, end, f, from, method, queue, ref, ref1, stage, start, step, to, value;
     this.time = time1;
     if (this.queue.length === 0) {
       return true;
     }
     clock = this.getTime();
-    value = this.value, queue = this.queue;
+    ref = this, value = ref.value, queue = ref.queue;
     active = false;
     while (!active) {
-      ref = stage = queue[0], from = ref.from, to = ref.to, start = ref.start, end = ref.end, step = ref.step, complete = ref.complete, ease = ref.ease;
+      ref1 = stage = queue[0], from = ref1.from, to = ref1.to, start = ref1.start, end = ref1.end, step = ref1.step, complete = ref1.complete, ease = ref1.ease;
       if (from == null) {
         from = stage.from = this.type.clone(this.value);
       }
@@ -25163,7 +23072,7 @@ module.exports = Animator;
 
 
 
-},{"../util":175}],167:[function(require,module,exports){
+},{"../util":165}],157:[function(require,module,exports){
 var API, Util;
 
 Util = require('../util');
@@ -25503,7 +23412,7 @@ module.exports = API;
 
 
 
-},{"../util":175}],168:[function(require,module,exports){
+},{"../util":165}],158:[function(require,module,exports){
 var Controller, Util;
 
 Util = require('../util');
@@ -25531,7 +23440,7 @@ Controller = (function() {
   };
 
   Controller.prototype.set = function(node, key, value) {
-    var e, error;
+    var e;
     try {
       return node.set(key, value);
     } catch (error) {
@@ -25542,7 +23451,7 @@ Controller = (function() {
   };
 
   Controller.prototype.bind = function(node, key, expr) {
-    var e, error;
+    var e;
     try {
       return node.bind(key, expr);
     } catch (error) {
@@ -25553,7 +23462,7 @@ Controller = (function() {
   };
 
   Controller.prototype.unbind = function(node, key) {
-    var e, error;
+    var e;
     try {
       return node.unbind(key);
     } catch (error) {
@@ -25586,7 +23495,7 @@ module.exports = Controller;
 
 
 
-},{"../util":175}],169:[function(require,module,exports){
+},{"../util":165}],159:[function(require,module,exports){
 exports.Animator = require('./animator');
 
 exports.API = require('./api');
@@ -25595,7 +23504,7 @@ exports.Controller = require('./controller');
 
 
 
-},{"./animator":166,"./api":167,"./controller":168}],170:[function(require,module,exports){
+},{"./animator":156,"./api":157,"./controller":158}],160:[function(require,module,exports){
 var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 exports.setOrigin = function(vec, dimensions, origin) {
@@ -25663,7 +23572,7 @@ exports.recenterAxis = (function() {
 
 
 
-},{}],171:[function(require,module,exports){
+},{}],161:[function(require,module,exports){
 // Recycled from threestrap
 
 module.exports = self = {
@@ -25788,7 +23697,7 @@ module.exports = self = {
 
 };
 
-},{}],172:[function(require,module,exports){
+},{}],162:[function(require,module,exports){
 var getSizes;
 
 exports.getSizes = getSizes = function(data) {
@@ -26432,7 +24341,7 @@ exports.getLerpThunk = function(data1, data2) {
 
 
 
-},{}],173:[function(require,module,exports){
+},{}],163:[function(require,module,exports){
 var ease, π;
 
 π = Math.PI;
@@ -26456,7 +24365,7 @@ module.exports = ease;
 
 
 
-},{}],174:[function(require,module,exports){
+},{}],164:[function(require,module,exports){
 var index, letters, parseOrder, toFloatString, toType,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -26659,7 +24568,7 @@ exports.toType = toType;
 
 
 
-},{}],175:[function(require,module,exports){
+},{}],165:[function(require,module,exports){
 exports.Axis = require('./axis');
 
 exports.Data = require('./data');
@@ -26680,7 +24589,7 @@ exports.VDOM = require('./vdom');
 
 
 
-},{"./axis":170,"./data":172,"./ease":173,"./glsl":174,"./js":176,"./pretty":177,"./three":178,"./ticks":179,"./vdom":180}],176:[function(require,module,exports){
+},{"./axis":160,"./data":162,"./ease":163,"./glsl":164,"./js":166,"./pretty":167,"./three":168,"./ticks":169,"./vdom":170}],166:[function(require,module,exports){
 exports.merge = function() {
   var i, k, len, obj, v, x;
   x = {};
@@ -26753,7 +24662,7 @@ exports.parseQuoted = function(str) {
 
 
 
-},{}],177:[function(require,module,exports){
+},{}],167:[function(require,module,exports){
 var NUMBER_PRECISION, NUMBER_THRESHOLD, checkFactor, checkUnit, escapeHTML, formatFactors, formatFraction, formatMultiple, formatPrimes, prettyFormat, prettyJSXBind, prettyJSXPair, prettyJSXProp, prettyMarkup, prettyNumber, prettyPrint;
 
 NUMBER_PRECISION = 5;
@@ -27113,7 +25022,7 @@ for x in [1, 2, 1/2, 3, 1/3, Math.PI, Math.PI / 2, Math.PI * 2, Math.PI * 3, Mat
 
 
 
-},{}],178:[function(require,module,exports){
+},{}],168:[function(require,module,exports){
 exports.paramToGL = function(gl, p) {
   if (p === THREE.RepeatWrapping) {
     return gl.REPEAT;
@@ -27300,7 +25209,7 @@ exports.transformComposer = function() {
 
 
 
-},{}],179:[function(require,module,exports){
+},{}],169:[function(require,module,exports){
 
 /*
  Generate equally spaced ticks in a range at sensible positions.
@@ -27363,7 +25272,7 @@ linear = function(min, max, n, unit, base, factor, start, end, zero, nice) {
     }
     return results;
   })();
-  distance = Infinity;
+  distance = 2e308;
   step = steps.reduce(function(ref, step) {
     var d;
     f = step / ideal;
@@ -27425,7 +25334,7 @@ exports.log = log;
 
 
 
-},{}],180:[function(require,module,exports){
+},{}],170:[function(require,module,exports){
 var HEAP, Types, apply, createClass, descriptor, element, hint, id, j, key, len, map, mount, prop, recycle, ref1, set, unmount, unset;
 
 HEAP = [];
@@ -27879,530 +25788,7 @@ module.exports = {
 
 
 
-},{}],181:[function(require,module,exports){
-
-/*
-  Graph of nodes with outlets
- */
-var Graph;
-
-Graph = (function() {
-  Graph.index = 0;
-
-  Graph.id = function(name) {
-    return ++Graph.index;
-  };
-
-  Graph.IN = 0;
-
-  Graph.OUT = 1;
-
-  function Graph(nodes, parent) {
-    this.parent = parent != null ? parent : null;
-    this.id = Graph.id();
-    this.nodes = [];
-    nodes && this.add(nodes);
-  }
-
-  Graph.prototype.inputs = function() {
-    var i, inputs, j, len, len1, node, outlet, ref, ref1;
-    inputs = [];
-    ref = this.nodes;
-    for (i = 0, len = ref.length; i < len; i++) {
-      node = ref[i];
-      ref1 = node.inputs;
-      for (j = 0, len1 = ref1.length; j < len1; j++) {
-        outlet = ref1[j];
-        if (outlet.input === null) {
-          inputs.push(outlet);
-        }
-      }
-    }
-    return inputs;
-  };
-
-  Graph.prototype.outputs = function() {
-    var i, j, len, len1, node, outlet, outputs, ref, ref1;
-    outputs = [];
-    ref = this.nodes;
-    for (i = 0, len = ref.length; i < len; i++) {
-      node = ref[i];
-      ref1 = node.outputs;
-      for (j = 0, len1 = ref1.length; j < len1; j++) {
-        outlet = ref1[j];
-        if (outlet.output.length === 0) {
-          outputs.push(outlet);
-        }
-      }
-    }
-    return outputs;
-  };
-
-  Graph.prototype.getIn = function(name) {
-    var outlet;
-    return ((function() {
-      var i, len, ref, results;
-      ref = this.inputs();
-      results = [];
-      for (i = 0, len = ref.length; i < len; i++) {
-        outlet = ref[i];
-        if (outlet.name === name) {
-          results.push(outlet);
-        }
-      }
-      return results;
-    }).call(this))[0];
-  };
-
-  Graph.prototype.getOut = function(name) {
-    var outlet;
-    return ((function() {
-      var i, len, ref, results;
-      ref = this.outputs();
-      results = [];
-      for (i = 0, len = ref.length; i < len; i++) {
-        outlet = ref[i];
-        if (outlet.name === name) {
-          results.push(outlet);
-        }
-      }
-      return results;
-    }).call(this))[0];
-  };
-
-  Graph.prototype.add = function(node, ignore) {
-    var _node, i, len;
-    if (node.length) {
-      for (i = 0, len = node.length; i < len; i++) {
-        _node = node[i];
-        this.add(_node);
-      }
-      return;
-    }
-    if (node.graph && !ignore) {
-      throw new Error("Adding node to two graphs at once");
-    }
-    node.graph = this;
-    return this.nodes.push(node);
-  };
-
-  Graph.prototype.remove = function(node, ignore) {
-    var _node, i, len;
-    if (node.length) {
-      for (i = 0, len = node.length; i < len; i++) {
-        _node = node[i];
-        this.remove(_node);
-      }
-      return;
-    }
-    if (node.graph !== this) {
-      throw new Error("Removing node from wrong graph.");
-    }
-    ignore || node.disconnect();
-    this.nodes.splice(this.nodes.indexOf(node), 1);
-    return node.graph = null;
-  };
-
-  Graph.prototype.adopt = function(node) {
-    var _node, i, len;
-    if (node.length) {
-      for (i = 0, len = node.length; i < len; i++) {
-        _node = node[i];
-        this.adopt(_node);
-      }
-      return;
-    }
-    node.graph.remove(node, true);
-    return this.add(node, true);
-  };
-
-  return Graph;
-
-})();
-
-module.exports = Graph;
-
-
-
-},{}],182:[function(require,module,exports){
-exports.Graph = require('./graph');
-
-exports.Node = require('./node');
-
-exports.Outlet = require('./outlet');
-
-exports.IN = exports.Graph.IN;
-
-exports.OUT = exports.Graph.OUT;
-
-
-
-},{"./graph":181,"./node":183,"./outlet":184}],183:[function(require,module,exports){
-var Graph, Node, Outlet;
-
-Graph = require('./graph');
-
-Outlet = require('./outlet');
-
-
-/*
- Node in graph.
- */
-
-Node = (function() {
-  Node.index = 0;
-
-  Node.id = function(name) {
-    return ++Node.index;
-  };
-
-  function Node(owner, outlets) {
-    this.owner = owner;
-    this.graph = null;
-    this.inputs = [];
-    this.outputs = [];
-    this.all = [];
-    this.outlets = null;
-    this.id = Node.id();
-    this.setOutlets(outlets);
-  }
-
-  Node.prototype.getIn = function(name) {
-    var outlet;
-    return ((function() {
-      var i, len, ref, results;
-      ref = this.inputs;
-      results = [];
-      for (i = 0, len = ref.length; i < len; i++) {
-        outlet = ref[i];
-        if (outlet.name === name) {
-          results.push(outlet);
-        }
-      }
-      return results;
-    }).call(this))[0];
-  };
-
-  Node.prototype.getOut = function(name) {
-    var outlet;
-    return ((function() {
-      var i, len, ref, results;
-      ref = this.outputs;
-      results = [];
-      for (i = 0, len = ref.length; i < len; i++) {
-        outlet = ref[i];
-        if (outlet.name === name) {
-          results.push(outlet);
-        }
-      }
-      return results;
-    }).call(this))[0];
-  };
-
-  Node.prototype.get = function(name) {
-    return this.getIn(name) || this.getOut(name);
-  };
-
-  Node.prototype.setOutlets = function(outlets) {
-    var existing, hash, i, j, k, key, len, len1, len2, match, outlet, ref;
-    if (outlets != null) {
-      if (this.outlets == null) {
-        this.outlets = {};
-        for (i = 0, len = outlets.length; i < len; i++) {
-          outlet = outlets[i];
-          if (!(outlet instanceof Outlet)) {
-            outlet = Outlet.make(outlet);
-          }
-          this._add(outlet);
-        }
-        return;
-      }
-      hash = function(outlet) {
-        return [outlet.name, outlet.inout, outlet.type].join('-');
-      };
-      match = {};
-      for (j = 0, len1 = outlets.length; j < len1; j++) {
-        outlet = outlets[j];
-        match[hash(outlet)] = true;
-      }
-      ref = this.outlets;
-      for (key in ref) {
-        outlet = ref[key];
-        key = hash(outlet);
-        if (match[key]) {
-          match[key] = outlet;
-        } else {
-          this._remove(outlet);
-        }
-      }
-      for (k = 0, len2 = outlets.length; k < len2; k++) {
-        outlet = outlets[k];
-        existing = match[hash(outlet)];
-        if (existing instanceof Outlet) {
-          this._morph(existing, outlet);
-        } else {
-          if (!(outlet instanceof Outlet)) {
-            outlet = Outlet.make(outlet);
-          }
-          this._add(outlet);
-        }
-      }
-      this;
-    }
-    return this.outlets;
-  };
-
-  Node.prototype.connect = function(node, empty, force) {
-    var dest, dests, hint, hints, i, j, k, len, len1, len2, list, outlets, ref, ref1, ref2, source, sources, type, typeHint;
-    outlets = {};
-    hints = {};
-    typeHint = function(outlet) {
-      return type + '/' + outlet.hint;
-    };
-    ref = node.inputs;
-    for (i = 0, len = ref.length; i < len; i++) {
-      dest = ref[i];
-      if (!force && dest.input) {
-        continue;
-      }
-      type = dest.type;
-      hint = typeHint(dest);
-      if (!hints[hint]) {
-        hints[hint] = dest;
-      }
-      outlets[type] = list = outlets[type] || [];
-      list.push(dest);
-    }
-    sources = this.outputs;
-    sources = sources.filter(function(outlet) {
-      return !(empty && outlet.output.length);
-    });
-    ref1 = sources.slice();
-    for (j = 0, len1 = ref1.length; j < len1; j++) {
-      source = ref1[j];
-      type = source.type;
-      hint = typeHint(source);
-      dests = outlets[type];
-      if (dest = hints[hint]) {
-        source.connect(dest);
-        delete hints[hint];
-        dests.splice(dests.indexOf(dest), 1);
-        sources.splice(sources.indexOf(source), 1);
-      }
-    }
-    if (!sources.length) {
-      return this;
-    }
-    ref2 = sources.slice();
-    for (k = 0, len2 = ref2.length; k < len2; k++) {
-      source = ref2[k];
-      type = source.type;
-      dests = outlets[type];
-      if (dests && dests.length) {
-        source.connect(dests.shift());
-      }
-    }
-    return this;
-  };
-
-  Node.prototype.disconnect = function(node) {
-    var i, j, len, len1, outlet, ref, ref1;
-    ref = this.inputs;
-    for (i = 0, len = ref.length; i < len; i++) {
-      outlet = ref[i];
-      outlet.disconnect();
-    }
-    ref1 = this.outputs;
-    for (j = 0, len1 = ref1.length; j < len1; j++) {
-      outlet = ref1[j];
-      outlet.disconnect();
-    }
-    return this;
-  };
-
-  Node.prototype._key = function(outlet) {
-    return [outlet.name, outlet.inout].join('-');
-  };
-
-  Node.prototype._add = function(outlet) {
-    var key;
-    key = this._key(outlet);
-    if (outlet.node) {
-      throw new Error("Adding outlet to two nodes at once.");
-    }
-    if (this.outlets[key]) {
-      throw new Error("Adding two identical outlets to same node. (" + key + ")");
-    }
-    outlet.node = this;
-    if (outlet.inout === Graph.IN) {
-      this.inputs.push(outlet);
-    }
-    if (outlet.inout === Graph.OUT) {
-      this.outputs.push(outlet);
-    }
-    this.all.push(outlet);
-    return this.outlets[key] = outlet;
-  };
-
-  Node.prototype._morph = function(existing, outlet) {
-    var key;
-    key = this._key(outlet);
-    delete this.outlets[key];
-    existing.morph(outlet);
-    key = this._key(outlet);
-    return this.outlets[key] = outlet;
-  };
-
-  Node.prototype._remove = function(outlet) {
-    var inout, key;
-    key = this._key(outlet);
-    inout = outlet.inout;
-    if (outlet.node !== this) {
-      throw new Error("Removing outlet from wrong node.");
-    }
-    outlet.disconnect();
-    outlet.node = null;
-    delete this.outlets[key];
-    if (outlet.inout === Graph.IN) {
-      this.inputs.splice(this.inputs.indexOf(outlet), 1);
-    }
-    if (outlet.inout === Graph.OUT) {
-      this.outputs.splice(this.outputs.indexOf(outlet), 1);
-    }
-    this.all.splice(this.all.indexOf(outlet), 1);
-    return this;
-  };
-
-  return Node;
-
-})();
-
-module.exports = Node;
-
-
-
-},{"./graph":181,"./outlet":184}],184:[function(require,module,exports){
-var Graph, Outlet;
-
-Graph = require('./graph');
-
-
-/*
-  In/out outlet on node
- */
-
-Outlet = (function() {
-  Outlet.make = function(outlet, extra) {
-    var key, meta, ref, value;
-    if (extra == null) {
-      extra = {};
-    }
-    meta = extra;
-    if (outlet.meta != null) {
-      ref = outlet.meta;
-      for (key in ref) {
-        value = ref[key];
-        meta[key] = value;
-      }
-    }
-    return new Outlet(outlet.inout, outlet.name, outlet.hint, outlet.type, meta);
-  };
-
-  Outlet.index = 0;
-
-  Outlet.id = function(name) {
-    return "_io_" + (++Outlet.index) + "_" + name;
-  };
-
-  Outlet.hint = function(name) {
-    name = name.replace(/^_io_[0-9]+_/, '');
-    name = name.replace(/_i_o$/, '');
-    return name = name.replace(/(In|Out|Inout|InOut)$/, '');
-  };
-
-  function Outlet(inout, name1, hint, type, meta1, id) {
-    this.inout = inout;
-    this.name = name1;
-    this.hint = hint;
-    this.type = type;
-    this.meta = meta1 != null ? meta1 : {};
-    this.id = id;
-    if (this.hint == null) {
-      this.hint = Outlet.hint(this.name);
-    }
-    this.node = null;
-    this.input = null;
-    this.output = [];
-    if (this.id == null) {
-      this.id = Outlet.id(this.hint);
-    }
-  }
-
-  Outlet.prototype.morph = function(outlet) {
-    this.inout = outlet.inout;
-    this.name = outlet.name;
-    this.hint = outlet.hint;
-    this.type = outlet.type;
-    return this.meta = outlet.meta;
-  };
-
-  Outlet.prototype.dupe = function(name) {
-    var outlet;
-    if (name == null) {
-      name = this.id;
-    }
-    outlet = Outlet.make(this);
-    outlet.name = name;
-    return outlet;
-  };
-
-  Outlet.prototype.connect = function(outlet) {
-    if (this.inout === Graph.IN && outlet.inout === Graph.OUT) {
-      return outlet.connect(this);
-    }
-    if (this.inout !== Graph.OUT || outlet.inout !== Graph.IN) {
-      throw new Error("Can only connect out to in.");
-    }
-    if (outlet.input === this) {
-      return;
-    }
-    outlet.disconnect();
-    outlet.input = this;
-    return this.output.push(outlet);
-  };
-
-  Outlet.prototype.disconnect = function(outlet) {
-    var i, index, len, ref;
-    if (this.input) {
-      this.input.disconnect(this);
-    }
-    if (this.output.length) {
-      if (outlet) {
-        index = this.output.indexOf(outlet);
-        if (index >= 0) {
-          this.output.splice(index, 1);
-          return outlet.input = null;
-        }
-      } else {
-        ref = this.output;
-        for (i = 0, len = ref.length; i < len; i++) {
-          outlet = ref[i];
-          outlet.input = null;
-        }
-        return this.output = [];
-      }
-    }
-  };
-
-  return Outlet;
-
-})();
-
-module.exports = Outlet;
-
-
-
-},{"./graph":181}],185:[function(require,module,exports){
+},{}],171:[function(require,module,exports){
 var Block, Graph, Layout, OutletError, Program, debug;
 
 Graph = require('../graph');
@@ -28561,7 +25947,7 @@ module.exports = Block;
 
 
 
-},{"../graph":205,"../linker":210}],186:[function(require,module,exports){
+},{"../graph":191,"../linker":196}],172:[function(require,module,exports){
 var Block, Call,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -28632,7 +26018,7 @@ module.exports = Call;
 
 
 
-},{"./block":185}],187:[function(require,module,exports){
+},{"./block":171}],173:[function(require,module,exports){
 var Block, Callback, Graph,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -28740,7 +26126,7 @@ module.exports = Callback;
 
 
 
-},{"../graph":205,"./block":185}],188:[function(require,module,exports){
+},{"../graph":191,"./block":171}],174:[function(require,module,exports){
 exports.Block = require('./block');
 
 exports.Call = require('./call');
@@ -28753,7 +26139,7 @@ exports.Join = require('./join');
 
 
 
-},{"./block":185,"./call":186,"./callback":187,"./isolate":189,"./join":190}],189:[function(require,module,exports){
+},{"./block":171,"./call":172,"./callback":173,"./isolate":175,"./join":176}],175:[function(require,module,exports){
 var Block, Graph, Isolate,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -28849,7 +26235,7 @@ module.exports = Isolate;
 
 
 
-},{"../graph":205,"./block":185}],190:[function(require,module,exports){
+},{"../graph":191,"./block":171}],176:[function(require,module,exports){
 var Block, Join,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -28909,7 +26295,7 @@ module.exports = Join;
 
 
 
-},{"./block":185}],191:[function(require,module,exports){
+},{"./block":171}],177:[function(require,module,exports){
 
 /*
   Cache decorator  
@@ -28944,7 +26330,7 @@ module.exports = cache;
 
 
 
-},{"./hash":193,"./queue":197}],192:[function(require,module,exports){
+},{"./hash":179,"./queue":183}],178:[function(require,module,exports){
 var Block, Factory, Graph, State, Visualize;
 
 Graph = require('../graph').Graph;
@@ -29081,7 +26467,7 @@ Factory = (function() {
   };
 
   Factory.prototype._concat = function(factory) {
-    var block, error, error1;
+    var block, error;
     if (factory._state.nodes.length === 0) {
       return this;
     }
@@ -29100,7 +26486,7 @@ Factory = (function() {
   };
 
   Factory.prototype._import = function(factory) {
-    var block, error, error1;
+    var block, error;
     if (factory._state.nodes.length === 0) {
       throw "Can't import empty callback";
     }
@@ -29134,7 +26520,7 @@ Factory = (function() {
   };
 
   Factory.prototype._isolate = function(sub, main) {
-    var block, error, error1, subgraph;
+    var block, error, subgraph;
     if (sub.nodes.length) {
       subgraph = this._subgraph(sub);
       this._tail(sub, subgraph);
@@ -29152,7 +26538,7 @@ Factory = (function() {
   };
 
   Factory.prototype._callback = function(sub, main) {
-    var block, error, error1, subgraph;
+    var block, error, subgraph;
     if (sub.nodes.length) {
       subgraph = this._subgraph(sub);
       this._tail(sub, subgraph);
@@ -29203,7 +26589,7 @@ Factory = (function() {
     }
     graph.compile = (function(_this) {
       return function(namespace) {
-        var error, error1;
+        var error;
         if (namespace == null) {
           namespace = 'main';
         }
@@ -29220,7 +26606,7 @@ Factory = (function() {
     })(this);
     graph.link = (function(_this) {
       return function(namespace) {
-        var error, error1;
+        var error;
         if (namespace == null) {
           namespace = 'main';
         }
@@ -29364,7 +26750,7 @@ module.exports = Factory;
 
 
 
-},{"../block":188,"../graph":205,"../visualize":216}],193:[function(require,module,exports){
+},{"../block":174,"../graph":191,"../visualize":202}],179:[function(require,module,exports){
 var c1, c2, c3, c4, c5, hash, imul, test;
 
 c1 = 0xcc9e2d51;
@@ -29431,7 +26817,7 @@ module.exports = hash;
 
 
 
-},{}],194:[function(require,module,exports){
+},{}],180:[function(require,module,exports){
 exports.Factory = require('./factory');
 
 exports.Material = require('./material');
@@ -29446,7 +26832,7 @@ exports.hash = require('./hash');
 
 
 
-},{"./cache":191,"./factory":192,"./hash":193,"./library":195,"./material":196,"./queue":197}],195:[function(require,module,exports){
+},{"./cache":177,"./factory":178,"./hash":179,"./library":181,"./material":182,"./queue":183}],181:[function(require,module,exports){
 
 /*
   Snippet library
@@ -29504,7 +26890,7 @@ module.exports = library;
 
 
 
-},{}],196:[function(require,module,exports){
+},{}],182:[function(require,module,exports){
 var Material, Visualize, debug, tick;
 
 debug = false;
@@ -29592,7 +26978,7 @@ module.exports = Material;
 
 
 
-},{"../visualize":216}],197:[function(require,module,exports){
+},{"../visualize":202}],183:[function(require,module,exports){
 var queue;
 
 queue = function(limit) {
@@ -29661,7 +27047,7 @@ module.exports = queue;
 
 
 
-},{}],198:[function(require,module,exports){
+},{}],184:[function(require,module,exports){
 
 /*
   Compile snippet back into GLSL, but with certain symbols replaced by prefixes / placeholders
@@ -29761,7 +27147,7 @@ module.exports = compile;
 
 
 
-},{}],199:[function(require,module,exports){
+},{}],185:[function(require,module,exports){
 module.exports = {
   SHADOW_ARG: '_i_o',
   RETURN_ARG: 'return'
@@ -29769,7 +27155,7 @@ module.exports = {
 
 
 
-},{}],200:[function(require,module,exports){
+},{}],186:[function(require,module,exports){
 var Definition, decl, defaults, get, three, threejs, win;
 
 module.exports = decl = {};
@@ -29989,7 +27375,7 @@ Definition = (function() {
 
 
 
-},{}],201:[function(require,module,exports){
+},{}],187:[function(require,module,exports){
 var $, Graph, _;
 
 Graph = require('../graph');
@@ -30320,7 +27706,7 @@ module.exports = _ = {
 
 
 
-},{"../graph":205,"./constants":199}],202:[function(require,module,exports){
+},{"../graph":191,"./constants":185}],188:[function(require,module,exports){
 var i, k, len, ref, v;
 
 exports.compile = require('./compile');
@@ -30337,7 +27723,7 @@ for (v = i = 0, len = ref.length; i < len; v = ++i) {
 
 
 
-},{"./compile":198,"./constants":199,"./generate":201,"./parse":203}],203:[function(require,module,exports){
+},{"./compile":184,"./constants":185,"./generate":187,"./parse":189}],189:[function(require,module,exports){
 var $, collect, debug, decl, extractSignatures, mapSymbols, parse, parseGLSL, parser, processAST, sortSymbols, tick, tokenizer, walk;
 
 tokenizer = require('../../vendor/glsl-tokenizer');
@@ -30363,7 +27749,7 @@ parse = function(name, code) {
 };
 
 parseGLSL = function(name, code) {
-  var ast, e, error, error1, errors, fmt, j, len, ref, ref1, tock;
+  var ast, e, error, errors, fmt, j, len, ref, ref1, tock;
   if (debug) {
     tock = tick();
   }
@@ -30627,7 +28013,7 @@ module.exports = parse;
 
 
 
-},{"../../vendor/glsl-parser":219,"../../vendor/glsl-tokenizer":223,"./constants":199,"./decl":200}],204:[function(require,module,exports){
+},{"../../vendor/glsl-parser":205,"../../vendor/glsl-tokenizer":209,"./constants":185,"./decl":186}],190:[function(require,module,exports){
 
 /*
   Graph of nodes with outlets
@@ -30772,7 +28158,7 @@ module.exports = Graph;
 
 
 
-},{}],205:[function(require,module,exports){
+},{}],191:[function(require,module,exports){
 exports.Graph = require('./graph');
 
 exports.Node = require('./node');
@@ -30785,7 +28171,7 @@ exports.OUT = exports.Graph.OUT;
 
 
 
-},{"./graph":204,"./node":206,"./outlet":207}],206:[function(require,module,exports){
+},{"./graph":190,"./node":192,"./outlet":193}],192:[function(require,module,exports){
 var Graph, Node, Outlet;
 
 Graph = require('./graph');
@@ -31029,7 +28415,7 @@ module.exports = Node;
 
 
 
-},{"./graph":204,"./outlet":207}],207:[function(require,module,exports){
+},{"./graph":190,"./outlet":193}],193:[function(require,module,exports){
 var Graph, Outlet;
 
 Graph = require('./graph');
@@ -31150,7 +28536,7 @@ module.exports = Outlet;
 
 
 
-},{"./graph":204}],208:[function(require,module,exports){
+},{"./graph":190}],194:[function(require,module,exports){
 var Block, Factory, GLSL, Graph, Linker, ShaderGraph, Snippet, Visualize, cache, inspect, library, merge, visualize;
 
 Block = require('./block');
@@ -31258,7 +28644,7 @@ if (typeof window !== 'undefined') {
 
 
 
-},{"./block":188,"./factory":194,"./glsl":202,"./graph":205,"./linker":210,"./visualize":216}],209:[function(require,module,exports){
+},{"./block":174,"./factory":180,"./glsl":188,"./graph":191,"./linker":196,"./visualize":202}],195:[function(require,module,exports){
 var Graph, Priority, assemble;
 
 Graph = require('../graph');
@@ -31448,7 +28834,7 @@ module.exports = assemble;
 
 
 
-},{"../graph":205,"./priority":213}],210:[function(require,module,exports){
+},{"../graph":191,"./priority":199}],196:[function(require,module,exports){
 exports.Snippet = require('./snippet');
 
 exports.Program = require('./program');
@@ -31465,7 +28851,7 @@ exports.load = exports.Snippet.load;
 
 
 
-},{"./assemble":209,"./layout":211,"./link":212,"./priority":213,"./program":214,"./snippet":215}],211:[function(require,module,exports){
+},{"./assemble":195,"./layout":197,"./link":198,"./priority":199,"./program":200,"./snippet":201}],197:[function(require,module,exports){
 var Layout, Snippet, debug, link;
 
 Snippet = require('./snippet');
@@ -31544,7 +28930,7 @@ module.exports = Layout;
 
 
 
-},{"./link":212,"./snippet":215}],212:[function(require,module,exports){
+},{"./link":198,"./snippet":201}],198:[function(require,module,exports){
 var Graph, Priority, link;
 
 Graph = require('../graph');
@@ -31687,7 +29073,7 @@ module.exports = link;
 
 
 
-},{"../graph":205,"./priority":213}],213:[function(require,module,exports){
+},{"../graph":191,"./priority":199}],199:[function(require,module,exports){
 exports.make = function(x) {
   var ref;
   if (x == null) {
@@ -31737,7 +29123,7 @@ exports.max = function(a, b) {
 
 
 
-},{}],214:[function(require,module,exports){
+},{}],200:[function(require,module,exports){
 var Program, Snippet, assemble;
 
 Snippet = require('./snippet');
@@ -31817,7 +29203,7 @@ module.exports = Program;
 
 
 
-},{"./assemble":209,"./snippet":215}],215:[function(require,module,exports){
+},{"./assemble":195,"./snippet":201}],201:[function(require,module,exports){
 var Snippet;
 
 Snippet = (function() {
@@ -32000,10 +29386,10 @@ module.exports = Snippet;
 
 
 
-},{}],216:[function(require,module,exports){
+},{}],202:[function(require,module,exports){
 var Graph, markup, merge, resolve, serialize, visualize;
 
-Graph = require('../Graph').Graph;
+Graph = require('../graph').Graph;
 
 exports.serialize = serialize = require('./serialize');
 
@@ -32086,7 +29472,7 @@ exports.inspect = function() {
 
 
 
-},{"../Graph":182,"./markup":217,"./serialize":218}],217:[function(require,module,exports){
+},{"../graph":191,"./markup":203,"./serialize":204}],203:[function(require,module,exports){
 var _activate, _markup, _order, connect, cssColor, escapeText, hash, hashColor, makeSVG, merge, overlay, path, process, sqr, trim, wrap;
 
 hash = require('../factory/hash');
@@ -32401,7 +29787,7 @@ module.exports = {
 
 
 
-},{"../factory/hash":193}],218:[function(require,module,exports){
+},{"../factory/hash":179}],204:[function(require,module,exports){
 var Block, isCallback, serialize;
 
 Block = require('../block');
@@ -32505,10 +29891,10 @@ module.exports = serialize;
 
 
 
-},{"../block":188}],219:[function(require,module,exports){
+},{"../block":174}],205:[function(require,module,exports){
 module.exports = require('./lib/index')
 
-},{"./lib/index":221}],220:[function(require,module,exports){
+},{"./lib/index":207}],206:[function(require,module,exports){
 var state
   , token
   , tokens
@@ -32775,7 +30161,7 @@ function fail(message) {
   return function() { return state.unexpected(message) }
 }
 
-},{}],221:[function(require,module,exports){
+},{}],207:[function(require,module,exports){
 module.exports = parser
 
 var through = require('../../through')
@@ -33736,7 +31122,7 @@ function is_precision(token) {
          token.data === 'lowp'
 }
 
-},{"../../through":227,"./expr":220,"./scope":222}],222:[function(require,module,exports){
+},{"../../through":213,"./expr":206,"./scope":208}],208:[function(require,module,exports){
 module.exports = scope
 
 function scope(state) {
@@ -33776,7 +31162,7 @@ proto.find = function(name, fail) {
   return null
 }
 
-},{}],223:[function(require,module,exports){
+},{}],209:[function(require,module,exports){
 module.exports = tokenize
 
 var through = require('../through')
@@ -34113,7 +31499,7 @@ function tokenize() {
   }
 }
 
-},{"../through":227,"./lib/builtins":224,"./lib/literals":225,"./lib/operators":226}],224:[function(require,module,exports){
+},{"../through":213,"./lib/builtins":210,"./lib/literals":211,"./lib/operators":212}],210:[function(require,module,exports){
 module.exports = [
     'gl_Position'
   , 'gl_PointSize'
@@ -34259,7 +31645,7 @@ module.exports = [
   , 'textureCubeLod'
 ]
 
-},{}],225:[function(require,module,exports){
+},{}],211:[function(require,module,exports){
 module.exports = [
   // current
     'precision'
@@ -34354,7 +31740,7 @@ module.exports = [
   , 'using'
 ]
 
-},{}],226:[function(require,module,exports){
+},{}],212:[function(require,module,exports){
 module.exports = [
     '<<='
   , '>>='
@@ -34402,7 +31788,7 @@ module.exports = [
   , '}'
 ]
 
-},{}],227:[function(require,module,exports){
+},{}],213:[function(require,module,exports){
 var through;
 
 through = function(write, end) {
@@ -34447,4 +31833,4 @@ module.exports = through;
 
 
 
-},{}]},{},[30])
+},{}]},{},[20])

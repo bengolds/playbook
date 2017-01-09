@@ -247,8 +247,11 @@ class LineGraph extends Graph {
     let t = mouseX/this.width;
     this.zoomRange('xRange', zoomAmount, t);
 
+    this.start = performance.now();
     clearTimeout(this.resetBoundsTimeout);
     this.resetBoundsTimeout = setTimeout( () => {
+      console.log('time taken: ' + (performance.now()-this.start) + 'ms');
+      console.log(document.visibilityState);
       this.resetBounds();
     }, 50);
   }
