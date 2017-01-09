@@ -25,7 +25,10 @@ helper = {
   makePinnedVar: function (scope, name, bounds=[-10, 10], value=0) {
     let pinned = {};
     pinned.variable = scope.getVariable(name);
-    pinned.bounds = bounds;
+    pinned.range = {
+      bounds: bounds,
+      steps: 100
+    };
     pinned.value = value;
 
     return pinned;

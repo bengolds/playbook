@@ -492,6 +492,15 @@ Custom property | Description | Default
         this.value = this._clampValue(this.value - this.step);
       },
 
+      getNumStops: function () {
+        if (this.snaps) {
+          return Math.floor((this.max-this.min)/this.step);
+        }
+        else {
+          return this.$.sliderContainer.offsetWidth;
+        }
+      },
+
       _updateKnob: function(value, min, max, snaps, step) {
         this.setAttribute('aria-valuemin', min);
         this.setAttribute('aria-valuemax', max);
@@ -733,7 +742,7 @@ Custom property | Description | Default
           useGrouping: false,
           maximumSignificantDigits: 3
         });
-      }
+      },
     });
 
     /**

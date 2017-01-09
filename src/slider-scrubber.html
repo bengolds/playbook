@@ -30,16 +30,16 @@
     </style>
 
     <range-end-picker id='lowerBound' 
-      max='[[getUpperBound(bounds.*)]]'
+      max='[[getUpperBound(range.bounds.*)]]'
       on-change='lowerBoundChanged'></range-end-picker>
     <paper-slider id='slider' pin
       immediate-value='{{value}}'
-      min='[[getLowerBound(bounds.*)]]'
-      max='[[getUpperBound(bounds.*)]]'
+      min='[[getLowerBound(range.bounds.*)]]'
+      max='[[getUpperBound(range.bounds.*)]]'
       max-markers='20'
       ></paper-slider>
     <range-end-picker id='upperBound'
-      min='[[getLowerBound(bounds.*)]]' 
+      min='[[getLowerBound(range.bounds.*)]]' 
       on-change='upperBoundChanged'></range-end-picker>
     <div id='bottomTray'>
       <paper-icon-button icon="add"></paper-icon-button>
@@ -62,26 +62,33 @@
           notify: true,
           value: 0,
         },
-        bounds: {
-          type: Array,
+        range: {
+          type: Object,
           notify: true,
-          value: [-1, 1],
-          observer: 'boundsChanged'
+          observer: 'rangeChanged',
+          value: function() {return {
+            bounds: [-1, 1],
+          };}
         },
       },
 
+      observers: [
+        'rangeChanged(range.bounds)'
+      ],
+
       attached: function() {
         if (this.domain == SETS.NATURAL) {
-          this.bounds = [0, this.bounds[1]];
+          this.set('range.bounds', [0, this.range.bounds[1]]);
         }
         this.$.slider.value = this.value;
+        this.set('range.steps', this.$.slider.getNumStops());
       },
 
       domainChanged: function () {
         switch (this.domain) {
         case SETS.NATURAL:
-          if (this.bounds) {
-            this.bounds = [0, this.bounds[1]];
+          if (this.range) {
+            this.set('range.bounds', [0, this.range.bounds[1]]);
           }
           this.$.slider.step = 1;
           this.$.slider.snaps = true;
@@ -100,30 +107,34 @@
           this.$.lowerBound.fixed = false;
           break;
         }
+        if (this.range) {
+          this.set('range.steps', this.$.slider.getNumStops());
+          console.log(this.range.steps);
+        }
       },
 
       getLowerBound: function () {
-        return this.bounds[0];
+        return this.range.bounds[0];
       },
 
       getUpperBound: function () {
-        return this.bounds[1];
+        return this.range.bounds[1];
       },
 
       lowerBoundChanged: function() {
-        this.set('bounds.0', this.$.lowerBound.value);
-        this.value = Math.max(this.value, this.bounds[0]);
+        this.set('range.bounds.0', this.$.lowerBound.value);
+        this.value = Math.max(this.value, this.range.bounds[0]);
       },
 
       upperBoundChanged: function() {
-        this.set('bounds.1', this.$.upperBound.value);
-        this.value = Math.min(this.value, this.bounds[1]);
+        this.set('range.bounds.1', this.$.upperBound.value);
+        this.value = Math.min(this.value, this.range.bounds[1]);
       },
 
-      boundsChanged: function () {
-        this.$.lowerBound.value = this.bounds[0];
-        this.$.upperBound.value = this.bounds[1];
-        this.value = Math.min(Math.max(this.value, this.bounds[0]), this.bounds[1]);
+      rangeChanged: function () {
+        this.$.lowerBound.value = this.range.bounds[0];
+        this.$.upperBound.value = this.range.bounds[1];
+        this.value = Math.min(Math.max(this.value, this.range.bounds[0]), this.range.bounds[1]);
       },
       
     });

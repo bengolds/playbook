@@ -49,7 +49,7 @@
         <slider-scrubber
           domain='{{variable.set}}' 
           value='{{value}}'
-          bounds='{{bounds}}'></slider-scrubber>
+          range='{{range}}'></slider-scrubber>
       </div>
     </paper-card>
 
@@ -62,8 +62,8 @@
           type: Object,
           notify: true,
         },
-        bounds: {
-          type: Array,
+        range: {
+          type: Object,
           notify: true,
         },
         value: {

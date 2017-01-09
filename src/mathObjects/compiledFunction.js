@@ -10,6 +10,10 @@ class CompiledFunction {
     return this.compiled.eval(combinedScope);
   }
 
+  evalWithoutGlobalScope(scope) {
+    return this.compiled.eval(scope);
+  }
+
   getDomain() {
     return this.freeVariables.map((variable) => {
       return variable.set;
@@ -33,7 +37,7 @@ class CompiledFunction {
     });
   }
 
-  getMinMax(unboundRanges, numSamples=200) {
+  getMinMax(unboundRanges, maxSamples = 1e5) {
     this._checkRangesMatchVariables(unboundRanges);
 
     if (this.variables.length == 0) {
@@ -44,44 +48,59 @@ class CompiledFunction {
     for (let variable of this.variables) {
       let pinnedIndex = this.globalScope.indexOfPinnedVar(variable.name);
       if (pinnedIndex != -1) {
-        ranges[variable.name] = this.globalScope.pinnedVariables[pinnedIndex].bounds;
+        ranges[variable.name] = this.globalScope.pinnedVariables[pinnedIndex].range;
       }
     }
 
-    let iterateSteps = {};
     let numDimensions = this.variables.length;
-    let numSamplePoints = Math.round(Math.pow(numSamples, 1/numDimensions));
+    let maxSamplesPerDimension = Math.round(Math.pow(maxSamples, 1/numDimensions));
 
-    for (let variable of this.variables) {
-      let currRange = ranges[variable.name];
-      let rangeWidth = currRange[1]-currRange[0];
-      iterateSteps[variable.name] = rangeWidth/numSamplePoints;
-    }
-
-    let minY = Number.MAX_VALUE, maxY = -minY;
-    let checkValue = function (y) {
-      if (!isNaN(y)) {
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
-      }
-    };
-
+    let samples = [];
     let scope = {};
     let iterate = (dimension) => {
       let currVar = this.variables[dimension];
-      let currRange = ranges[currVar.name];
-      let currStep = iterateSteps[currVar.name];
-      for (let x = currRange[0]; x < currRange[1]; x+=currStep) {
+      let currBounds = ranges[currVar.name].bounds;
+      let numSteps = Math.min(ranges[currVar.name].steps, maxSamplesPerDimension);
+      let boundsWith = currBounds[1]-currBounds[0];
+      for (let i = 0; i < numSteps; i++) {
+        let x = currBounds[0] + boundsWith * (i/(numSteps-1));
         scope[currVar.name] = x;
         if (dimension == numDimensions-1) {
-          checkValue(this.eval(scope));
+          let sample = this.evalWithoutGlobalScope(scope);
+          if (math.im(sample) == 0 && isFinite(sample)) {
+            samples.push(sample);
+          }
         } else {
           iterate(dimension+1);
         }
       }
     };
     iterate(0);
-    return [minY, maxY];
+
+
+    let numCycles = 5;
+    let mean = math.mean(samples);
+    for (let i = 0; i < numCycles; i++) {
+      if (samples.length == 0) {
+        return [-5, 5];
+      }
+      let stddev = math.std(samples);
+      let numSigmas = 10;
+      let bottomBracket = mean - stddev * numSigmas;
+      let topBracket = mean + stddev * numSigmas;
+
+      samples = samples.filter( (val) => {
+        return val > bottomBracket && val < topBracket;
+      });
+    }
+
+    let bounds = samples.reduce( (range, sample) => {
+      range[0] = Math.min(range[0], sample);
+      range[1] = Math.max(range[1], sample);
+      return range;
+    }, [Number.MAX_VALUE, -Number.MAX_VALUE]);
+
+    return bounds;
   }
 
   _checkRangesMatchVariables(unboundRanges) {

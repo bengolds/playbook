@@ -38,7 +38,7 @@
           expect(el.$.slider.snaps).to.be.true;
           expect(el.$.lowerBound.fixed).to.be.true;
           expect(el.$.lowerBound.value).to.equal(0);
-          expect(el.bounds[0]).to.equal(0);
+          expect(el.range.bounds[0]).to.equal(0);
 
           el.domain = SETS.REAL;
           expect(el.$.lowerBound.fixed).to.be.false;
@@ -47,8 +47,8 @@
         });
 
         test('bounds kept in sync', function() {
-          el.bounds = [-10, 9];
-          expect(el.bounds).to.deep.equal([-10, 9]);
+          el.set('range.bounds', [-10, 9]);
+          expect(el.range.bounds).to.deep.equal([-10, 9]);
           expect(el.$.lowerBound.value).to.equal(-10);
           expect(el.$.upperBound.value).to.equal(9);
           expect(el.$.slider.min).to.equal(-10);
@@ -56,7 +56,7 @@
 
           el.$.lowerBound.lowerValue();
           el.$.upperBound.raiseValue();
-          expect(el.bounds).to.deep.equal([-100, 10]);
+          expect(el.range.bounds).to.deep.equal([-100, 10]);
           expect(el.$.lowerBound.value).to.equal(-100);
           expect(el.$.upperBound.value).to.equal(10);
           expect(el.$.slider.min).to.equal(-100);
@@ -66,30 +66,30 @@
         test('changing bounds past value', function() {
           el.domain = SETS.REAL;
 
-          el.bounds = [-10, 10];
+          el.set('range.bounds', [-10, 10]);
           el.value = 4;
           el.$.upperBound.lowerValue();
           expect (el.value).to.equal(1);
 
-          el.bounds = [-10, 10];
+          el.set('range.bounds', [-10, 10]);
           el.value = -4;
           el.$.lowerBound.raiseValue();
           expect (el.value).to.equal(-1);
 
-          el.bounds = [-10, 10];
+          el.set('range.bounds', [-10, 10]);
           el.value = 7;
-          el.bounds = [-10, 1];
+          el.set('range.bounds', [-10, 1]);
           expect(el.value).to.equal(1);
         });
 
         test('can\'t change bounds over or under other one', function() {
-          el.bounds = [0, 1];
+          el.set('range.bounds', [0, 1]);
           el.$.lowerBound.raiseValue();
-          expect(el.bounds).to.deep.equal([0, 1]);
+          expect(el.range.bounds).to.deep.equal([0, 1]);
 
-          el.bounds = [0, 1];
+          el.set('range.bounds', [0, 1]);
           el.$.upperBound.lowerValue();
-          expect(el.bounds).to.deep.equal([0, 1]);
+          expect(el.range.bounds).to.deep.equal([0, 1]);
         });
 
         //Make sure can't change bounds over or under the other one

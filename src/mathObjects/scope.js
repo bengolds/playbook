@@ -68,7 +68,7 @@ class Scope {
     for (let pinned of this.pinnedVariables) {
       let copyPinned = {};
       copyPinned.variable = pinned.variable;
-      copyPinned.bounds = pinned.bounds.slice();
+      copyPinned.range = Object.assign({}, pinned.range);
       copyPinned.value = pinned.value;
       newScope.pinnedVariables.push(copyPinned);
     }

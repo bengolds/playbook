@@ -44,7 +44,7 @@
       <template is='dom-repeat' id='pinnedVarsRepeater' items='{{scope.pinnedVariables}}'>
         <pinned-variable-card 
           variable='{{item.variable}}'
-          bounds='{{item.bounds}}'
+          range='{{item.range}}'
           value='{{item.value}}'
           ></pinned-variable-card>
       </template>
@@ -155,7 +155,10 @@
           }
           let pinned = {
             variable: this.scope.getVariable(name),
-            bounds: bounds,
+            range: {
+              bounds: bounds,
+              steps: 100 
+            },
             value: value
           };
           this.push('scope.pinnedVariables', pinned);

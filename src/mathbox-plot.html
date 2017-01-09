@@ -268,11 +268,15 @@
       },
 
       onMouseEnter: function (e) {
-        this.graph.onMouseEnter(e);
+        if (this.graph) {
+          this.graph.onMouseEnter(e);
+        }
       },
 
       onMouseLeave: function (e) {
-        this.graph.onMouseLeave(e);
+        if (this.graph) {
+          this.graph.onMouseLeave(e);
+        }
       },
 
       onWheel: function (e) {

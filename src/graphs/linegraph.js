@@ -6,6 +6,7 @@ class LineGraph extends Graph {
     this._exprAnimDuration = 500;
     this._resetBoundsDuration = 250;
     this.labelsVisible = false;
+    this.resetBoundsTimeout = null;
   }
 
   static get supportedSignatures() {
@@ -214,7 +215,10 @@ class LineGraph extends Graph {
     let ranges = {};
     let unboundVar = this.compiled.freeVariables[0];
     if (unboundVar) {
-      ranges[unboundVar.name] = this.getFinal('xRange');
+      ranges[unboundVar.name] = {
+        bounds: this.getFinal('xRange'),
+        steps: this.width
+      };
     } 
     return ranges;
   }
@@ -242,6 +246,10 @@ class LineGraph extends Graph {
     let zoomAmount = 1 + zoomScale*amount;
     let t = mouseX/this.width;
     this.zoomRange('xRange', zoomAmount, t);
-    this.resetBounds();
+
+    clearTimeout(this.resetBoundsTimeout);
+    this.resetBoundsTimeout = setTimeout( () => {
+      this.resetBounds();
+    }, 50);
   }
 }
