@@ -158,17 +158,20 @@
         this.view.axis({
           axis: 1,
           width: 4,
-          end: false
+          end: false,
+          zIndex: 1
         })
         .axis({
           axis: 2,
           width: 4,
-          end: false
+          end: false,
+          zIndex: 1
         })
         .grid({
           width: 1,
           divideX: 20,
           divideY: 10,
+          zIndex: 1
         });
       },
 
@@ -220,6 +223,13 @@
           else {
             this._setNoGraphFound(true);
             this.fire('graph-error', 'No graph found with that signature');
+          }
+        } 
+        else {
+          if (this.noGraphFound) {
+            this._setNoGraphFound(false);
+            this.fire('graph-ok');
+            return true;
           }
         }
         return false;

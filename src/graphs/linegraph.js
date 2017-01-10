@@ -6,7 +6,6 @@ class LineGraph extends Graph {
     this._exprAnimDuration = 500;
     this._resetBoundsDuration = 250;
     this.labelsVisible = false;
-    this.resetBoundsTimeout = null;
   }
 
   static get supportedSignatures() {
@@ -34,9 +33,6 @@ class LineGraph extends Graph {
   setup () {
     this.getMinMax = new Worker('src/mathObjects/getMinMax.js');
     this.getMinMax.onmessage = this.newRangeReceived.bind(this);
-    this.getMinMax.onerror = (e) => {
-      throw Error(e.message + ' at ' + e.filename + ':' + e.lineno);
-    };
     let view = this.mathbox.select('cartesian'); 
     let ranges = view.get('range');
     this.setRange('xRange', this.vectorToRange(ranges[0]), false);
@@ -51,8 +47,8 @@ class LineGraph extends Graph {
     this.displayId = 'display';
     this.animId = 'anim';
     this.domId = 'linedom';
-    this.htmlId = 'htmldom';
-    this.labelPointsId = 'labelpoints';
+    this.htmlId = 'linehtmldom';
+    this.labelPointsId = 'linelabelpoints';
 
     this.data = view.interval({
       channels: 2,
@@ -63,7 +59,7 @@ class LineGraph extends Graph {
     this.display = view.line({
       width: 5,
       color: '#3090FF',
-      zIndex: 1,
+      zIndex: 2,
       id: this.displayId
     });
     this.dataAnim = this.mathbox.play({
@@ -92,7 +88,7 @@ class LineGraph extends Graph {
         offset: [0,0],
         outline: 2,
         // color: '#000',
-        zIndex: 2,
+        zIndex: 3,
       });
     }
     else {
@@ -106,6 +102,7 @@ class LineGraph extends Graph {
   }
 
   teardown() {
+    // console.log('tearing down');
     this.getMinMax.terminate();
     this.mathbox.remove('#'+this.dataId);
     this.mathbox.remove('#'+this.displayId);
@@ -145,7 +142,7 @@ class LineGraph extends Graph {
     let freeVars = compiledFunction.freeVariables;
     let cachedVarName = '_';
     if (freeVars.length == 1) {
-      cachedVarName = compiledFunction.freeVariables[0].name;
+      cachedVarName = freeVars[0].name;
     }
     let newExpr = (emit, x) => {
       emit(x, cachedEval({
