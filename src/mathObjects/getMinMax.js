@@ -9,6 +9,20 @@ let getMinMax = function(compiled, unboundRanges, maxSamples = 1e5) {
     return [compiled.eval(), compiled.eval()];
   }
 
+  let ranges = _combineRanges(compiled, unboundRanges);
+  let samples = _sampleFunction(compiled, ranges, maxSamples);
+  samples = _discardOutliers(samples);
+
+  let bounds = samples.reduce( (range, sample) => {
+    range[0] = Math.min(range[0], sample);
+    range[1] = Math.max(range[1], sample);
+    return range;
+  }, [Number.MAX_VALUE, -Number.MAX_VALUE]);
+
+  return bounds;
+};
+
+let _combineRanges = function(compiled, unboundRanges) {
   let ranges = Object.assign({}, unboundRanges);
   for (let variable of compiled.variables) {
     let pinnedIndex = compiled.globalScope.indexOfPinnedVar(variable.name);
@@ -16,7 +30,10 @@ let getMinMax = function(compiled, unboundRanges, maxSamples = 1e5) {
       ranges[variable.name] = compiled.globalScope.pinnedVariables[pinnedIndex].range;
     }
   }
+  return ranges;
+};
 
+let _sampleFunction = function(compiled, ranges, maxSamples) {
   let numDimensions = compiled.variables.length;
   let maxSamplesPerDimension = Math.round(Math.pow(maxSamples, 1/numDimensions));
 
@@ -41,30 +58,27 @@ let getMinMax = function(compiled, unboundRanges, maxSamples = 1e5) {
     }
   };
   iterate(0);
+  return samples;
+};
 
+let _discardOutliers = function(samples) {
+  let copiedSamples = samples.slice();
   let numCycles = 5;
-  let mean = math.mean(samples);
   for (let i = 0; i < numCycles; i++) {
     if (samples.length == 0) {
       return [-5, 5];
     }
+    let mean = math.mean(samples);
     let stddev = math.std(samples);
     let numSigmas = 10;
     let bottomBracket = mean - stddev * numSigmas;
     let topBracket = mean + stddev * numSigmas;
 
-    samples = samples.filter( (val) => {
+    copiedSamples = copiedSamples.filter( (val) => {
       return val > bottomBracket && val < topBracket;
     });
   }
-
-  let bounds = samples.reduce( (range, sample) => {
-    range[0] = Math.min(range[0], sample);
-    range[1] = Math.max(range[1], sample);
-    return range;
-  }, [Number.MAX_VALUE, -Number.MAX_VALUE]);
-
-  return bounds;
+  return copiedSamples;
 };
 
 let _checkRangesMatchVariables = function(compiled, unboundRanges) {
