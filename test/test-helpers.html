@@ -51,7 +51,7 @@ helper = {
     let allVars = varNames.map( (name) => {
       return scope.getVariable(name);
     });
-    return new CompiledFunction(compiled, allVars, scope);
+    return new CompiledFunction(compiled, funcString, allVars, scope);
   },
 
   makeFunctionWithSignature: function (domain, range) {

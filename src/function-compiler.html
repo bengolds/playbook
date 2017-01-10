@@ -1,7 +1,5 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="mathObjects/math-objects-import.html">
-<script src="../libs/algebrite/dist/algebrite.bundle-for-browser.js"></script>
-<script src="../bower_components/mathjs/dist/math.js"></script>
 
 <dom-module id="function-compiler">
   <template>
@@ -34,25 +32,9 @@
         }
       },
 
-      observers: [
-      ],
-
-      attached: function() {
-
-      },
-
       recompile: function() {
         try {
-          let definition = this.definition;
-          if (!this.definition || this.definition == '') {
-            definition = '0';
-          }
-          let simplified = Algebrite.simplify(definition).toString();
-          let processed = this.insertMultipliers(simplified);
-          let parsed = math.parse(processed);
-          let symbols = this.getVariables(parsed);
-
-          let compiled = new CompiledFunction(parsed.compile(), symbols, this.scope);
+          let compiled = CompiledFunction.compile(this.definition, this.scope);
           this.updateScope(compiled);
           this._setCompiled(compiled);
           this.fire('compile-ok');
@@ -69,37 +51,6 @@
           }
         }
       },
-
-      getVariables: function(parsedFunction) {
-        var symbols = [];
-        parsedFunction.traverse( (node) => {
-          if (node.type == 'SymbolNode' && !symbols.includes(node.name)) {
-            symbols.push(node.name);
-          }
-        });
-
-        let variables = symbols.map( (symbol) => {
-          if (this.scope.hasVariable(symbol)) {
-            return this.scope.getVariable(symbol);
-          }
-          else {
-            return new Variable(symbol);
-          }
-        });
-
-        return variables;
-      },
-
-      insertMultipliers: function(input) {
-        let re = /([a-z]+)\s*\(/g;
-        return input.replace(re, (match, symbol) => {
-          if (symbol.length > 1 || this.scope.isFunction(symbol)){
-            return match;
-          } else {
-            return symbol+'*(';
-          }
-        });
-      }
 
     });
   </script>

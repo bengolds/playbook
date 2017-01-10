@@ -203,15 +203,15 @@
           el.scope = helper.makeScope(['a','b','c'], [SETS.NATURAL, SETS.INTEGER, SETS.REAL]);
 
           pinVar('a');
-          expect(getPinned('a').bounds).to.deep.equal([0, 10]);
+          expect(getPinned('a').range.bounds).to.deep.equal([0, 10]);
           expect(getPinned('a').value).to.equal(1);
 
           pinVar('b');
-          expect(getPinned('b').bounds).to.deep.equal([-10, 10]);
+          expect(getPinned('b').range.bounds).to.deep.equal([-10, 10]);
           expect(getPinned('b').value).to.equal(1);
 
           pinVar('c');
-          expect(getPinned('c').bounds).to.deep.equal([-10, 10]);
+          expect(getPinned('c').range.bounds).to.deep.equal([-10, 10]);
           expect(getPinned('c').value).to.equal(1);
         });        
 

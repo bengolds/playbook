@@ -67,33 +67,6 @@
           el.addEventListener('compile-error', errorListener);
         });
 
-        test('compiling scopeless function', function(){
-          el.definition='2*x';
-          let f = (x) => {return 2*x;};
-          assertCompiledMatches(f, ['x']);
-        });
-
-        test('compiling multivar function', function() {
-          el.definition = '2*x*y';
-          let f = (x,y) => {return 2*x*y;};
-          assertCompiledMatches(f, ['x','y']);
-        });
-
-        test('symbols array is proper', function() {
-          el.definition = '2*a*b*c*d';
-          expect(el.compiled.variables).to.deep.equal([
-            new Variable('a'),
-            new Variable('b'),
-            new Variable('c'),
-            new Variable('d')
-          ]);
-
-          el.definition = 'x + cos(x) + cos(x)';
-          expect(el.compiled.variables).to.deep.equal([
-            new Variable('x')
-          ]);
-        });
-
         test('changing scope recompiles', function() {
           el.definition = '2*x*y';
           let f = (x) => {return 2*x*2;};
@@ -129,24 +102,6 @@
           el.definition='2*';
         });
 
-        test('handle factoring correctly', function() {
-          el.definition='x+x^2';
-          let f = (x) => {return x+ x*x;};
-          assertCompiledMatches(f, ['x']);
-        });
-
-        test('insert multipliers behaves properly', function() {
-          let expectTransform = (input, expected) => {
-            let transformed = el.insertMultipliers(input);
-            expect(transformed).to.equal(expected);
-          };
-
-          el.scope.functions.push(new FunctionDefinition('g'));
-          expectTransform('x(x+1)', 'x*(x+1)');
-          expectTransform('a+x(x+1)+b (2+x)', 'a+x*(x+1)+b*(2+x)');
-          expectTransform('g(x+1)', 'g(x+1)');
-          expectTransform('sin(x+1)', 'sin(x+1)');
-        });
 
       });
     </script>

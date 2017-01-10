@@ -57,12 +57,103 @@
           expectIsNotInScope('z');
         });
 
+        test('clone', function() {
+          let scope = helper.makeScope(['a','b','c'], [SETS.INTEGER, SETS.REAL, SETS.COMPLEX], ['b']);
+          scope.functions.push(new FunctionDefinition('g', 'a+a'));
+          expect(scope.clone()).to.deep.equal(scope);
+        });
+
       });
 
       suite ('compiledFunction tests', function() {
+        let epsilon = 1e-14;
+        let numSamples = 100;
+        let range = [-5, 5];
+        let rangeWidth = range[1]-range[0];
+
         setup(function(){
         });
 
+        let assertCompiledMatches = function(compiled, expected, paramNames) {
+          let wrapped = wrapEval(compiled, paramNames);
+
+          let evaluate = function(bound1, bound2, dim) {
+            for (let i = 0; i < numSamples; i++) {
+              let t = i/numSamples;
+              let x = range[0] + t*rangeWidth;
+              if (dim == paramNames.length - 1) {
+                assert.closeTo(bound1(x), bound2(x), epsilon);
+              } 
+              else {
+                let newBound1 = bound1.bind(null, x);
+                let newBound2 = bound2.bind(null, x);
+                evaluate(newBound1, newBound2, dim+1);
+              }
+            }
+          };
+
+          evaluate(wrapped, expected, 0);
+        };
+
+        let wrapEval = function(compiled, paramNames) {
+          return function(...args) {
+            let scope = {};
+            for (let i = 0; i < paramNames.length; i++) {
+              let param = paramNames[i];
+              scope[param] = args[i];
+            }
+            return compiled.evalWithoutGlobalScope(scope);
+          };
+        };
+
+        test('compiling scopeless function', function(){
+          let compiled = CompiledFunction.compile('2*x', new Scope());
+          let expected = (x) => {return 2*x;};
+          assertCompiledMatches(compiled, expected, ['x']);
+        });
+
+        test('compiling multivar function', function() {
+          let compiled = CompiledFunction.compile('2*x*y', new Scope());
+          let expected = (x,y) => {return 2*x*y;};
+          assertCompiledMatches(compiled, expected, ['x', 'y']);
+        });
+
+        test('handle factoring correctly', function() {
+          let compiled = CompiledFunction.compile('x+x*x', new Scope());
+          let expected = (x) => {return x+ x*x;};
+          assertCompiledMatches(compiled, expected, ['x']);
+        });
+
+        test('symbols array is proper', function() {
+          let compiled = CompiledFunction.compile('2*a*b*c*d', new Scope());
+
+          expect(compiled.variables).to.deep.equal([
+            new Variable('a'),
+            new Variable('b'),
+            new Variable('c'),
+            new Variable('d')
+          ]);
+
+          compiled = CompiledFunction.compile('x + cos(x) + cos(x)', new Scope());
+          expect(compiled.variables).to.deep.equal([
+            new Variable('x')
+          ]);
+        });
+
+        test('insert multipliers behaves properly', function() {
+          let scope = new Scope();
+          scope.functions.push(new FunctionDefinition('g'));
+
+          let expectTransform = (input, expected) => {
+            let transformed = CompiledFunction._insertMultipliers(input, scope);
+            expect(transformed).to.equal(expected);
+          };
+
+          expectTransform('x(x+1)', 'x*(x+1)');
+          expectTransform('a+x(x+1)+b (2+x)', 'a+x*(x+1)+b*(2+x)');
+          expectTransform('g(x+1)', 'g(x+1)');
+          expectTransform('sin(x+1)', 'sin(x+1)');
+        });
 
         test('domain should be automatically found', function() {
           let scope = helper.makeScope(
@@ -74,61 +165,22 @@
           expect(f.getDomain()).to.deep.equal([SETS.REAL, SETS.INTEGER]);
         });
 
-
-        test('getMinMax', function() {
-          let unboundRanges = {
-            a: {
-              bounds: [-5, 5],
-              steps: 1000
-            },
-            b: {
-              bounds: [-2, 2],
-              steps: 1000
-            }
+        test('dehydrate/rehydrate', function() {
+          let scope = helper.makeScope(['a','b'],
+            [SETS.INTEGER, SETS.REAL],
+            ['b'], [[-10, 10]], [3]);
+          let compiled = CompiledFunction.compile('cos(a*b)', scope);
+          let expected = (a,b) => {
+            return Math.cos(a*b);
           };
+          assertCompiledMatches(compiled, expected, ['a','b']);
 
-          let testMinMax = (funcString, allVars, expected) => {
-            let scope = helper.makeScope(allVars);
-            let f = helper.makeFakeCompiled(funcString, allVars, scope);
-            let minMax = f.getMinMax(unboundRanges);
-            expect(minMax[0]).to.be.closeTo(expected[0], 0.1);
-            expect(minMax[1]).to.be.closeTo(expected[1], 0.1);
-          };
+          let dehydrated = compiled.dehydrate();
+          expect(dehydrated.scope).to.deep.equal(scope);
+          expect(dehydrated.definition).to.deep.equal('cos(a b)');
 
-          testMinMax('3', [], [3, 3]);
-          testMinMax('a', ['a'], [-5, 5]);
-          testMinMax('a^2', ['a'], [0, 25]);
-          testMinMax('a*b', ['a', 'b'], [-10, 10]);
-
-          let shouldFail = function() {
-            testMinMax('c', ['c'], [-5, 5]);
-          };
-          expect(shouldFail).to.throw('No range found for c');
-        });
-
-        test('getMinMax with pinnedVars', function() {
-          let allVars = ['a','b','c','d'];
-          let scope = helper.makeScope(allVars, null, ['c','d'], [[-4, 4],[-5, 5]]);
-          let unboundRanges = {
-            a: {
-              bounds: [-2, 2],
-              steps: 10
-            },
-            b: {
-              bounds: [-3, 3],
-              steps: 10
-            }
-          };
-          let f = helper.makeFakeCompiled('a*b*c*d', allVars, scope);
-          let minMax = f.getMinMax(unboundRanges);
-          expect(minMax[0]).to.be.closeTo(-120, 0.5);
-          expect(minMax[1]).to.be.closeTo(120, 0.5);
-        });
-
-        test('clone', function() {
-          let scope = helper.makeScope(['a','b','c'], [SETS.INTEGER, SETS.REAL, SETS.COMPLEX], ['b']);
-          scope.functions.push(new FunctionDefinition('g', 'a+a'));
-          expect(scope.clone()).to.deep.equal(scope);
+          let rehydrated = CompiledFunction.rehydrate(dehydrated);
+          assertCompiledMatches(rehydrated, expected, ['a','b']);
         });
 
         // test('compiledFunction shouldn\'t evaluate with incomplete scope', function() {
@@ -142,6 +194,107 @@
         //   //Test here
         // });
       });
+
+      suite('getMinMax tests', function() {
+        let getMinMax;
+        let unboundRanges;
+
+        setup(function() {
+          getMinMax = new Worker('../src/mathObjects/getMinMax.js');
+          unboundRanges = {
+            a: {
+              bounds: [-5, 5],
+              steps: 1000
+            },
+            b: {
+              bounds: [-2, 2],
+              steps: 1000
+            }
+          };
+        });
+
+        teardown(function() {
+          getMinMax.terminate();
+        });
+
+        let testMinMax = (done, funcString, allVars, expected) => {
+          let scope = helper.makeScope(allVars);
+          let f = helper.makeFakeCompiled(funcString, allVars, scope);
+          getMinMax.onmessage = (e) => {
+            let minMax = e.data;
+            expect(minMax[0]).to.be.closeTo(expected[0], 0.1);
+            expect(minMax[1]).to.be.closeTo(expected[1], 0.1);
+            done();
+          };
+          getMinMax.onerror = (e) => {
+            throw Error(e.message + ' at ' + e.filename + ':' + e.lineno);
+          };
+          getMinMax.postMessage({
+            dehydratedFunction: f.dehydrate(),
+            unboundRanges: unboundRanges
+          });
+        };
+
+        test('const function', function(done) {
+          testMinMax(done, '3', [], [3, 3]);
+        });
+
+        test('linear function', function(done) {
+          testMinMax(done, 'a', ['a'], [-5, 5]);
+        });
+
+        test('quadratic function', function(done) {
+          testMinMax(done, 'a^2', ['a'], [0, 25]);
+        });
+
+        test('multi-variable function', function(done) {
+          testMinMax(done, 'a*b', ['a', 'b'], [-10, 10]);
+        });
+
+        test('range missing', function(done) {
+          let scope = helper.makeScope(['c']);
+          let f = helper.makeFakeCompiled('c', ['c'], scope);
+          getMinMax.onmessage = (e) => {
+            done(new Error('Shouldn\'t receive a success message from getMinMax'));
+          };
+          getMinMax.onerror = (e) => {
+            expect(e.message).to.contain('No range found (unbound or pinned) for c');
+            done();
+          };
+          getMinMax.postMessage({
+            dehydratedFunction: f.dehydrate(),
+            unboundRanges: unboundRanges,
+          });
+        });
+
+        test('getMinMax with pinnedVars', function(done) {
+          let allVars = ['a','b','c','d'];
+          let scope = helper.makeScope(allVars, null, ['c','d'], [[-4, 4],[-5, 5]]);
+          let unboundRanges = {
+            a: {
+              bounds: [-2, 2],
+              steps: 10
+            },
+            b: {
+              bounds: [-3, 3],
+              steps: 10
+            }
+          };
+          getMinMax.onmessage = (e) => {
+            let minMax = e.data;
+            expect(minMax[0]).to.equal(-120);
+            expect(minMax[1]).to.equal(120);
+            done();
+          };
+          let f = helper.makeFakeCompiled('a*b*c*d', allVars, scope);
+          getMinMax.postMessage({
+            dehydratedFunction: f.dehydrate(),
+            unboundRanges: unboundRanges,
+          });
+        });
+
+      });
+
     </script>
   </body>
 </html>

@@ -32,6 +32,11 @@ class LineGraph extends Graph {
   //Setup & Teardown
 
   setup () {
+    this.getMinMax = new Worker('src/mathObjects/getMinMax.js');
+    this.getMinMax.onmessage = this.newRangeReceived.bind(this);
+    this.getMinMax.onerror = (e) => {
+      throw Error(e.message + ' at ' + e.filename + ':' + e.lineno);
+    };
     let view = this.mathbox.select('cartesian'); 
     let ranges = view.get('range');
     this.setRange('xRange', this.vectorToRange(ranges[0]), false);
@@ -101,6 +106,7 @@ class LineGraph extends Graph {
   }
 
   teardown() {
+    this.getMinMax.terminate();
     this.mathbox.remove('#'+this.dataId);
     this.mathbox.remove('#'+this.displayId);
     this.mathbox.remove('#'+this.animId);
@@ -201,10 +207,17 @@ class LineGraph extends Graph {
   //Ranges
 
   resetBounds(animDuration=this._resetBoundsDuration, animEasing='easeOutSine') {
-    var newRange = this.compiled.getMinMax(this.unboundRanges());
-    newRange = this.constructor.humanizeBounds(newRange);
+    this.getMinMax.postMessage({
+      dehydratedFunction: this.compiled.dehydrate(),
+      unboundRanges: this.unboundRanges()
+    });
+  }
+
+  newRangeReceived(e) {
+    let newRange = this.constructor.humanizeBounds(e.data);
     if (this.animated) {
-      this.animateRange('yRange', newRange, animDuration, animEasing);
+      this.animateRange('yRange', newRange);
+      // this.animateRange('yRange', newRange, animDuration, animEasing);
     } 
     else {
       this.setRange('yRange', newRange);
@@ -247,11 +260,8 @@ class LineGraph extends Graph {
     let t = mouseX/this.width;
     this.zoomRange('xRange', zoomAmount, t);
 
-    this.start = performance.now();
     clearTimeout(this.resetBoundsTimeout);
     this.resetBoundsTimeout = setTimeout( () => {
-      console.log('time taken: ' + (performance.now()-this.start) + 'ms');
-      console.log(document.visibilityState);
       this.resetBounds();
     }, 50);
   }

@@ -92,8 +92,8 @@
         // });
 
         test('show incompatible function', function() {
-          let f = new CompiledFunction(null, [new Variable('a'), new Variable('b')]);
-          let g = new CompiledFunction(null, [new Variable('a', SETS.COMPLEX)]);
+          let f = new CompiledFunction(null, null, [new Variable('a'), new Variable('b')]);
+          let g = new CompiledFunction(null, null, [new Variable('a', SETS.COMPLEX)]);
 
           expect(graph.showFunction.bind(graph, f)).to.throw(Error);
           expect(graph.compiled).to.be.not.ok;
@@ -120,13 +120,9 @@
           graph.showFunction(compiled);
 
           expect(graph.compiled).to.equal(compiled);
-
-          let yRange = graph.getFinal('yRange');
-          expect(yRange[0]).to.be.closeTo(0, 0.1);
-          expect(yRange[1]).to.be.closeTo(25, 0.1);
         });
 
-        test('function animations should match', function() {
+        test('function animations should be right', function() {
           graph.animated = false;
           let f = helper.makeFakeCompiled('a', ['a'], scope);
           graph.showFunction(f);
@@ -137,22 +133,8 @@
 
           let exprDuration = graph.dataAnim.get('pace')*1000;
           expect(exprDuration).to.equal(graph._exprAnimDuration);
-          expect(graph.tweeners.yRange._duration).to.equal(exprDuration);
         });
 
-        test('range animations should be right', function() {
-          graph.animated = false;
-          let f = helper.makeFakeCompiled('a', ['a'], scope);
-          graph.showFunction(f);
-
-          graph.animated = true;
-          graph.setRange('xRange', [-2, 2]);
-          let expectedDuration = graph._resetBoundsDuration;
-          expect(graph.tweeners.xRange._duration).to.equal(expectedDuration);
-
-          graph.resetBounds();
-          expect(graph.tweeners.yRange._duration).to.equal(expectedDuration);
-        });
         // test('')
 
       });
