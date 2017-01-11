@@ -215,6 +215,20 @@
           expect(getPinned('c').value).to.equal(1);
         });        
 
+        test('hover graph events', function() {
+          let hoverEvent = new Event('show-hovergraph');
+          sinon.spy(el, 'showHoverGraph');
+          el.dispatchEvent(hoverEvent);
+          expect(el.showHoverGraph.calledOnce).to.be.true;
+          el.showHoverGraph.restore();
+
+          let hideEvent = new Event('hide-hovergraph');
+          sinon.spy(el, 'hideHoverGraph');
+          el.dispatchEvent(hideEvent);
+          expect(el.hideHoverGraph.calledOnce).to.be.true;
+          el.hideHoverGraph.restore();
+        });
+
         // test('bounds and domain are remembered when repinning', function() {
         //   //Test here
         // });

@@ -69,6 +69,11 @@ helper = {
     }
 
     return scope;
+  },
+
+  expectStyleToBe: function(element, key, value) {
+    let computed = window.getComputedStyle(element);
+    expect(computed[key]).to.equal(value);
   }
 
 };

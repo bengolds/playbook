@@ -4,8 +4,6 @@
     <style>
       :host {
         display: block;
-      }
-      #mainBox {
         border-radius: 4px;
         border: 2px solid #9C9C9C;
         background: #FFF;
@@ -24,7 +22,7 @@
         border: solid 15px transparent;
         z-index: 1;
       }
-      :host(.down) #mainBox {
+      :host(.down) {
         margin-bottom: 15px;
       }
       :host(.down) #tailFill {
@@ -39,7 +37,7 @@
         transform: translate(-50%, 0%);
         border-top-color: #9C9C9C;
       }
-      :host(.up) #mainBox {
+      :host(.up) {
         margin-top: 15px;
       }
       :host(.up) #tailFill {
@@ -54,7 +52,7 @@
         transform: translate(-50%, 0%);
         border-bottom-color: #9C9C9C;
       }
-      :host(.left) #mainBox {
+      :host(.left) {
         margin-left: 15px;
       }
       :host(.left) #tailFill {
@@ -69,7 +67,7 @@
         transform: translate(0%, -50%);
         border-right-color: #9C9C9C;
       }
-      :host(.right) #mainBox {
+      :host(.right) {
         margin-right: 15px;
       }
       :host(.right) #tailFill {
@@ -86,11 +84,9 @@
       }
        
     </style>
-    <div id='mainBox'>
-      <content></content>
-      <div id='tailFill'></div>
-      <div id='tailBorder'></div>
-    </div>
+    <content></content>
+    <div id='tailFill'></div>
+    <div id='tailBorder'></div>
     
   </template>
   <script>
@@ -107,6 +103,19 @@
       directionChanged: function () {
         this.classList.remove('left','right','down','up');
         this.classList.add(this.direction);
+      },
+
+      getOuterRect: function() {
+        let computedStyle = (key) => {
+          return parseInt(window.getComputedStyle(this)[key].match(/\d+/));
+        };
+        let rect = this.getBoundingClientRect();
+        return {
+          left: rect.left - computedStyle('margin-left'),
+          right: rect.right + computedStyle('margin-right'),
+          top: rect.top - computedStyle('margin-top'),
+          bottom: rect.bottom + computedStyle('margin-bottom'),
+        };
       }
 
     });

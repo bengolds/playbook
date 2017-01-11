@@ -186,8 +186,16 @@
       },
 
       compiledFunctionChanged: function() {
-        if (!this.initialized || !this.compiledFunction)
+        if (!this.initialized)
           return;
+
+        if (!this.compiledFunction) {
+          if (this.graph) {
+            this.graph.teardown();
+            this.graph = null;
+          }
+          return;
+        }
 
         this.tryChangeGraph();
         if (!this.noGraphFound) {

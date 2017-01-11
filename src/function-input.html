@@ -1,5 +1,4 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
-<link rel="import" href="hover-plot.html">
 <link rel="import" href="mathquill-element.html">
 <dom-module id="function-input">
 	<template>
@@ -9,27 +8,14 @@
 			#quill {
         --mathquill-font-size: 200%;
 			}
-      #outline {
-        border-radius: 8px;
-        box-shadow: 0 0 5px 5px rgba(0,0,255,0.5);
-        position: absolute;
-        pointer-events: none;
-      }
-      #hoverplot {
-      	position:absolute;
-      }
-      .hidden {
-        display:none;
-      }
+
 		</style>
 	<mathquill-element id="quill" editable
     latex='{{latex}}'
     semantic-text='{{definition}}'
+    on-edit='onEdit'
     on-element-mouseover='onElementMouseOver'>
   </mathquill-element>
-  <hover-plot class='hidden' id='hoverplot' 
-    synced-parameters='{{syncedParameters}}'></hover-plot>
-  <div id='outline' class='hidden'></div>
 
 </template>
 <script>
@@ -53,8 +39,6 @@
     },
 
     onElementMouseOver: function(e, details) {
-      //TODO: REMOVE THIS
-      return;
       let semanticNode = mqUtil.semanticNodeFromHTML(details.target, details.mathField);
       if (!semanticNode) {
         return;
@@ -67,36 +51,19 @@
 
       let hoveredDisplayNodes = applicationNode.getDisplayNodes();
       let outlineRect = this.getBoundingBox(hoveredDisplayNodes);
-      this.drawOutline(outlineRect);
 
-      let xCenter = outlineRect.left + (outlineRect.right-outlineRect.left)/2;
-      this.createHoverPlot(xCenter, outlineRect.bottom, applicationNode.toString());
-      
-      this.listen(this.$.hoverplot, 'mouseleave', 'hideHoverItems');
-      this.listen(this, 'mouseleave', 'hideHoverItems');
-      this.listen(this, 'mousemove', 'checkForLeaveOutline');
+      this.debounce('show-hovergraph', () => {
+        this.fire('show-hovergraph', {
+          funcString: applicationNode.toString(),
+          boundingBox: outlineRect,
+          direction: 'down'
+        });
+      });
     },
 
-    createHoverPlot: function(x, y, funcString) {
-      //TODO: Make sure this gets the global scope
-      //Move this to the main-app/global scope, and send up an event
-      this.$.hoverplot.functor = this.$.parser.getFunctor(funcString);
-      this.$.hoverplot.classList.remove('hidden');
-      this.$.hoverplot.style.top = y+'px';
-      this.$.hoverplot.style.left = x-this.$.hoverplot.offsetWidth/2+'px';
+    onEdit: function() {
+      this.fire('hide-hovergraph');
     },
-
-    checkForLeaveOutline: function (e) {
-      let rect = this.$.outline.getBoundingClientRect();
-      let x = e.clientX, y = e.clientY;
-      // If we're down in the hover plot, don't bother
-      if (y > rect.bottom) {
-        return;
-      }
-      else if (x < rect.left || x > rect.right || y < rect.top) {
-        this.hideHoverItems();
-      }
-    }, 
 
     getBoundingBox: function (nodes) {
       let merge = (r1, r2) => {
@@ -116,41 +83,13 @@
       };
       for (var i = 0; i < nodes.length; i++) {
         let node = nodes[i].jQ[0];
-        let rect = this.makeOffsetRect(node);
+        let rect = node.getBoundingClientRect();
         finalRect = merge(finalRect, rect);
       }
       return finalRect;
     },
 
-    makeOffsetRect: function (node) {
-      return {
-        left: node.offsetLeft,
-        right: node.offsetLeft + node.offsetWidth,
-        top: node.offsetTop,
-        bottom: node.offsetTop+node.offsetHeight,
-      };
-    },
-
-    drawOutline: function(rect) {
-      let outline = this.$.outline;
-      outline.style.top = rect.top + 'px';
-      outline.style.left = rect.left + 'px';
-      outline.style.width = rect.right-rect.left + 'px';
-      outline.style.height = rect.bottom-rect.top + 'px';
-
-      outline.classList.remove('hidden');
-    },
-
-    removeOutline: function () {
-      this.$.outline.classList.add('hidden');
-    },
-
     hideHoverItems: function () {
-      this.unlisten(this.$.hoverplot, 'mouseleave', 'hideHoverItems');
-      this.unlisten(this, 'mouseleave', 'hideHoverItems');
-      this.unlisten(this, 'mousemove', 'checkForLeaveOutline');
-      this.$.hoverplot.classList.add('hidden'); 
-      this.removeOutline();
     }
 
   });

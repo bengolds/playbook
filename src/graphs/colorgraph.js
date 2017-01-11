@@ -238,11 +238,11 @@ class ColorGraph extends Graph {
     return {
       [freeVars[0].name]: {
         bounds: this.getFinal('xRange'),
-        steps: this.width
+        steps: 200
       },
       [freeVars[1].name]: {
         bounds: this.getFinal('yRange'),
-        steps: this.height
+        steps: 200
       }
     };
   }

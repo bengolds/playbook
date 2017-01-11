@@ -81,14 +81,9 @@
         });
 
         test('holding fixed; buttons should disappear', function() {
-          let expectStyleToBe = function(element, key, value) {
-            let computed = window.getComputedStyle(element);
-            expect(computed[key]).to.equal(value);
-          };
-
           el.fixed = true;
-          expectStyleToBe(el.$.up, 'opacity', '0');
-          expectStyleToBe(el.$.down, 'opacity', '0');
+          helper.expectStyleToBe(el.$.up, 'opacity', '0');
+          helper.expectStyleToBe(el.$.down, 'opacity', '0');
         });
 
         test('obey min', function () {

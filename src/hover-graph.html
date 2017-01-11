@@ -1,0 +1,165 @@
+<link rel="import" href="mathbox-plot.html">
+<link rel="import" href="arrow-box.html">
+<link rel="import" href="mathObjects/math-objects-import.html">
+
+<dom-module id="hover-graph">
+  <template>
+    <style>
+      :host {
+      }
+      .hidden {
+        display:none;
+      }
+      #arrowBox {
+        position: absolute;
+        width: 480px;
+        height: 192px;
+      }
+      #plot {
+        height: 100%;
+      }
+      #outline {
+        border-radius: 8px;
+        box-shadow: 0 0 5px 5px rgba(0,0,255,0.5);
+        position: absolute;
+        pointer-events: none;
+      }
+
+    </style>
+    <arrow-box id='arrowBox' direction='up'>
+      <mathbox-plot id='plot' animated
+        compiled-function='{{compiledFunction}}'
+        scope='{{scope}}'
+        synced-parameters='{{graphParameters}}'></mathbox-plot>
+    </arrow-box>
+    <div id='outline'></div>
+    
+  </template>
+  <script>
+    Polymer({
+      is: 'hover-graph',
+      properties: {
+        graphParameters: {
+          type: Object,
+          notify: true,
+          value: function() {return {};}
+        },
+        scope: {
+          type: Object,
+          notify: false,
+          value: function() {return new Scope();},
+        },
+        hidden: {
+          type: Boolean,
+          notify: true,
+          observer: '_hiddenChanged',
+          reflectToAttribute: true
+        },
+        compiledFunction: {
+          type: Object,
+          notify: true,
+        }
+      },
+
+      attached: function() {
+        document.addEventListener('mousemove', this._checkHideGraph.bind(this));
+      },
+
+      show: function(funcString, boundingBox, direction) {
+        this.hidden = false;
+        clearTimeout(this.hideTimeout);
+        this.hideTimeout = null;
+        if (funcString != this.oldString) {
+          this.compiledFunction = CompiledFunction.compile(funcString, this.scope);
+        }
+        this.oldString = funcString;
+
+        this._moveOutlineTo(boundingBox);
+
+        let displayX = boundingBox.left + (boundingBox.right-boundingBox.left)/2;
+        let displayY = 0;
+        // NOTE: A graph that is 'up' has an arrow pointing 'down'
+        switch(direction) {
+        case 'up':
+          displayY = boundingBox.top;
+          this.$.arrowBox.direction = 'down';
+          break;
+        case 'down':
+          displayY = boundingBox.bottom;
+          this.$.arrowBox.direction = 'up';
+          break;
+        }
+
+        this._pointGraphAt(displayX, displayY);
+
+      },
+
+      hide: function() {
+        this.hidden = true;
+        this.compiledFunction = null;
+        this.oldString = '';
+        clearTimeout(this.hideTimeout);
+        this.hideTimeout = null;
+      },
+
+      _pointGraphAt: function(x, y) {
+        let height = this.$.arrowBox.offsetHeight;
+        let halfWidth = this.$.arrowBox.offsetWidth/2;
+        let arrowOffset = 15;
+        switch (this.$.arrowBox.direction) {
+        case 'up':
+          this.$.arrowBox.style.top = y +'px';
+          this.$.arrowBox.style.left = x-halfWidth + 'px';
+          break;
+        case 'down':
+          this.$.arrowBox.style.top = y-height-arrowOffset+ 'px';
+          this.$.arrowBox.style.left = x-halfWidth + 'px';
+          break;
+        }
+      },
+
+      _moveOutlineTo: function(boundingBox) {
+        let outline = this.$.outline;
+        outline.style.top = boundingBox.top + 'px';
+        outline.style.left = boundingBox.left + 'px';
+        outline.style.width = boundingBox.right-boundingBox.left + 'px';
+        outline.style.height = boundingBox.bottom-boundingBox.top + 'px';
+      },
+
+      _checkHideGraph: function(e) {
+        if (this.hidden) {
+          return;
+        }
+
+        let rectContains = (bb, x, y) => {
+          return x >= bb.left && x <= bb.right
+                && y >= bb.top && y <= bb.bottom;
+        };
+        let outlineRect = this.$.outline.getBoundingClientRect();
+        let arrowBoxRect = this.$.arrowBox.getOuterRect();
+        if (!rectContains(outlineRect, e.clientX, e.clientY)
+          && !rectContains(arrowBoxRect, e.clientX, e.clientY)) {
+          if (!this.hideTimeout) {
+            this.hideTimeout = setTimeout(()=>{
+              this.hide();
+            }, 350);
+          }
+        }
+        else {
+          clearTimeout(this.hideTimeout);
+          this.hideTimeout = null;
+        }
+      },
+
+      _hiddenChanged: function () {
+        if (this.hidden) {
+          this.classList.add('hidden');
+        } else {
+          this.classList.remove('hidden');
+          this.$.plot.resize();
+        }
+      }
+
+    });
+  </script>
+</dom-module>

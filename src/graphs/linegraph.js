@@ -33,6 +33,9 @@ class LineGraph extends Graph {
   setup () {
     this.getMinMax = new Worker('src/mathObjects/getMinMax.js');
     this.getMinMax.onmessage = this.newRangeReceived.bind(this);
+    // this.getMinMax.onerror = (e) => {
+    //   console.error(e.detail.message + ' at ' + e.detail.filename + ':' + e.detail.lineno);
+    // };
     let view = this.mathbox.select('cartesian'); 
     let ranges = view.get('range');
     this.setRange('xRange', this.vectorToRange(ranges[0]), false);
@@ -227,7 +230,7 @@ class LineGraph extends Graph {
     if (unboundVar) {
       ranges[unboundVar.name] = {
         bounds: this.getFinal('xRange'),
-        steps: this.width
+        steps: 200
       };
     } 
     return ranges;

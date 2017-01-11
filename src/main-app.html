@@ -2,6 +2,7 @@
 <link rel="import" href="../bower_components/paper-fab/paper-fab.html">
 <link rel="import" href="function-row.html">
 <link rel="import" href="pinned-variable-card.html">
+<link rel="import" href="hover-graph.html">
 <link rel="import" href="mathObjects/math-objects-import.html">
 
 <dom-module id="main-app">
@@ -62,6 +63,11 @@
       on-focus='buttonFocused'
       on-blur='buttonBlurred'></paper-fab>
 
+    <hover-graph id='hoverGraph' hidden
+      graph-parameters='{{graphParameters}}'
+      scope='{{scope}}'
+      ></hover-graph>
+
   </template>
 
   <script>
@@ -88,6 +94,8 @@
         'remove-row': 'removeRow',
         'pin-var': 'pinVar',
         'unpin-var': 'unpinVar',
+        'show-hovergraph': 'showHoverGraph',
+        'hide-hovergraph': 'hideHoverGraph'
       },
 
       observers: [
@@ -186,6 +194,14 @@
         else {
           this.$.noPinnedVarsMsg.classList.remove('hidden');
         }
+      },
+
+      showHoverGraph: function (e) {
+        this.$.hoverGraph.show(e.detail.funcString, e.detail.boundingBox, e.detail.direction);
+      },
+
+      hideHoverGraph: function (e) {
+        this.$.hoverGraph.hide();
       },
 
       buttonFocused: function() {

@@ -102,17 +102,13 @@
           expect(didThrowError).to.be.test-fixture;
         });
 
-        let expectStyleToBe = function(element, key, value) {
-          let computed = window.getComputedStyle(element);
-          expect(computed[key]).to.equal(value);
-        };
 
         test('icon hides and shows', function() {
           el.showError = false;
-          expectStyleToBe(el.$.errorIcon, 'display', 'none');
+          helper.expectStyleToBe(el.$.errorIcon, 'display', 'none');
 
           el.showError = true;
-          expectStyleToBe(el.$.errorIcon, 'display', 'block');
+          helper.expectStyleToBe(el.$.errorIcon, 'display', 'block');
         });
 
 

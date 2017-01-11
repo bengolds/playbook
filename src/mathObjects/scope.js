@@ -1,4 +1,4 @@
-class Scope {
+  class Scope {
   constructor(variables = [], functions = []) {
     this.variables = variables;
     this.pinnedVariables = [];
