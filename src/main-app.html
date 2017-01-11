@@ -1,0 +1,219 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-fab/paper-fab.html">
+<link rel="import" href="function-row.html">
+<link rel="import" href="pinned-variable-card.html">
+<link rel="import" href="hover-graph.html">
+<link rel="import" href="mathObjects/math-objects-import.html">
+
+<dom-module id="main-app">
+  <template>
+    <style>
+      #card {
+        display: block;
+        max-width:1280px;
+        margin:0px auto;
+      }
+      #addButton {
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 16px;
+        --paper-fab-background: #FFFFFF;
+        --paper-fab-keyboard-focus-background: #4285F4;
+        --paper-fab-iron-icon: {
+          color: #757575;
+        };
+      }
+      #pinnedVars {
+        min-height: 160px;
+        display:flex;
+        justify-content: center;
+      }
+      #noPinnedVarsMsg {
+        text-align: center;
+        margin-top: auto;
+        margin-bottom: auto;
+        font-family: Symbola;
+        font-size: 20px;
+        color: #757575;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+    <div id='pinnedVars'>
+      <span id='noPinnedVarsMsg'>No variables pinned yet.</span>
+      <template is='dom-repeat' id='pinnedVarsRepeater' items='{{scope.pinnedVariables}}'>
+        <pinned-variable-card 
+          variable='{{item.variable}}'
+          range='{{item.range}}'
+          value='{{item.value}}'
+          ></pinned-variable-card>
+      </template>
+    </div>
+
+    <template is='dom-repeat' id='functionRepeater' items='{{scope.functions}}'>
+      <function-row 
+        function-definition='{{item}}'
+        scope='{{scope}}'
+        graph-parameters='{{graphParameters}}'
+      ></function-row>
+    </template>
+    <paper-fab id='addButton' icon="add" 
+      on-click='addRow' 
+      on-focus='buttonFocused'
+      on-blur='buttonBlurred'></paper-fab>
+
+    <hover-graph id='hoverGraph' hidden
+      graph-parameters='{{graphParameters}}'
+      scope='{{scope}}'
+      ></hover-graph>
+
+  </template>
+
+  <script>
+    Polymer({
+      is: 'main-app',
+      properties: {
+        scope: {
+          type: Object,
+          value: function() {return new Scope();},
+        },
+        graphParameters: {
+          type: Object,
+          value: function() {
+            return {xRange: [-5, 5], yRange: [-5, 5]};
+          }
+        },
+        startNamesAt: {
+          type: String,
+          value: 'f'
+        }
+      },
+
+      listeners: {
+        'remove-row': 'removeRow',
+        'pin-var': 'pinVar',
+        'unpin-var': 'unpinVar',
+        'show-hovergraph': 'showHoverGraph',
+        'hide-hovergraph': 'hideHoverGraph'
+      },
+
+      observers: [
+        'pinnedVarsChanged(scope.pinnedVariables.*)'
+      ],
+
+      attached: function () {
+        this.addRow();
+        this.buttonBlurred();
+      },
+
+      addRow: function () {
+        let nextFunc = new FunctionDefinition(this.getNextName());
+        this.push('scope.functions', nextFunc);
+      },
+
+      removeRow: function (e) {
+        let name = e.detail;
+        let index = this.scope.functions.findIndex((func) => {
+          return func.name === name;
+        });
+
+        if (index == -1) {
+          throw Error('Can\'t delete ' + name + ' because it doesn\'t exist');
+        }
+
+        this.splice('scope.functions', index, 1);
+      },
+
+      getNextName: function() {
+        let isNameInRow = (name) => {
+          return this.scope.functions.some((func) => {
+            return func.name === name;
+          });
+        };
+        let nextName = this.startNamesAt;
+        while (isNameInRow(nextName)) {
+          nextName = String.fromCharCode(nextName.charCodeAt(0)+1);
+        }
+        return nextName;
+      },
+
+      pinVar: function(e) {
+        let name = e.detail;
+        if (!this.scope.hasVariable(name)) {
+          throw Error(name + ' can\'t be pinned because it doesn\'t exist');
+        }
+
+        if (!this.scope.isPinned(name)) {
+          let bounds = [-10, 10];
+          let value = 1;
+          switch (this.scope.getVariable(name).set) {
+          case SETS.NATURAL:
+            bounds = [0, 10];
+            value = 1;
+            break;
+          case SETS.INTEGER:
+            bounds = [-10, 10];
+            value = 1;
+            break;
+          case SETS.REAL:
+            bounds = [-10, 10];
+            value = 1;
+            break;
+          }
+          let pinned = {
+            variable: this.scope.getVariable(name),
+            range: {
+              bounds: bounds,
+              steps: 100 
+            },
+            value: value
+          };
+          this.push('scope.pinnedVariables', pinned);
+        }
+      },
+
+      unpinVar: function(e) {
+        let name = e.detail;
+        if (!this.scope.hasVariable(name)) {
+          throw Error(name + ' can\'t be unpinned because it doesn\'t exist');
+        }
+
+        let pinnedIndex = this.scope.indexOfPinnedVar(name);
+        if (pinnedIndex != -1) {
+          let variable = this.scope.pinnedVariables[pinnedIndex].variable;
+
+          this.splice('scope.pinnedVariables', pinnedIndex, 1);
+        }
+      },
+
+      pinnedVarsChanged: function () {
+        if (this.scope.pinnedVariables.length > 0) {
+          this.$.noPinnedVarsMsg.classList.add('hidden');
+        }
+        else {
+          this.$.noPinnedVarsMsg.classList.remove('hidden');
+        }
+      },
+
+      showHoverGraph: function (e) {
+        this.$.hoverGraph.show(e.detail.funcString, e.detail.boundingBox, e.detail.direction);
+      },
+
+      hideHoverGraph: function (e) {
+        this.$.hoverGraph.hide();
+      },
+
+      buttonFocused: function() {
+        //NO WAY TO DO THIS FROM CSS I GUESS
+        // this.$.addButton.$.icon.style.color = '#FFFFFF';
+      },
+
+      buttonBlurred: function() {
+        //NO WAY TO DO THIS FROM CSS I GUESS
+        // this.$.addButton.$.icon.style.color = '#757575';
+      }
+
+    });
+ </script>
+</dom-module>

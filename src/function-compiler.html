@@ -1,0 +1,57 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="mathObjects/math-objects-import.html">
+
+<dom-module id="function-compiler">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    
+  </template>
+  <script>
+    Polymer({
+      is: 'function-compiler',
+      properties: {
+        definition: {
+          type: Object,
+          notify: false,
+          observer: 'recompile'
+        },
+        scope: {
+          type: Object,
+          notify: false,
+          value: function() {return new Scope();},
+          observer: 'recompile'
+        },
+        compiled: {
+          type: Object,
+          readOnly: true,
+          notify: true,
+        }
+      },
+
+      recompile: function() {
+        try {
+          let compiled = CompiledFunction.compile(this.definition, this.scope);
+          this.updateScope(compiled);
+          this._setCompiled(compiled);
+          this.fire('compile-ok');
+        }
+        catch(e) {
+          this.fire('compile-error', e);
+        }
+      },
+
+      updateScope: function (funcToLoad) {
+        for (let variable of funcToLoad.variables) {
+          if (!this.scope.hasVariable(variable.name)) {
+            this.push('scope.variables', variable);
+          }
+        }
+      },
+
+    });
+  </script>
+</dom-module>

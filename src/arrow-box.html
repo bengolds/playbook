@@ -1,0 +1,123 @@
+
+<dom-module id="arrow-box">
+  <template>
+    <style>
+      :host {
+        display: block;
+        border-radius: 4px;
+        border: 2px solid #9C9C9C;
+        background: #FFF;
+        position:relative;
+        padding: var(--arrow-box-padding);
+      }
+      #tailFill {
+        content: "";
+        position:absolute;
+        border: solid 13px transparent;
+        z-index: 2;
+      }
+      #tailBorder {
+        content: "";
+        position:absolute;
+        border: solid 15px transparent;
+        z-index: 1;
+      }
+      :host(.down) {
+        margin-bottom: 15px;
+      }
+      :host(.down) #tailFill {
+        bottom: -24px;
+        left: 50%;
+        transform: translate(-50%, 0%);
+        border-top-color: #FFF;
+      }
+      :host(.down) #tailBorder {
+        bottom: -30px;
+        left: 50%;
+        transform: translate(-50%, 0%);
+        border-top-color: #9C9C9C;
+      }
+      :host(.up) {
+        margin-top: 15px;
+      }
+      :host(.up) #tailFill {
+        top: -24px;
+        left: 50%;
+        transform: translate(-50%, 0%);
+        border-bottom-color: #FFF;
+      }
+      :host(.up) #tailBorder {
+        top: -30px;
+        left: 50%;
+        transform: translate(-50%, 0%);
+        border-bottom-color: #9C9C9C;
+      }
+      :host(.left) {
+        margin-left: 15px;
+      }
+      :host(.left) #tailFill {
+        top: 50%;
+        left: -24px;
+        transform: translate(0%, -50%);
+        border-right-color: #FFF;
+      }
+      :host(.left) #tailBorder {
+        top: 50%;
+        left: -30px;
+        transform: translate(0%, -50%);
+        border-right-color: #9C9C9C;
+      }
+      :host(.right) {
+        margin-right: 15px;
+      }
+      :host(.right) #tailFill {
+        top: 50%;
+        right: -24px;
+        transform: translate(0%, -50%);
+        border-left-color: #FFF;
+      }
+      :host(.right) #tailBorder {
+        top: 50%;
+        right: -30px;
+        transform: translate(0%, -50%);
+        border-left-color: #9C9C9C;
+      }
+       
+    </style>
+    <content></content>
+    <div id='tailFill'></div>
+    <div id='tailBorder'></div>
+    
+  </template>
+  <script>
+    Polymer({
+      is: 'arrow-box',
+      properties: {
+        direction: {
+          type: String,
+          value: 'down',
+          observer: 'directionChanged'
+        }
+      },
+
+      directionChanged: function () {
+        this.classList.remove('left','right','down','up');
+        this.classList.add(this.direction);
+      },
+
+      getOuterRect: function() {
+        let computedStyle = (key) => {
+          return parseInt(window.getComputedStyle(this)[key].match(/\d+/));
+        };
+        let rect = this.getBoundingClientRect();
+        return {
+          left: rect.left - computedStyle('margin-left'),
+          right: rect.right + computedStyle('margin-right'),
+          top: rect.top - computedStyle('margin-top'),
+          bottom: rect.bottom + computedStyle('margin-bottom'),
+        };
+      }
+
+    });
+  </script>
+</dom-module>

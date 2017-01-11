@@ -1,0 +1,159 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="mathquill-element.html">
+<link rel="import" href="var-action-bar.html">
+<link rel="import" href="mathObjects/math-objects-import.html">
+<script src="../bower_components/mathjs/dist/math.js"></script>
+
+<dom-module id="function-signature">
+  <template>
+    <style>
+      :host {
+        display: block;
+        white-space: nowrap;
+      }
+      mathquill-element {
+        --mathquill-font-size: 200%;
+      }
+      #nameQuill {
+        margin-right: -10px;
+      }
+      .hidden {
+        display:none;
+      }
+    </style>
+
+  <mathquill-element id="nameQuill"
+    on-element-mouseover='onNameMouseOver' 
+    on-mouseleave='onNameMouseLeave'
+    on-enter='stopEditingName'
+    latex='{{name}}'
+    editable='[[editing]]'>
+  </mathquill-element>
+  <mathquill-element id="parametersQuill"
+    on-element-mouseover='onParameterMouseOver'>
+  </mathquill-element>
+  <var-action-bar id="actionbar" class="hidden"></var-action-bar>
+
+  </template>
+  <script>
+    Polymer({
+      is: 'function-signature',
+      properties: {
+        name: {
+          type: String,
+          notify: true
+        },
+        parameters: {
+          type: Array,
+          value: function() {return [];},
+          observer: 'updateSignature'
+        },
+        scope: {
+          type: Object,
+          value: function() {return new Scope();},
+          observer: 'updateSignature'
+        },
+        editing: {
+          type: Boolean,
+          value: false,
+          observer: 'editingChanged'
+        }
+      },
+
+      observers: [
+        'updateSignature(parameters.splices)',
+        'updateSignature(scope.pinnedVariables)',
+        'updateSignature(scope.pinnedVariables.splices)',
+      ],
+
+      attached: function () {
+        this.initialized = true;
+        this.updateSignature();
+      },
+      
+      updateSignature: function () {
+        if (!this.initialized)
+          return;
+
+        let latex = '\\left(';
+        if (this.parameters) {
+          let names = this.parameters.map( (variable) => {
+            return variable.name;
+          });
+          let sorted = names.sort();
+
+          let isNotPinned = (name) => {
+            return !this.scope.isPinned(name);
+          };
+
+          let filtered = sorted.filter(isNotPinned);
+          latex += filtered.join(',');
+        }
+        latex += '\\right)=';
+        this.$.parametersQuill.latex = latex;
+
+        if (!this.$.actionbar.classList.contains('hidden')
+          && !this.scope.isFree(this.$.actionbar.variable.name)) 
+        {
+          this.hideHoverBar();
+        }
+      },
+
+      editingChanged: function (_) {
+        if (this.editing) {
+          this.oldName = this.name;
+          this.listen(this.$.nameQuill, 'blur', 'stopEditingName');
+        }
+        else {
+          if (this.$.nameQuill.latex == '') {
+            this.name = this.oldName;
+          }
+        }
+      },
+
+      onParameterMouseOver: function (e, details) {
+        if (details.target.tagName == 'VAR') {
+          this.showHoverBar(details.target);
+          $(this).on('mouseout', this.hideHoverBar);
+        }
+      },
+
+      onNameMouseOver: function (e, details) {
+        if (!this.editing) {
+          this.editing = true;
+        }
+      },
+
+      onNameMouseLeave: function (_) {
+        let mq = this.$.nameQuill.getMathQuill();
+        //TODO: EXPOSE THIS BLURRED PROP BETTER
+        if (mq.__controller.blurred) {
+          this.stopEditingName();
+        }
+      },
+
+      stopEditingName: function (_) {
+        this.editing = false;
+      },
+
+      showHoverBar: function (target) {
+        let actionbar = this.$.actionbar;
+        actionbar.classList.remove('hidden');
+        let pushDown = 10;
+        let topY = target.offsetTop-this.$.actionbar.offsetHeight + pushDown;
+        let middleX = target.offsetLeft + target.offsetWidth/2 - actionbar.offsetWidth/2;
+        actionbar.style.left = middleX + 'px';
+        actionbar.style.top = topY + 'px';
+
+        let index = this.scope.indexOfFreeVar(target.textContent);
+        actionbar.variable = this.scope.freeVariables[index];
+      },
+
+      hideHoverBar: function() {
+        this.$.actionbar.classList.add('hidden');
+        $(this).off('mouseout', this.hideHoverBar);
+      }
+
+    });
+  </script>
+</dom-module>

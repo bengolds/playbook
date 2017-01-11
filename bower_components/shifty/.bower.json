@@ -1,0 +1,46 @@
+{
+  "name": "shifty",
+  "version": "1.5.4",
+  "main": "./dist/shifty.min.js",
+  "homepage": "http://jeremyckahn.github.io/shifty",
+  "description": "A teeny tiny tweening engine in JavaScript.",
+  "authors": [
+    {
+      "name": "Jeremy Kahn",
+      "email": "jeremyckahn@gmail.com"
+    },
+    {
+      "name": "Miller Medeiros",
+      "email": "contact@millermedeiros.com"
+    },
+    {
+      "name": "Carl Olsen",
+      "email": "carl@emoxie.com"
+    },
+    {
+      "name": "Joe Lambert"
+    },
+    {
+      "name": "Roman Kofman",
+      "email": "romank@groupon.com"
+    },
+    {
+      "name": "Jonathan Raoult",
+      "email": "jesuisjonathan@gmx.fr"
+    },
+    {
+      "name": "Adrian Voica",
+      "email": "adrian.voica@nanokyte.com"
+    }
+  ],
+  "license": "MIT",
+  "_release": "1.5.4",
+  "_resolution": {
+    "type": "version",
+    "tag": "1.5.4",
+    "commit": "3ec5e8f21abdd614c5c82a05d1be3f2038e2a91e"
+  },
+  "_source": "https://github.com/jeremyckahn/shifty.git",
+  "_target": "^1.5.4",
+  "_originalSource": "shifty"
+}

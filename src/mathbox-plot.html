@@ -1,0 +1,305 @@
+<script src="../libs/mathbox/build/mathbox-bundle.js"></script>
+<script src="../bower_components/css-element-queries/src/ResizeSensor.js"></script>
+<script src="../bower_components/css-element-queries/src/ElementQueries.js"></script>
+<link rel="import" href="graphs/graph-import.html">
+<link rel="import" href="../bower_components/iron-icon/iron-icon.html">
+<dom-module id="mathbox-plot">
+  <link rel="import" type="css" href="../libs/mathbox/build/mathbox.css"/>
+  <template>
+    <style is="custom-style">
+      :host {
+        position:relative;
+        user-select: none;
+        overflow:hidden;
+        display: block;
+        flex-grow: 1;
+      }
+      #mathbox {
+        height: 100%;
+        width: 100%;
+        transition: filter .5s;
+      }
+      :host(.ungrabbed) #mathbox {
+        cursor: grab;
+        cursor: -webkit-grab;
+        cursor: -moz-grab;
+      }
+      #errorIcon {
+        display:none;
+        opacity:0;
+        position:absolute;
+        z-index:1;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%,-50%);
+        --iron-icon-fill-color: #d40000;
+        --iron-icon-stroke-color: rgba(0,0,0,0.1);
+        --iron-icon-width: 64px;
+        --iron-icon-height: 64px;
+        transition: opacity .5s;
+      }
+      :host(.error) #errorIcon {
+        opacity:1;
+        display:block;
+      }
+      :host(.error) #mathbox{
+        filter:blur(10px);
+      }
+    </style>
+    <iron-icon id='errorIcon' icon='error'></iron-icon>
+    <div id='mathbox' class='blur'></div>
+    
+  </template>
+
+  <script>
+    Polymer({
+      is: 'mathbox-plot',
+
+      properties: {
+        animated: Boolean,
+        compiledFunction: {
+          type: Object,
+          observer: 'compiledFunctionChanged'
+        },
+        scope: {
+          type: Object,
+          notify: false,
+          value: function() {return new Scope();}
+        },
+        syncedParameters: {
+          type: Object,
+          notify: true,
+          value: function() {return {
+            xRange: [-5, 5],
+            yRange: [-5, 5],
+          };}
+        },
+        noGraphFound: {
+          type: Boolean,
+          notify: true,
+          readOnly: true,
+          value: true
+        },
+        showError: {
+          type: Boolean,
+          notify: false,
+          observer: 'showErrorChanged'
+        }
+      },
+
+      observers: [
+        'pinnedVariablesChanged(scope.pinnedVariables.splices)'
+      ],
+
+      listeners: {
+        'mouseenter': 'onMouseEnter',
+        'mouseleave': 'onMouseLeave',
+        'down': 'onPanStart',
+        'wheel': 'onWheel'
+      },
+
+      attached: function() {
+        this.initialized = true;
+        this.supportedGraphs = [LineGraph, ColorGraph];
+
+        var options = {
+          plugins: ['core', 'cursor', 'mathbox'],
+          element: this.$.mathbox,
+          camera: {
+            fov: 90
+          },
+        };
+        this.mathbox = mathBox(options);
+        this.mathbox.three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
+
+        this.camera = this.mathbox.camera({
+          proxy: true,
+          position: [0,0,1]
+        });
+
+        this.view = this.mathbox.cartesian({}, {
+          scale: () => {
+            return [this.getAspectRatio(), 1];
+          },
+        });
+
+        this._setupGridLines();
+        //For some reason, initializing the mathbox changes the width,
+        //so we need to do this again after the setup
+        this.resize();
+        new ResizeSensor(this.$.mathbox, () => {
+          this.resize();
+        });
+
+        this.classList.add('ungrabbed');
+      },
+
+      detached: function() {
+        if (this.mathbox.three) {
+          this.mathbox.three.renderer.forceContextLoss() ;
+          this.mathbox.three.destroy();
+        }
+      },
+
+      showErrorChanged: function () {
+        if (this.showError) {
+          this.classList.add('error');
+        } 
+        else {
+          this.classList.remove('error');
+        }
+      },
+
+      getAspectRatio: function() {
+        return this.offsetWidth/this.offsetHeight;
+      },
+
+      _setupGridLines: function() {
+        this.view.axis({
+          axis: 1,
+          width: 4,
+          end: false,
+          zIndex: 1
+        })
+        .axis({
+          axis: 2,
+          width: 4,
+          end: false,
+          zIndex: 1
+        })
+        .grid({
+          width: 1,
+          divideX: 20,
+          divideY: 10,
+          zIndex: 1
+        });
+      },
+
+      resize: function() {
+        if (!this.initialized)
+          return;
+
+        this.mathbox.three.Size.set({
+          width: this.offsetWidth,
+          height: this.offsetHeight
+        });
+      },
+
+      compiledFunctionChanged: function() {
+        if (!this.initialized)
+          return;
+
+        if (!this.compiledFunction) {
+          if (this.graph) {
+            this.graph.teardown();
+            this.graph = null;
+          }
+          return;
+        }
+
+        this.tryChangeGraph();
+        if (!this.noGraphFound) {
+          this.graph.showFunction(this.compiledFunction);
+        }
+      },
+
+      pinnedVariablesChanged: function(_) {
+        if (!this.initialized || !this.compiledFunction)
+          return;
+
+        if (this.tryChangeGraph()) {
+          this.graph.showFunction(this.compiledFunction);
+        } else {
+          this.graph.pinnedVariablesChanged();
+        }
+      },
+
+      tryChangeGraph: function () {
+        let newSignature = this.compiledFunction.getSignature();
+        if (!this.graph || !this.graph.constructor.isSupported(newSignature)) {
+          let graphConstructor = this._getCompatibleGraph();
+          if (graphConstructor) {
+            if (this.graph) {
+              this.graph.teardown();
+            }
+            this.graph = new graphConstructor(this.mathbox, this.syncedParameters, this.animated);
+            this.graph.setup();
+            this._setNoGraphFound(false);
+            this.fire('graph-ok');
+            return true;
+          }
+          else {
+            this._setNoGraphFound(true);
+            this.fire('graph-error', 'No graph found with that signature');
+          }
+        } 
+        else {
+          if (this.noGraphFound) {
+            this._setNoGraphFound(false);
+            this.fire('graph-ok');
+            return true;
+          }
+        }
+        return false;
+      },
+
+      _getCompatibleGraph: function() {
+        let matchingGraphs = this.supportedGraphs.filter((graph) => {
+          return graph.isSupported(this.compiledFunction.getSignature());
+        });
+        if (matchingGraphs.length != 0) {
+          return matchingGraphs[0];
+        }
+        else {
+          return null;
+        }
+      },
+
+      onPanStart: function (e) {
+        e.preventDefault();
+        this.classList.remove('ungrabbed');
+        this.lastPan = {x:e.detail.x, y:e.detail.y};
+        this.listen(this, 'track', 'onPan');
+        this.listen(this, 'up', 'onPanStop');
+        for (let value of ['grabbing', '-webkit-grabbing', '-moz-grabbing']) {
+          document.body.style.cursor = value;
+          if (document.body.style.cursor  === value)
+            break;
+        }
+        this.graph.onPanStart();
+      },
+
+      onPan: function (e) {
+        let dx = e.detail.x - this.lastPan.x;
+        let dy = e.detail.y - this.lastPan.y;
+        this.graph.onPan(dx, dy);
+        this.lastPan = {x:e.detail.x, y:e.detail.y};
+      },
+
+      onPanStop: function (e) {
+        this.graph.onPanStop();
+        this.classList.add('ungrabbed');
+        this.lastPanX = null;
+        this.unlisten(this, 'track', 'onPan');
+        this.unlisten(this, 'up', 'onPanStop');
+        document.body.style.cursor = null;
+      },
+
+      onMouseEnter: function (e) {
+        if (this.graph) {
+          this.graph.onMouseEnter(e);
+        }
+      },
+
+      onMouseLeave: function (e) {
+        if (this.graph) {
+          this.graph.onMouseLeave(e);
+        }
+      },
+
+      onWheel: function (e) {
+        this.graph.onZoom(e.deltaY, e.offsetX, e.offsetY);
+      },
+    });
+ </script>
+</dom-module>

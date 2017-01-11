@@ -1,0 +1,142 @@
+<link rel="import" href="../libs/paper-slider/paper-slider.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/iron-icons/av-icons.html">
+<link rel="import" href="range-end-picker.html">
+<link rel="import" href="shared-styles.html">
+<link rel="import" href="mathObjects/math-objects-import.html">
+
+<dom-module id="slider-scrubber">
+  <template>
+    <style include="shared-styles"></style>
+    <style>
+      :host {
+        display: flex;
+        justify-content: center;
+        padding: 0px 24px;
+        margin: auto;
+        margin-top: 4px;
+      }
+      paper-slider {
+        flex-grow: 1;
+        --paper-slider-knob-start-color: --google-blue-700;
+        --paper-slider-knob-start-border-color: transparent;
+        --paper-slider-pin-start-color: --google-blue-700;
+      }
+      #bottomTray {
+        position: absolute;
+        bottom: 8px;
+        margin: auto;
+      }
+    </style>
+
+    <range-end-picker id='lowerBound' 
+      max='[[getUpperBound(range.bounds.*)]]'
+      on-change='lowerBoundChanged'></range-end-picker>
+    <paper-slider id='slider' pin
+      immediate-value='{{value}}'
+      min='[[getLowerBound(range.bounds.*)]]'
+      max='[[getUpperBound(range.bounds.*)]]'
+      max-markers='20'
+      ></paper-slider>
+    <range-end-picker id='upperBound'
+      min='[[getLowerBound(range.bounds.*)]]' 
+      on-change='upperBoundChanged'></range-end-picker>
+    <div id='bottomTray'>
+      <paper-icon-button icon="add"></paper-icon-button>
+      <paper-icon-button icon="av:play-circle-filled"></paper-icon-button>
+    </div>
+    
+  </template>
+  <script>
+    Polymer({
+      is: 'slider-scrubber',
+      properties: {
+        domain: {
+          type: Number,
+          notify: false,
+          value: SETS.REAL,
+          observer: 'domainChanged'
+        },
+        value: {
+          type: Number,
+          notify: true,
+          value: 0,
+        },
+        range: {
+          type: Object,
+          notify: true,
+          observer: 'rangeChanged',
+          value: function() {return {
+            bounds: [-1, 1],
+          };}
+        },
+      },
+
+      observers: [
+        'rangeChanged(range.bounds)'
+      ],
+
+      attached: function() {
+        if (this.domain == SETS.NATURAL) {
+          this.set('range.bounds', [0, this.range.bounds[1]]);
+        }
+        this.$.slider.value = this.value;
+        this.set('range.steps', this.$.slider.getNumStops());
+      },
+
+      domainChanged: function () {
+        switch (this.domain) {
+        case SETS.NATURAL:
+          if (this.range) {
+            this.set('range.bounds', [0, this.range.bounds[1]]);
+          }
+          this.$.slider.step = 1;
+          this.$.slider.snaps = true;
+          this.$.lowerBound.fixed = true;
+          break;
+
+        case SETS.INTEGER:
+          this.$.slider.step = 1;
+          this.$.slider.snaps = true;
+          this.$.lowerBound.fixed = false;
+          break;
+
+        case SETS.REAL:
+          this.$.slider.step = 0.01;
+          this.$.slider.snaps = false;
+          this.$.lowerBound.fixed = false;
+          break;
+        }
+        if (this.range) {
+          this.set('range.steps', this.$.slider.getNumStops());
+          console.log(this.range.steps);
+        }
+      },
+
+      getLowerBound: function () {
+        return this.range.bounds[0];
+      },
+
+      getUpperBound: function () {
+        return this.range.bounds[1];
+      },
+
+      lowerBoundChanged: function() {
+        this.set('range.bounds.0', this.$.lowerBound.value);
+        this.value = Math.max(this.value, this.range.bounds[0]);
+      },
+
+      upperBoundChanged: function() {
+        this.set('range.bounds.1', this.$.upperBound.value);
+        this.value = Math.min(this.value, this.range.bounds[1]);
+      },
+
+      rangeChanged: function () {
+        this.$.lowerBound.value = this.range.bounds[0];
+        this.$.upperBound.value = this.range.bounds[1];
+        this.value = Math.min(Math.max(this.value, this.range.bounds[0]), this.range.bounds[1]);
+      },
+      
+    });
+  </script>
+</dom-module>

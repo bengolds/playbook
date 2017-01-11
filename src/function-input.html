@@ -1,0 +1,97 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="mathquill-element.html">
+<dom-module id="function-input">
+	<template>
+		<style>
+			:host {
+			}
+			#quill {
+        --mathquill-font-size: 200%;
+			}
+
+		</style>
+	<mathquill-element id="quill" editable
+    latex='{{latex}}'
+    semantic-text='{{definition}}'
+    on-edit='onEdit'
+    on-element-mouseover='onElementMouseOver'>
+  </mathquill-element>
+
+</template>
+<script>
+  Polymer({
+    is: 'function-input',
+
+    properties: {
+      latex: {
+        type: String,
+        notify: true,
+        value: '',
+      },
+      definition: {
+        type: String,
+        notify: true,
+        value: '',
+      }
+    },
+
+    attached: function() {
+    },
+
+    onElementMouseOver: function(e, details) {
+      let semanticNode = mqUtil.semanticNodeFromHTML(details.target, details.mathField);
+      if (!semanticNode) {
+        return;
+      }
+
+      let applicationNode = mqUtil.getClosestApplicationNode(semanticNode);
+      if (!applicationNode || !applicationNode.parent) {
+        return;
+      }
+
+      let hoveredDisplayNodes = applicationNode.getDisplayNodes();
+      let outlineRect = this.getBoundingBox(hoveredDisplayNodes);
+
+      this.debounce('show-hovergraph', () => {
+        this.fire('show-hovergraph', {
+          funcString: applicationNode.toString(),
+          boundingBox: outlineRect,
+          direction: 'down'
+        });
+      });
+    },
+
+    onEdit: function() {
+      this.fire('hide-hovergraph');
+    },
+
+    getBoundingBox: function (nodes) {
+      let merge = (r1, r2) => {
+        return {
+          left: Math.min(r1.left, r2.left),
+          right: Math.max(r1.right, r2.right),
+          top: Math.min(r1.top, r2.top),
+          bottom: Math.max(r1.bottom, r2.bottom),
+        };
+      };
+
+      let finalRect = {
+        left: Number.MAX_VALUE,
+        right: -Number.MAX_VALUE,
+        top: Number.MAX_VALUE,
+        bottom: -Number.MAX_VALUE,
+      };
+      for (var i = 0; i < nodes.length; i++) {
+        let node = nodes[i].jQ[0];
+        let rect = node.getBoundingClientRect();
+        finalRect = merge(finalRect, rect);
+      }
+      return finalRect;
+    },
+
+    hideHoverItems: function () {
+    }
+
+  });
+</script>
+</dom-module>

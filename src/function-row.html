@@ -1,0 +1,181 @@
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="shared-styles.html">
+<link rel="import" href="mathbox-plot.html">
+<link rel="import" href="function-input.html">
+<link rel="import" href="function-signature.html">
+<link rel="import" href="function-compiler.html">
+
+<dom-module id="function-row">
+  <template>
+  <style include="shared-styles"></style>
+    <style>
+      #container {
+        position: relative;
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        height: 192px;
+        max-width: 1280px;
+        margin-top: 8px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #signature {
+        margin-left: 24px;
+      }
+      #plot {
+        max-width: 480px;
+        height: 100%;
+      }
+      #inputContainer {
+        flex-grow: 1;
+        position:relative;
+      }
+      #errorMessage {
+        color: #d40000;
+        font-size: 80%;
+        position: absolute;
+        margin-top: 8px;
+      }
+    </style>
+    <paper-card id='container'>
+      <div class='topLeftTray'>
+        <paper-icon-button id='closeButton' icon="close" on-tap='removeRow'></paper-icon-button>
+        <paper-icon-button icon="speaker-notes"></paper-icon-button>
+      </div>
+
+      <function-compiler id='compiler'
+        definition='{{functionDefinition.parseableString}}'
+        scope='{{scope}}'
+        compiled='{{compiled}}'
+        ></function-compiler>
+
+      <function-signature id='signature'
+        name='{{functionDefinition.name}}'
+        parameters='{{compiled.variables}}'
+        scope='{{scope}}'
+        ></function-signature>
+      <div id= 'inputContainer'>
+        <function-input id='input'
+          definition='{{functionDefinition.parseableString}}'
+          latex='{{functionDefinition.latex}}'
+          on-semantic-text-ok='semanticTextOk'
+          on-semantic-text-error='semanticTextError'
+          ></function-input>
+        <div id='errorMessage'
+        >{{errorMessage}}</div>
+      </div>
+      <mathbox-plot id='plot' animated
+        compiled-function='{{compiled}}'
+        scope='{{scope}}'
+        synced-parameters='{{graphParameters}}'
+        ></mathbox-plot>
+    </paper-card>
+  </template>
+
+  <script>
+    Polymer({
+      is: 'function-row',
+      properties: {
+        functionDefinition: {
+          type: Object,
+          notify: true,
+          value: function() {return new FunctionDefinition();},
+        },
+        graphParameters: {
+          type: Object,
+          notify: true,
+          value: function() {return {};},
+        },
+        scope: {
+          type: Object,
+          notify: true,
+          value: function() {return new Scope();},
+        },
+        compiled: {
+          type: Object,
+          notify: false,
+        },
+        errorMessage: {
+          type: String,
+          notify: true,
+          value: ''
+        }
+      },
+
+      listeners: {
+        'compile-ok': 'compileOk',
+        'compile-error': 'compileError',
+        'graph-ok': 'graphOk',
+        'graph-error': 'graphError',
+      },
+
+      attached: function() {
+        this.isSemanticTextError = false;
+        this.isCompileError = false;
+        this.isGraphError = false;
+      },
+
+      removeRow: function() {
+        this.fire('remove-row', this.functionDefinition.name);
+      },
+
+      semanticTextOk: function() {
+        this.isSemanticTextError = false;
+        this.resetErrorMessage();
+      },
+
+      compileOk: function () {
+        this.isCompileError = false;
+        this.resetErrorMessage();
+      },
+
+      graphOk: function () {
+        this.isGraphError = false;
+        this.resetErrorMessage();
+      },
+
+      semanticTextError: function (e) {
+        this.isSemanticTextError = true;
+        this.semanticTextErrorMessage = e.detail;
+        this.resetErrorMessage();
+      },
+
+      compileError: function (e) {
+        this.isCompileError = true;
+        this.compileErrorMessage = e.detail;
+        this.resetErrorMessage();
+      },
+
+      graphError: function (e) {
+        this.isGraphError = true;
+        this.graphErrorMessage = e.detail;
+        this.resetErrorMessage();
+      },
+
+      resetErrorMessage: function () {
+        this.debounce('resetErrorMessage', () => {
+          if (this.isSemanticTextError) {
+            this.errorMessage = this.semanticTextErrorMessage;
+            this.$.plot.showError = true;
+          } 
+          else if (this.isCompileError) {
+            this.$.plot.showError = true;
+            this.errorMessage = this.compileErrorMessage;
+          }
+          else if (this.isGraphError) {
+            this.errorMessage = this.graphErrorMessage;
+            this.$.plot.showError = true;
+          }
+          else {
+            this.errorMessage = '';
+            this.$.plot.showError = false;
+          }
+        }, 500);
+      }
+
+    });
+ </script>
+</dom-module>
