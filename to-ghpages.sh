@@ -19,5 +19,5 @@ git commit -am "Deploy to GitHub Pages"
 git push --force --quiet
 
 cd ../../
-rm -rf temp
+#rm -rf temp
 
