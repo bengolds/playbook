@@ -108,7 +108,7 @@
           expect(graph.unboundRanges()).to.deep.equal({
             a: {
               bounds: [-5, 5],
-              steps: graph.width
+              steps: 200
             }
           });
         });
@@ -138,18 +138,56 @@
       });
 
       suite('colograph tests', function() {
-        setup(function() {
+        let el;
+        let scope;
+        let graph;
 
+        setup(function() {
+          el = fixture('basic');
+          scope = helper.makeScope(['a','b','c'], [SETS.REAL, SETS.REAL, SETS.COMPLEX]);
+          graph = new ColorGraph(el.mathbox, {}, false);
+          graph.setup();
         });
 
-        // test('show function', function() {
-        //   //Test here
-        // });
+        test('unboundRanges 2 real numbers', function() {
+          graph.compiled = helper.makeFakeCompiled('a*b', ['a', 'b'], scope);
+          graph.setRange('xRange', [-5, 5]);
+          graph.setRange('yRange', [-5, 5]);
 
-        // test('unboundRanges', function() {
-        //   //Test here
-        // });
+          expect(graph.unboundRanges()).to.deep.equal({
+            a: {
+              bounds: [-5, 5],
+              steps: 200
+            },
+            b: {
+              bounds: [-5, 5],
+              steps: 200
+            }
+          });
+        });
 
+        test('unboundRanges 1 complex number', function() {
+          graph.compiled = helper.makeFakeCompiled('c', ['c'], scope);
+          graph.setRange('xRange', [-5, 5]);
+          graph.setRange('yRange', [-3, 3]);
+
+          expect(graph.unboundRanges()).to.deep.equal({
+            c: {
+              bounds: [math.complex(-5, -3), math.complex(5, 3)],
+              steps: 200
+            }
+          });
+        });
+
+        test('show incompatible function', function() {
+          let f = new CompiledFunction(null, null, [new Variable('a')]);
+          let g = new CompiledFunction(null, null, [new Variable('a', SETS.COMPLEX), new Variable('b', SETS.COMPLEX)]);
+
+          expect(graph.showFunction.bind(graph, f)).to.throw(Error);
+          expect(graph.compiled).to.be.not.ok;
+          expect(graph.showFunction.bind(graph, g)).to.throw(Error);
+          expect(graph.compiled).to.be.not.ok;
+        });
 
       });
 

@@ -56,7 +56,7 @@
             top: 300-arrowOffset-2*borderOffset-height, bottom: 300-arrowOffset};
           expectBoundingBoxesEqual(getOffsetRect(el.$.arrowBox), expectedBox);
 
-          expectBoundingBoxesEqual(el.$.outline.getBoundingClientRect(), boundingBox);
+          expectBoundingBoxesEqual(getOffsetRect(el.$.outline), boundingBox);
 
           expect(el.compiledFunction.freeVariables).to.deep.equal([new Variable('x')]);
 
@@ -64,12 +64,12 @@
         });
 
         test('hide hover graph', function() {
-          //expect that this bad boy is now hidden
+          let boundingBox = {left: 100, right: 200, top: 300, bottom: 400 };
+          el.show('x*x', boundingBox, 'up');
+          assert(!el.classList.contains('hidden'));
+          el.hide();
+          assert(el.classList.contains('hidden'));
         });
-
-
-        // hovergraph errors
-
       });
     </script>
   </body>

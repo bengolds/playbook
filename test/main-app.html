@@ -25,6 +25,7 @@
         let el;
 
         setup(function() {
+          replace('mathbox-plot').with('fake-mathbox-plot');
           el = fixture('basic');
         });
 
@@ -37,18 +38,30 @@
           return getPinnedVarCards().length;
         };
 
-        let pinVariable = function(name, bounds=[-5, 5], value=0) {
-          let pinned = {
-            variable: el.scope.getVariable(name),
-            bounds: bounds,
-            value: value
-          };
-          el.push('scope.pinnedVariables', pinned);
+        let isPinned = function(name) {
+          let isInPinned = el.scope.pinnedVariables.some( (pinned) => {
+            return pinned.variable.name === name;
+          });
+
+          let isInFree = el.scope.freeVariables.some( (free) => {
+            return free.name === name;
+          });
+
+          expect(isInPinned).to.not.equal(isInFree);
+
+          return isInPinned;
         };
 
-        let unpinVariable = function(name) {
-          let index = el.scope.indexOfPinnedVar(name);
-          el.splice('scope.pinnedVariables', index, 1);
+        let pinVar = function(name) {
+          let pinEvt = new Event('pin-var');
+          pinEvt.detail = name;
+          el.dispatchEvent(pinEvt);
+        };
+
+        let unpinVar = function(name) {
+          let unpinEvt = new Event('unpin-var');
+          unpinEvt.detail = name;
+          el.dispatchEvent(unpinEvt);
         };
 
         test('cards match scope', function() {
@@ -56,23 +69,79 @@
 
           expect(numberOfPinnedVarCards()).to.equal(0);
 
-          pinVariable('a');
+          pinVar('a');
           expect(numberOfPinnedVarCards()).to.equal(1);
 
-          pinVariable('b');
-          pinVariable('c');
+          pinVar('b');
+          pinVar('c');
           expect(numberOfPinnedVarCards()).to.equal(3);
 
-          unpinVariable('b');
+          unpinVar('b');
           expect(numberOfPinnedVarCards()).to.equal(2);
         });
 
+
+        test('pinning variables', function() {
+          el.set('scope.variables', helper.makeVarsArray(['a','b'], [SETS.INTEGER, SETS.REAL]));
+
+          pinVar('a');
+          expect(isPinned('a')).to.be.true;
+          expect(isPinned('b')).to.be.false;
+          let pinnedVarA = el.scope.getVariable('a');
+          expect(pinnedVarA.set).to.equal(SETS.INTEGER);
+
+          //Double-pinning shouldn't throw an error
+          pinVar('a');
+          expect(isPinned('a')).to.be.true;
+
+          let shouldFail = el.pinVar.bind(el, {detail: 'c'});
+          expect(shouldFail).to.throw('c can\'t be pinned because it doesn\'t exist');
+        });
+
+        test('unpinning variables', function() {
+          let scope = helper.makeScope(['a', 'b'], [SETS.INTEGER, SETS.REAL], ['a','b'], null, null);
+          el.scope = scope;
+
+          unpinVar('a');
+          expect(isPinned('a')).to.be.false;
+          expect(isPinned('b')).to.be.true;
+          let varA = el.scope.getVariable('a');
+          expect(varA.set).to.equal(SETS.INTEGER);
+
+          unpinVar('a');
+          expect(isPinned('a')).to.be.false;
+
+          let shouldFail = el.unpinVar.bind(el, {detail: 'c'});
+          expect(shouldFail).to.throw('c can\'t be unpinned because it doesn\'t exist');
+        });
+
+        test('sensible defaults for bounds', function() {
+          let getPinned = function(name) {
+            return el.scope.pinnedVariables.find( (pinned) => {
+              return name === pinned.variable.name;
+            });
+          };
+          el.scope = helper.makeScope(['a','b','c'], [SETS.NATURAL, SETS.INTEGER, SETS.REAL]);
+
+          pinVar('a');
+          expect(getPinned('a').range.bounds).to.deep.equal([0, 10]);
+          expect(getPinned('a').value).to.equal(1);
+
+          pinVar('b');
+          expect(getPinned('b').range.bounds).to.deep.equal([-10, 10]);
+          expect(getPinned('b').value).to.equal(1);
+
+          pinVar('c');
+          expect(getPinned('c').range.bounds).to.deep.equal([-10, 10]);
+          expect(getPinned('c').value).to.equal(1);
+        });        
       });
 
       suite('function row manipulation tests', function() {
         var el;
 
         setup(function() {
+          replace('mathbox-plot').with('fake-mathbox-plot');
           el = fixture('basic');
         });
 
@@ -132,91 +201,20 @@
           let shouldFail = el.removeRow.bind(el, {detail: 'f'});
           expect(shouldFail).to.throw('Can\'t delete f because it doesn\'t exist');
         });
-
-        let isPinned = function(name) {
-          let isInPinned = el.scope.pinnedVariables.some( (pinned) => {
-            return pinned.variable.name === name;
-          });
-
-          let isInFree = el.scope.freeVariables.some( (free) => {
-            return free.name === name;
-          });
+      });
 
 
-          expect(isInPinned).to.not.equal(isInFree);
-
-          return isInPinned;
-        };
-
-        let pinVar = function(name) {
-          let pinEvt = new Event('pin-var');
-          pinEvt.detail = name;
-          el.dispatchEvent(pinEvt);
-        };
-
-        let unpinVar = function(name) {
-          let unpinEvt = new Event('unpin-var');
-          unpinEvt.detail = name;
-          el.dispatchEvent(unpinEvt);
-        };
-
-        test('pinning variables', function() {
-          el.set('scope.variables', helper.makeVarsArray(['a','b'], [SETS.INTEGER, SETS.REAL]));
-
-          pinVar('a');
-          expect(isPinned('a')).to.be.true;
-          expect(isPinned('b')).to.be.false;
-          let pinnedVarA = el.scope.getVariable('a');
-          expect(pinnedVarA.set).to.equal(SETS.INTEGER);
-
-          //Double-pinning shouldn't throw an error
-          pinVar('a');
-          expect(isPinned('a')).to.be.true;
-
-          let shouldFail = el.pinVar.bind(el, {detail: 'c'});
-          expect(shouldFail).to.throw('c can\'t be pinned because it doesn\'t exist');
+      suite('hover graph events', function() {
+        let el;
+        
+        setup(function() {
+          replace('hover-graph').with('fake-hover-graph');
+          el = fixture('basic');
         });
-
-        test('unpinning variables', function() {
-          let scope = helper.makeScope(['a', 'b'], [SETS.INTEGER, SETS.REAL], ['a','b'], null, null);
-          el.scope = scope;
-
-          unpinVar('a');
-          expect(isPinned('a')).to.be.false;
-          expect(isPinned('b')).to.be.true;
-          let varA = el.scope.getVariable('a');
-          expect(varA.set).to.equal(SETS.INTEGER);
-
-          unpinVar('a');
-          expect(isPinned('a')).to.be.false;
-
-          let shouldFail = el.unpinVar.bind(el, {detail: 'c'});
-          expect(shouldFail).to.throw('c can\'t be unpinned because it doesn\'t exist');
-        });
-
-        test('sensible defaults for bounds', function() {
-          let getPinned = function(name) {
-            return el.scope.pinnedVariables.find( (pinned) => {
-              return name === pinned.variable.name;
-            });
-          };
-          el.scope = helper.makeScope(['a','b','c'], [SETS.NATURAL, SETS.INTEGER, SETS.REAL]);
-
-          pinVar('a');
-          expect(getPinned('a').range.bounds).to.deep.equal([0, 10]);
-          expect(getPinned('a').value).to.equal(1);
-
-          pinVar('b');
-          expect(getPinned('b').range.bounds).to.deep.equal([-10, 10]);
-          expect(getPinned('b').value).to.equal(1);
-
-          pinVar('c');
-          expect(getPinned('c').range.bounds).to.deep.equal([-10, 10]);
-          expect(getPinned('c').value).to.equal(1);
-        });        
 
         test('hover graph events', function() {
           let hoverEvent = new Event('show-hovergraph');
+          hoverEvent.detail = {};
           sinon.spy(el, 'showHoverGraph');
           el.dispatchEvent(hoverEvent);
           expect(el.showHoverGraph.calledOnce).to.be.true;

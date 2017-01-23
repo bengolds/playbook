@@ -235,16 +235,30 @@ class ColorGraph extends Graph {
 
   unboundRanges() {
     let freeVars = this.compiled.freeVariables;
-    return {
-      [freeVars[0].name]: {
-        bounds: this.getFinal('xRange'),
-        steps: 200
-      },
-      [freeVars[1].name]: {
-        bounds: this.getFinal('yRange'),
-        steps: 200
-      }
-    };
+    if (freeVars.length == 2) {
+      return {
+        [freeVars[0].name]: {
+          bounds: this.getFinal('xRange'),
+          steps: 200
+        },
+        [freeVars[1].name]: {
+          bounds: this.getFinal('yRange'),
+          steps: 200
+        }
+      };
+    } else {
+      let realRange = this.getFinal('xRange');
+      let imRange = this.getFinal('yRange');
+      return {
+        [freeVars[0].name]: {
+          bounds: [
+            math.complex(realRange[0], imRange[0]),
+            math.complex(realRange[1], imRange[1])
+          ],
+          steps: 200
+        },
+      };
+    }
   }
 
   // Mouse events
