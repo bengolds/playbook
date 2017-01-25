@@ -52,18 +52,16 @@ class BarGraph extends Graph {
 
     this.data = view.array({
       channels: 2,
+      items: 4,
       fps: 60,
-      id: this.dataId,
-      width: 10
+      id: this.dataId
+    }, {
+      width: () => {
+        //TODO: RESIZING THIS IS SLOW
+        return Math.ceil(this.xRange[1])-Math.floor(this.xRange[0]) + 1;
+      }
     });
-    // this.display = view.line({
-    //   width: 5,
-    //   color: '#3090FF',
-    //   zIndex: 2,
-    //   id: this.displayId
-    // });
-    this.display = view.vector({
-      end: true,
+    this.display = view.face({
       width: 5,
       color: '#3090FF',
       zIndex: 2,
@@ -74,6 +72,7 @@ class BarGraph extends Graph {
       pace: this._exprAnimDuration/1000,
       id: this.animId
     });
+
   }
 
   teardown() {
@@ -92,6 +91,7 @@ class BarGraph extends Graph {
     this.changeExpr(this.makeExpr(compiledFunction));
     this.compiled = compiledFunction;
     this.resetBounds(this._exprAnimDuration, 'easeInOutSine');
+    this.mathbox.inspect();
   }
 
   pinnedVariablesChanged() {
@@ -118,11 +118,13 @@ class BarGraph extends Graph {
     if (freeVars.length == 1) {
       cachedVarName = freeVars[0].name;
     }
-    let newExpr = (emit, x) => {
-      emit(x, 0);
-      emit(x, cachedEval({
-        [cachedVarName]: x
-      }));
+    let newExpr = (emit, i) => {
+      let x = Math.floor(this.xRange[0]) + i;
+      let y = cachedEval({[cachedVarName]: x });
+      emit(x-0.4, 0);
+      emit(x-0.4, y);
+      emit(x+0.4, y);
+      emit(x+0.4, 0);
     };
     return newExpr;
   }
