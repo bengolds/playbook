@@ -43,6 +43,7 @@
 
       selectedChanged: function() {
         this.$.dropdownButton.icon = this.getIconForSet(this.selected);
+        this.fire('domain-changed', {set: this.selected});
       },
 
       getIconForSet: function(set) {

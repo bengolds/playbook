@@ -111,6 +111,7 @@
         "Graph": true,
         "LineGraph": true,
         "ColorGraph": true,
+        "BarGraph": true,
         "mqUtil": true,
         "SETS": true,
         "Scope": true,

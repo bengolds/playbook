@@ -40,14 +40,22 @@
           let f = makeSignature([SETS.REAL], [SETS.REAL]);
           let g = makeSignature([SETS.COMPLEX], [SETS.REAL]);
           let h = makeSignature([SETS.REAL, SETS.REAL], [SETS.REAL]);
+          let i = makeSignature([SETS.INTEGER], [SETS.REAL]);
 
           expect(LineGraph.isSupported(f)).to.be.true;
           expect(LineGraph.isSupported(g)).to.be.false;
           expect(LineGraph.isSupported(h)).to.be.false;
+          expect(LineGraph.isSupported(i)).to.be.false;
 
           expect(ColorGraph.isSupported(f)).to.be.false;
           expect(ColorGraph.isSupported(g)).to.be.true;
           expect(ColorGraph.isSupported(h)).to.be.true;
+          expect(ColorGraph.isSupported(i)).to.be.false;
+
+          expect(BarGraph.isSupported(f)).to.be.false;
+          expect(BarGraph.isSupported(g)).to.be.false;
+          expect(BarGraph.isSupported(h)).to.be.false;
+          expect(BarGraph.isSupported(i)).to.be.true;
         });
 
         test('zoomRange', function() {

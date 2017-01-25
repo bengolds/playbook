@@ -88,7 +88,8 @@
       },
 
       observers: [
-        'pinnedVariablesChanged(scope.pinnedVariables.splices)'
+        'pinnedVariablesChanged(scope.pinnedVariables.splices)',
+        'compiledFunctionChanged(scope.variables.*)'
       ],
 
       listeners: {
@@ -100,7 +101,7 @@
 
       attached: function() {
         this.initialized = true;
-        this.supportedGraphs = [LineGraph, ColorGraph];
+        this.supportedGraphs = [LineGraph, ColorGraph, BarGraph];
 
         var options = {
           plugins: ['core', 'cursor', 'mathbox'],

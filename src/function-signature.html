@@ -66,6 +66,10 @@
         'updateSignature(scope.pinnedVariables.splices)',
       ],
 
+      listeners: {
+        'actionbar.domain-changed': 'domainChanged'
+      },
+
       attached: function () {
         this.initialized = true;
         this.updateSignature();
@@ -152,6 +156,13 @@
       hideHoverBar: function() {
         this.$.actionbar.classList.add('hidden');
         $(this).off('mouseout', this.hideHoverBar);
+      },
+
+      domainChanged: function (e) {
+        if (this.$.actionbar.variable) {
+          let index = this.scope.indexOfVar(this.$.actionbar.variable.name);
+          this.notifyPath('scope.variables.'+index+'.set', e.detail.set);
+        }
       }
 
     });
