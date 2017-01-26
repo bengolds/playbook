@@ -1,0 +1,58 @@
+<dom-module id='label-styles'>
+  <template>
+    <style>
+      :root {
+        --x-label: {
+          position: absolute;
+          top: 100%;
+        };
+        --y-label: {
+          position: absolute;
+          right: 100%;
+          margin-right: 4px;
+        };
+        --number-label: {
+          font-family: Symbola;
+        };
+        --text-label: {
+          font-family: Times New Roman;
+          font-style: italic;
+        };
+      }
+
+      .xMinLabel {
+        @apply --x-label;
+        @apply --number-label;
+      }
+      .xMaxLabel {
+        @apply --x-label;
+        @apply --number-label;
+        right: 0px;
+      }
+      .xAxisLabel {
+        @apply --x-label;
+        @apply --text-label;
+        left: 50%;
+        transform: translate(-50%, 0);
+      }
+      .yMinLabel {
+        @apply --y-label;
+        @apply --number-label;
+        bottom: 0px;
+      }
+      .yMaxLabel {
+        @apply --y-label;
+        @apply --number-label;
+      }
+      .yAxisLabel {
+        @apply --y-label;
+        @apply --text-label;
+        top: 50%;
+        transform: translate(0, -50%);
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </template>
+</dom-module>

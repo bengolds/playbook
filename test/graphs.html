@@ -21,6 +21,12 @@
       </template>
     </test-fixture>
 
+    <test-fixture id="labels">
+      <template>
+        <div><p>some text</p></div>
+      </template>
+    </test-fixture>
+
     <script>
       suite('graphs tests', function() {
         var el;
@@ -197,6 +203,24 @@
           expect(graph.compiled).to.be.not.ok;
         });
 
+      });
+
+      suite('label object', function() {
+        let el;
+
+        setup(function() {
+          el = fixture('labels');
+        });
+
+        test('setup and teardown are opposites', function() {
+          let oldHTML = el.innerHTML;
+          let label = new ScaleLabel(el, ()=>{return {}});
+          expect(el.innerHTML).to.equal(oldHTML);
+          label.setup();
+          expect(el.innerHTML).to.not.equal(oldHTML);
+          label.teardown();
+          expect(el.innerHTML).to.equal(oldHTML);
+        });
       });
 
     </script>

@@ -1,11 +1,13 @@
 class BarGraph extends Graph {
 
-  constructor (mathbox, syncedParameters, animated) {
-    super(mathbox, syncedParameters, animated);
+  constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
+    super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
 
     this._exprAnimDuration = 500;
     this._resetBoundsDuration = 250;
-    this.labelsVisible = false;
+    this.scaleLabel = new ScaleLabel(overlayDiv, 
+      this.getLabelText.bind(this),
+      () => {return this.labelsVisible;});
   }
 
   static get supportedSignatures() {
@@ -25,6 +27,7 @@ class BarGraph extends Graph {
   static get syncedParameterNames() {
     return [
       'xRange',
+      'labelsVisible'
     ];
   }
 
@@ -81,6 +84,8 @@ class BarGraph extends Graph {
       let newXRange = [center-5, center+5];
       this.setRange('xRange', newXRange);
     }
+
+    this.scaleLabel.setup();
   }
 
   teardown() {
@@ -89,6 +94,7 @@ class BarGraph extends Graph {
     this.mathbox.remove('#'+this.dataId);
     this.mathbox.remove('#'+this.displayId);
     this.mathbox.remove('#'+this.animId);
+    this.scaleLabel.teardown();
   }
 
   showFunction(compiledFunction) {
@@ -144,7 +150,21 @@ class BarGraph extends Graph {
     };
     return newExpr;
   }
-
+  
+  getLabelText() {
+    let numDigits = 1;
+    let xAxisLabel = '';
+    if (this.compiled && this.compiled.freeVariables.length > 0) {
+      xAxisLabel = this.compiled.freeVariables[0].name;
+    }
+    return {
+      xMinLabel: this.xRange[0].toFixed(numDigits),
+      xMaxLabel: this.xRange[1].toFixed(numDigits),
+      yMinLabel: this.yRange[0].toFixed(numDigits),
+      yMaxLabel: this.yRange[1].toFixed(numDigits),
+      xAxisLabel: xAxisLabel,
+    };
+  }
   //Ranges
 
   resetBounds(animDuration=this._resetBoundsDuration, animEasing='easeOutSine') {

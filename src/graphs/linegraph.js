@@ -1,11 +1,13 @@
 class LineGraph extends Graph {
 
-  constructor (mathbox, syncedParameters, animated) {
-    super(mathbox, syncedParameters, animated);
+  constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
+    super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
 
     this._exprAnimDuration = 500;
     this._resetBoundsDuration = 250;
-    this.labelsVisible = false;
+    this.scaleLabel = new ScaleLabel(overlayDiv, 
+      this.getLabelText.bind(this),
+      () => {return this.labelsVisible;});
   }
 
   static get supportedSignatures() {
@@ -25,6 +27,7 @@ class LineGraph extends Graph {
   static get syncedParameterNames() {
     return [
       'xRange',
+      'labelsVisible'
     ];
   }
 
@@ -49,9 +52,6 @@ class LineGraph extends Graph {
     this.dataId = 'data';
     this.displayId = 'display';
     this.animId = 'anim';
-    this.domId = 'linedom';
-    this.htmlId = 'linehtmldom';
-    this.labelPointsId = 'linelabelpoints';
 
     this.data = view.interval({
       channels: 2,
@@ -71,37 +71,7 @@ class LineGraph extends Graph {
       id: this.animId
     });
 
-    if (this.mathbox.select('#'+this.domId).length == 0) {
-      view.layer({})
-      .array({
-        width: 4,
-        id: this.labelPointsId,
-        channels: 2 
-      })
-      .html({
-        width: 4,
-        id: this.htmlId,
-      })
-      .dom({
-        id: this.domId,
-        // depth: .5,
-        size: 12,
-        // snap: true,
-        // points: '<<',
-        offset: [0,0],
-        outline: 2,
-        // color: '#000',
-        zIndex: 3,
-      });
-    }
-    else {
-      this.mathbox.select('#'+this.domId).unbind('opacity');
-    }
-    this.mathbox.select('#'+this.domId).bind('opacity', () =>{
-      return this.labelsVisible ? 1: 0;
-    });
-    this.mathbox.select('#'+this.labelPointsId).set('expr', this.emitLabelPoints.bind(this));
-    this.mathbox.select('#'+this.htmlId).set('expr', this.emitLabelDom.bind(this));
+    this.scaleLabel.setup();
   }
 
   teardown() {
@@ -110,7 +80,7 @@ class LineGraph extends Graph {
     this.mathbox.remove('#'+this.dataId);
     this.mathbox.remove('#'+this.displayId);
     this.mathbox.remove('#'+this.animId);
-    this.labelsVisible = false;
+    this.scaleLabel.teardown();
   }
 
   showFunction(compiledFunction) {
@@ -155,53 +125,19 @@ class LineGraph extends Graph {
     return newExpr;
   }
 
-  emitLabelPoints(emit, i) {
-    let xWidth = this.width/this.height;
-    switch(i) {
-    case 0:
-      emit(-xWidth, -1);
-      break;
-    case 1:
-      emit(xWidth, -1);
-      break;
-    case 2:
-      emit(xWidth, -1);
-      break;
-    case 3:
-      emit(xWidth, 1);
-      break;
+  getLabelText() {
+    let numDigits = 1;
+    let xAxisLabel = '';
+    if (this.compiled && this.compiled.freeVariables.length > 0) {
+      xAxisLabel = this.compiled.freeVariables[0].name;
     }
-  }
-
-  emitLabelDom(emit, el, i) {
-    var text = '';
-    var style = {
-      position: 'absolute',
-      'user-select': 'none'
+    return {
+      xMinLabel: this.xRange[0].toFixed(numDigits),
+      xMaxLabel: this.xRange[1].toFixed(numDigits),
+      yMinLabel: this.yRange[0].toFixed(numDigits),
+      yMaxLabel: this.yRange[1].toFixed(numDigits),
+      xAxisLabel: xAxisLabel,
     };
-    switch(i) {
-    case 0: 
-      text = this.xRange[0].toFixed(1);
-      style.left = '4px';
-      style.bottom = '0px';
-      break;
-    case 1:
-      text = this.xRange[1].toFixed(1);
-      style.right = '24px';
-      style.bottom = '0px';
-      break;
-    case 2:
-      text = this.yRange[0].toFixed(1);
-      style.right = '4px';
-      style.bottom = '16px';
-      break;
-    case 3:
-      text = this.yRange[1].toFixed(1);
-      style.right = '4px';
-      style.top = '0px';
-      break;
-    }
-    emit(el('span', {style: style, innerHTML: text}));
   }
 
   //Ranges
