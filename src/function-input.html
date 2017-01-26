@@ -12,6 +12,7 @@
 		</style>
 	<mathquill-element id="quill" editable
     latex='{{latex}}'
+    config='[[mqConfig]]'
     semantic-text='{{definition}}'
     on-edit='onEdit'
     on-click='onClick'
@@ -33,6 +34,13 @@
         type: String,
         notify: true,
         value: '',
+      },
+      mqConfig: {
+        type: Object,
+        value: {
+          spaceBehavesLikeTab: true,
+          sumStartsWithNEquals: true
+        }
       }
     },
 

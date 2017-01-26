@@ -80,7 +80,7 @@
           return;
 
         let latex = '\\left(';
-        if (this.parameters) {
+        if (this.parameters && this.parameters.length > 0) {
           let names = this.parameters.map( (variable) => {
             return variable.name;
           });
@@ -92,6 +92,9 @@
 
           let filtered = sorted.filter(isNotPinned);
           latex += filtered.join(',');
+        }
+        else {
+          latex += '\\ ';
         }
         latex += '\\right)=';
         this.$.parametersQuill.latex = latex;

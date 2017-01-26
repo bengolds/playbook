@@ -88,6 +88,9 @@
         this.fire('element-mouseout', {mathField: mathField, target: target});
       },
       _initializeMathQuill: function(editable, config) {
+        if (!this._MQ) {
+          return;
+        }
         var mqEl = this.$.quill;
         var contents = '';
         if (this.mathquill != null) {
