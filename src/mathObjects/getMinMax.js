@@ -19,6 +19,8 @@ let getMinMax = function(compiled, unboundRanges, maxSamples = 1e5) {
     return range;
   }, [Number.MAX_VALUE, -Number.MAX_VALUE]);
 
+  bounds = _scaleBounds(bounds, 1.1);
+
   return bounds;
 };
 
@@ -79,6 +81,12 @@ let _discardOutliers = function(samples) {
     });
   }
   return copiedSamples;
+};
+
+let _scaleBounds = function(range, scale) {
+  let rangeHalfWidth = (range[1]-range[0])/2;
+  let center = range[0] + rangeHalfWidth;
+  return [center-rangeHalfWidth*scale, center+rangeHalfWidth*scale];
 };
 
 let _checkRangesMatchVariables = function(compiled, unboundRanges) {
