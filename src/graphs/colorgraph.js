@@ -1,7 +1,11 @@
 class ColorGraph extends Graph {
 
-  constructor (mathbox, syncedParameters, animated) {
-    super(mathbox, syncedParameters, animated);
+  constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
+    super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
+
+    this.scaleLabel = new ScaleLabel(overlayDiv, 
+      this.getLabelText.bind(this),
+      () => {return this.labelsVisible;});
   }
 
   static get supportedSignatures() {
@@ -21,7 +25,8 @@ class ColorGraph extends Graph {
   static get syncedParameterNames() {
     return [
       'xRange',
-      'yRange'
+      'yRange',
+      'labelsVisible'
     ];
   }
 
@@ -75,38 +80,10 @@ class ColorGraph extends Graph {
       id: this.animId
     });
 
-    if (this.mathbox.select('#'+this.domId).length == 0) {
-      view.layer({})
-      .array({
-        width: 4,
-        id: this.labelPointsId,
-        channels: 2 
-      })
-      .html({
-        width: 4,
-        id: this.htmlId,
-      })
-      .dom({
-        id: this.domId,
-        // depth: .5,
-        size: 12,
-        // snap: true,
-        // points: '<<',
-        offset: [0,0],
-        outline: 2,
-        // color: '#000',
-        zIndex: 3,
-      });
-    }
-    else {
-      this.mathbox.select('#'+this.domId).unbind('opacity');
-    }
-    this.mathbox.select('#'+this.domId).bind('opacity', () =>{
-      return this.labelsVisible ? 1: 0;
-    });
-    this.mathbox.select('#'+this.labelPointsId).set('expr', this.emitLabelPoints.bind(this));
-    this.mathbox.select('#'+this.htmlId).set('expr', this.emitLabelDom.bind(this));
     this.setRange('yRange', this.getFinal('xRange'));
+
+    this.scaleLabel.setup();
+    this.scaleLabel.hide();
   }
 
   teardown() {
@@ -117,6 +94,7 @@ class ColorGraph extends Graph {
     this.mathbox.remove('#'+this.displayId);
     this.mathbox.remove('#'+this.animId);
     this.mathbox.remove('#'+this.flatId);
+    this.scaleLabel.teardown();
   }
 
   showFunction(compiledFunction) {
@@ -164,54 +142,24 @@ class ColorGraph extends Graph {
     return warmCoolMap[i];
   }
    
-  emitLabelPoints(emit, i) {
-    let xWidth = this.width/this.height;
-    switch(i) {
-    case 0:
-      emit(-xWidth, -1);
-      break;
-    case 1:
-      emit(xWidth, -1);
-      break;
-    case 2:
-      emit(xWidth, -1);
-      break;
-    case 3:
-      emit(xWidth, 1);
-      break;
+  getLabelText() {
+    let numDigits = 1;
+    let xAxisLabel = '';
+    let yAxisLabel = '';
+    if (this.compiled) {
+      xAxisLabel = this.compiled.freeVariables[0].name;
+      yAxisLabel = this.compiled.freeVariables[1].name;
     }
+    return {
+      xMinLabel: this.xRange[0].toFixed(numDigits),
+      xMaxLabel: this.xRange[1].toFixed(numDigits),
+      yMinLabel: this.yRange[0].toFixed(numDigits),
+      yMaxLabel: this.yRange[1].toFixed(numDigits),
+      xAxisLabel: xAxisLabel,
+      yAxisLabel: yAxisLabel,
+    };
   }
 
-  emitLabelDom(emit, el, i) {
-    var text = '';
-    var style = {
-      position: 'absolute',
-      'user-select': 'none'
-    };
-    switch(i) {
-    case 0: 
-      text = this.xRange[0].toFixed(1);
-      style.left = '4px';
-      style.bottom = '0px';
-      break;
-    case 1:
-      text = this.xRange[1].toFixed(1);
-      style.right = '24px';
-      style.bottom = '0px';
-      break;
-    case 2:
-      text = this.yRange[0].toFixed(1);
-      style.right = '4px';
-      style.bottom = '16px';
-      break;
-    case 3:
-      text = this.yRange[1].toFixed(1);
-      style.right = '4px';
-      style.top = '0px';
-      break;
-    }
-    emit(el('span', {style: style, innerHTML: text}));
-  }
   //Ranges
 
   resetBounds() {

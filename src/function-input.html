@@ -12,8 +12,10 @@
 		</style>
 	<mathquill-element id="quill" editable
     latex='{{latex}}'
+    config='[[mqConfig]]'
     semantic-text='{{definition}}'
     on-edit='onEdit'
+    on-click='onClick'
     on-element-mouseover='onElementMouseOver'>
   </mathquill-element>
 
@@ -32,6 +34,13 @@
         type: String,
         notify: true,
         value: '',
+      },
+      mqConfig: {
+        type: Object,
+        value: {
+          spaceBehavesLikeTab: true,
+          sumStartsWithNEquals: true
+        }
       }
     },
 
@@ -65,6 +74,10 @@
       this.fire('hide-hovergraph');
     },
 
+    onClick: function() {
+      this.fire('hide-hovergraph');
+    },
+
     getBoundingBox: function (nodes) {
       let merge = (r1, r2) => {
         return {
@@ -88,9 +101,6 @@
       }
       return finalRect;
     },
-
-    hideHoverItems: function () {
-    }
 
   });
 </script>

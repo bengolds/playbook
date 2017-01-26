@@ -66,6 +66,10 @@
         'updateSignature(scope.pinnedVariables.splices)',
       ],
 
+      listeners: {
+        'actionbar.domain-changed': 'domainChanged'
+      },
+
       attached: function () {
         this.initialized = true;
         this.updateSignature();
@@ -76,7 +80,7 @@
           return;
 
         let latex = '\\left(';
-        if (this.parameters) {
+        if (this.parameters && this.parameters.length > 0) {
           let names = this.parameters.map( (variable) => {
             return variable.name;
           });
@@ -88,6 +92,9 @@
 
           let filtered = sorted.filter(isNotPinned);
           latex += filtered.join(',');
+        }
+        else {
+          latex += '\\ ';
         }
         latex += '\\right)=';
         this.$.parametersQuill.latex = latex;
@@ -152,6 +159,13 @@
       hideHoverBar: function() {
         this.$.actionbar.classList.add('hidden');
         $(this).off('mouseout', this.hideHoverBar);
+      },
+
+      domainChanged: function (e) {
+        if (this.$.actionbar.variable) {
+          let index = this.scope.indexOfVar(this.$.actionbar.variable.name);
+          this.notifyPath('scope.variables.'+index+'.set', e.detail.set);
+        }
       }
 
     });

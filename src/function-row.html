@@ -11,22 +11,30 @@
   <template>
   <style include="shared-styles"></style>
     <style>
-      #container {
+      :host {
+        display: block;
         position: relative;
+        height: 192px;
+        max-width: 1280px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #container {
         display: flex;
         flex-wrap: nowrap;
         align-items: center;
-        height: 192px;
-        max-width: 1280px;
-        margin-top: 8px;
-        margin-left: auto;
-        margin-right: auto;
+        width: 100%;
+        height: 100%;
       }
       #signature {
         margin-left: 24px;
       }
       #plot {
         max-width: 480px;
+        height: 100%;
+      }
+      #auxInfo {
+        flex: 0 0 auto;
         height: 100%;
       }
       #inputContainer {
@@ -67,6 +75,7 @@
         <div id='errorMessage'
         >{{errorMessage}}</div>
       </div>
+      <div id='auxInfo'> </div>
       <mathbox-plot id='plot' animated
         compiled-function='{{compiled}}'
         scope='{{scope}}'
@@ -116,6 +125,7 @@
         this.isSemanticTextError = false;
         this.isCompileError = false;
         this.isGraphError = false;
+        this.$.plot.auxDiv = this.$.auxInfo;
       },
 
       removeRow: function() {

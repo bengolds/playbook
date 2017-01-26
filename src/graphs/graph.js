@@ -1,5 +1,5 @@
 class Graph {
-  constructor(mathbox, syncedParameters={}, animated) {
+  constructor(mathbox, syncedParameters={}, animated, overlayDiv, auxDiv) {
     if (new.target === Graph) {
       throw new TypeError('Cannot construct Graph instances directly');
     }
@@ -7,6 +7,8 @@ class Graph {
     this.animated = animated;
     this.syncedParameters = syncedParameters;
     this.setupSyncedParameters(syncedParameters);
+    this.overlayDiv = overlayDiv;
+    this.auxDiv = auxDiv;
     this.tweeners = {};
     this.tweenerTargets = {};
   }
@@ -41,7 +43,12 @@ class Graph {
   }
 
   static humanizeBounds(minMax) {
+    let scale = 1.1;
     let minY = minMax[0], maxY = minMax[1];
+    let rangeHalfWidth = (maxY-minY)/2;
+    let center = minY + rangeHalfWidth;
+    minY = center-rangeHalfWidth*scale;
+    maxY = center+rangeHalfWidth*scale;
 
     // Apply some tricks to the resulting values to get a good range
     if (minY == Number.NEGATIVE_INFINITY) {

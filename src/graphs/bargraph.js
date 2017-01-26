@@ -1,4 +1,4 @@
-class LineGraph extends Graph {
+class BarGraph extends Graph {
 
   constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
     super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
@@ -13,8 +13,8 @@ class LineGraph extends Graph {
   static get supportedSignatures() {
     return {
       domains: [
-        [],
-        [SETS.REAL],
+        [SETS.INTEGER],
+        [SETS.NATURAL],
       ],
       ranges: [
         [SETS.REAL],
@@ -29,6 +29,10 @@ class LineGraph extends Graph {
       'xRange',
       'labelsVisible'
     ];
+  }
+
+  isNatural() {
+    return this.compiled.getDomain()[0] == SETS.NATURAL;
   }
 
   //Setup & Teardown
@@ -53,13 +57,17 @@ class LineGraph extends Graph {
     this.displayId = 'display';
     this.animId = 'anim';
 
-    this.data = view.interval({
+    this.data = view.array({
       channels: 2,
+      items: 4,
       fps: 60,
       id: this.dataId,
-      width: 500
+    }, {
+      width: () => {
+        return Math.ceil(this.xRange[1])-Math.floor(this.xRange[0]) + 1;
+      }
     });
-    this.display = view.line({
+    this.display = view.face({
       width: 5,
       color: '#3090FF',
       zIndex: 2,
@@ -70,6 +78,12 @@ class LineGraph extends Graph {
       pace: this._exprAnimDuration/1000,
       id: this.animId
     });
+
+    if (this.xRange[1]-this.xRange[0] < 10) {
+      let center = this.xRange[0] + (this.xRange[1]-this.xRange[0])/2;
+      let newXRange = [center-5, center+5];
+      this.setRange('xRange', newXRange);
+    }
 
     this.scaleLabel.setup();
   }
@@ -90,7 +104,13 @@ class LineGraph extends Graph {
 
     this.changeExpr(this.makeExpr(compiledFunction));
     this.compiled = compiledFunction;
+
+    if (this.isNatural()) {
+      this.clampBounds(true);
+    }
+    
     this.resetBounds(this._exprAnimDuration, 'easeInOutSine');
+    this.mathbox.inspect();
   }
 
   pinnedVariablesChanged() {
@@ -117,14 +137,20 @@ class LineGraph extends Graph {
     if (freeVars.length == 1) {
       cachedVarName = freeVars[0].name;
     }
-    let newExpr = (emit, x) => {
-      emit(x, cachedEval({
-        [cachedVarName]: x
-      }));
+    let newExpr = (emit, i) => {
+      let x = Math.floor(this.xRange[0]) + i;
+      if (this.isNatural() && x < 0) {
+        return;
+      }
+      let y = cachedEval({[cachedVarName]: x });
+      emit(x-0.4, 0);
+      emit(x-0.4, y);
+      emit(x+0.4, y);
+      emit(x+0.4, 0);
     };
     return newExpr;
   }
-
+  
   getLabelText() {
     let numDigits = 1;
     let xAxisLabel = '';
@@ -139,7 +165,6 @@ class LineGraph extends Graph {
       xAxisLabel: xAxisLabel,
     };
   }
-
   //Ranges
 
   resetBounds(animDuration=this._resetBoundsDuration, animEasing='easeOutSine') {
@@ -174,6 +199,13 @@ class LineGraph extends Graph {
 
   //Mouse events
 
+  clampBounds(animated) {
+    let xRange = this.getFinal('xRange');
+    if (xRange[0] < 0) {
+      this.setRange('xRange', [0, xRange[1]-xRange[0]], animated);
+    }
+  }
+
   onMouseEnter(e) {
     this.labelsVisible = true;
   }
@@ -184,6 +216,9 @@ class LineGraph extends Graph {
 
   onPan(dx, dy) {
     this.translateRange(dx);
+    if (this.isNatural()) {
+      this.clampBounds(false);
+    }
   }
 
   onPanStop() {
@@ -195,6 +230,9 @@ class LineGraph extends Graph {
     let zoomAmount = 1 + zoomScale*amount;
     let t = mouseX/this.width;
     this.zoomRange('xRange', zoomAmount, t);
+    if (this.isNatural()) {
+      this.clampBounds(true);
+    }
 
     clearTimeout(this.resetBoundsTimeout);
     this.resetBoundsTimeout = setTimeout( () => {

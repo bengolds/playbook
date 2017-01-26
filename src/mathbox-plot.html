@@ -6,18 +6,27 @@
 <dom-module id="mathbox-plot">
   <link rel="import" type="css" href="../libs/mathbox/build/mathbox.css"/>
   <template>
+    <style include='graph-styles'></style>
     <style is="custom-style">
       :host {
         position:relative;
         user-select: none;
-        overflow:hidden;
         display: block;
-        flex-grow: 1;
+        height: 100%;
+        width: 100%;
       }
       #mathbox {
         height: 100%;
         width: 100%;
         transition: filter .5s;
+      }
+      #overlay {
+        position: absolute;
+        top: 0px;
+        bottom: 0px;
+        left: 0px;
+        right: 0px;
+        z-index: 1;
       }
       :host(.ungrabbed) #mathbox {
         cursor: grab;
@@ -45,8 +54,14 @@
       :host(.error) #mathbox{
         filter:blur(10px);
       }
+      #overlay {
+        pointer-events: none;
+      }
+      /*move these to a module*/
+     
     </style>
     <iron-icon id='errorIcon' icon='error'></iron-icon>
+    <div id='overlay'></div>
     <div id='mathbox' class='blur'></div>
     
   </template>
@@ -74,6 +89,7 @@
             yRange: [-5, 5],
           };}
         },
+        auxDiv: Object,
         noGraphFound: {
           type: Boolean,
           notify: true,
@@ -88,7 +104,8 @@
       },
 
       observers: [
-        'pinnedVariablesChanged(scope.pinnedVariables.splices)'
+        'pinnedVariablesChanged(scope.pinnedVariables.splices)',
+        'compiledFunctionChanged(scope.variables.*)'
       ],
 
       listeners: {
@@ -100,7 +117,7 @@
 
       attached: function() {
         this.initialized = true;
-        this.supportedGraphs = [LineGraph, ColorGraph];
+        this.supportedGraphs = [LineGraph, ColorGraph, BarGraph];
 
         var options = {
           plugins: ['core', 'cursor', 'mathbox'],
@@ -222,7 +239,7 @@
             if (this.graph) {
               this.graph.teardown();
             }
-            this.graph = new graphConstructor(this.mathbox, this.syncedParameters, this.animated);
+            this.graph = new graphConstructor(this.mathbox, this.syncedParameters, this.animated, this.$.overlay, this.auxDiv);
             this.graph.setup();
             this._setNoGraphFound(false);
             this.fire('graph-ok');
