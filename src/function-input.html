@@ -14,6 +14,7 @@
     latex='{{latex}}'
     semantic-text='{{definition}}'
     on-edit='onEdit'
+    on-click='onClick'
     on-element-mouseover='onElementMouseOver'>
   </mathquill-element>
 
@@ -65,6 +66,10 @@
       this.fire('hide-hovergraph');
     },
 
+    onClick: function() {
+      this.fire('hide-hovergraph');
+    },
+
     getBoundingBox: function (nodes) {
       let merge = (r1, r2) => {
         return {
@@ -88,9 +93,6 @@
       }
       return finalRect;
     },
-
-    hideHoverItems: function () {
-    }
 
   });
 </script>
