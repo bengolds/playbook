@@ -118,6 +118,8 @@
         "FunctionDefinition": true,
         "CompiledFunction": true,
         "ResizeSensor": false,
-        "ScaleLabel": true
+        "ScaleLabel": true,
+        "Probe": true,
+        "util": true
     }
 }

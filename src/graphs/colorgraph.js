@@ -83,7 +83,6 @@ class ColorGraph extends Graph {
     this.setRange('yRange', this.getFinal('xRange'));
 
     this.scaleLabel.setup();
-    this.scaleLabel.hide();
   }
 
   teardown() {

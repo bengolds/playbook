@@ -17,12 +17,7 @@
   <body>
     <test-fixture id="basic">
       <template>
-        <mathbox-plot></mathbox-plot>
-      </template>
-    </test-fixture>
-
-    <test-fixture id="labels">
-      <template>
+        <mathbox-plot style='width:500px; height:500px;'></mathbox-plot>
         <div><p>some text</p></div>
       </template>
     </test-fixture>
@@ -32,7 +27,7 @@
         var el;
 
         setup(function() {
-          el = fixture('basic');
+          el = fixture('basic')[0];
         });
 
         let makeSignature = function(domain, range) {
@@ -81,6 +76,16 @@
           expectZoom(1.5, 1, [-2, 1]);
           expectZoom(0.5, 1, [0, 1]);
         });
+
+        test('clientToLocalCoords', function () {
+          let graph = new LineGraph(el.mathbox);
+
+          graph.xRange = [-10, 10];
+          graph.yRange = [-5, 5];
+          expect(graph.clientToLocalCoords([0, 0])).to.deep.equal([-10, 5]);
+          expect(graph.clientToLocalCoords([500, 500])).to.deep.equal([10, -5]);
+          expect(graph.clientToLocalCoords([250, 250])).to.deep.equal([0, 0]);
+        });
       });
 
       suite('linegraph tests', function() {
@@ -90,7 +95,7 @@
         let baseMathbox;
 
         setup(function() {
-          el = fixture('basic');
+          el = fixture('basic')[0];
           scope = helper.makeScope(['a','b','c']);
           baseMathbox = el.mathbox.toMarkup();
           graph = new LineGraph(el.mathbox, {}, true, document.createElement('div'));
@@ -151,13 +156,13 @@
 
       });
 
-      suite('colograph tests', function() {
+      suite('colorgraph tests', function() {
         let el;
         let scope;
         let graph;
 
         setup(function() {
-          el = fixture('basic');
+          el = fixture('basic')[0];
           scope = helper.makeScope(['a','b','c'], [SETS.REAL, SETS.REAL, SETS.COMPLEX]);
           graph = new ColorGraph(el.mathbox, {}, false, document.createElement('div'));
           graph.setup();
@@ -206,21 +211,51 @@
       });
 
       suite('label object', function() {
-        let el;
+        let overlay;
 
         setup(function() {
-          el = fixture('labels');
+          overlay = fixture('basic')[1];
         });
 
         test('setup and teardown are opposites', function() {
-          let oldHTML = el.innerHTML;
-          let label = new ScaleLabel(el, ()=>{return {};});
-          expect(el.innerHTML).to.equal(oldHTML);
+          let oldHTML = overlay.innerHTML;
+          let label = new ScaleLabel(overlay, ()=>{return {};});
+          expect(overlay.innerHTML).to.equal(oldHTML);
           label.setup();
-          expect(el.innerHTML).to.not.equal(oldHTML);
+          expect(overlay.innerHTML).to.not.equal(oldHTML);
           label.teardown();
-          expect(el.innerHTML).to.equal(oldHTML);
+          expect(overlay.innerHTML).to.equal(oldHTML);
         });
+      });
+
+      suite('probe', function() {
+        let mathbox;
+        let overlay;
+        let probe;
+
+        setup(function() {
+          let els = fixture('basic');
+          mathbox = els[0].mathbox;
+          overlay = els[1];
+        });
+
+        test('setup and teardown are opposites', function() {
+          let oldHTML = overlay.innerHTML;
+          let oldMathbox = mathbox.toMarkup();
+
+          probe = new Probe(mathbox, overlay, ()=>{return null;});
+          expect(overlay.innerHTML).to.equal(oldHTML);
+          expect(mathbox.toMarkup()).to.equal(oldMathbox);
+
+          probe.setup();
+          expect(overlay.innerHTML).to.not.equal(oldHTML);
+          expect(mathbox.toMarkup()).to.not.equal(oldMathbox);
+
+          probe.teardown();
+          expect(overlay.innerHTML).to.equal(oldHTML);
+          expect(mathbox.toMarkup()).to.equal(oldMathbox);
+        });
+
       });
 
     </script>

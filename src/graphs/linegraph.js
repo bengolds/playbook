@@ -5,9 +5,13 @@ class LineGraph extends Graph {
 
     this._exprAnimDuration = 500;
     this._resetBoundsDuration = 250;
+    this.mousePoint = [0,0];
     this.scaleLabel = new ScaleLabel(overlayDiv, 
       this.getLabelText.bind(this),
       () => {return this.labelsVisible;});
+    this.probe = new Probe(mathbox, overlayDiv,
+      this.getProbePoint.bind(this),
+      () => {return this.probeVisible;} );
   }
 
   static get supportedSignatures() {
@@ -27,7 +31,8 @@ class LineGraph extends Graph {
   static get syncedParameterNames() {
     return [
       'xRange',
-      'labelsVisible'
+      'labelsVisible',
+      'probeVisible'
     ];
   }
 
@@ -62,7 +67,7 @@ class LineGraph extends Graph {
     this.display = view.line({
       width: 5,
       color: '#3090FF',
-      zIndex: 2,
+      zIndex: 3,
       id: this.displayId
     });
     this.dataAnim = this.mathbox.play({
@@ -72,15 +77,18 @@ class LineGraph extends Graph {
     });
 
     this.scaleLabel.setup();
+    this.probe.setup();
   }
 
   teardown() {
     // console.log('tearing down');
     this.getMinMax.terminate();
+    //REPLACE THIS WITH ONE GROUP OBJECT
     this.mathbox.remove('#'+this.dataId);
     this.mathbox.remove('#'+this.displayId);
     this.mathbox.remove('#'+this.animId);
     this.scaleLabel.teardown();
+    this.probe.teardown();
   }
 
   showFunction(compiledFunction) {
@@ -140,6 +148,18 @@ class LineGraph extends Graph {
     };
   }
 
+  getProbePoint() {
+    let localMouseX = this.clientToLocalCoords(this.mousePoint)[0];
+    let expr = this.data.get('expr');
+    let targetPoint;
+    if (expr) {
+      expr((x, y)=> {
+        targetPoint = [x, y];
+      }, localMouseX);
+      return targetPoint;
+    }
+  }
+
   //Ranges
 
   resetBounds(animDuration=this._resetBoundsDuration, animEasing='easeOutSine') {
@@ -176,10 +196,16 @@ class LineGraph extends Graph {
 
   onMouseEnter(e) {
     this.labelsVisible = true;
+    this.probeVisible = true;
+  }
+
+  onMouseMove(e) {
+    this.mousePoint = [e.offsetX, e.offsetY];
   }
 
   onMouseLeave(e) {
     this.labelsVisible = false;
+    this.probeVisible = false;
   }
 
   onPan(dx, dy) {

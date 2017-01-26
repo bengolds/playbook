@@ -110,6 +110,7 @@
 
       listeners: {
         'mouseenter': 'onMouseEnter',
+        'mousemove': 'onMouseMove',
         'mouseleave': 'onMouseLeave',
         'down': 'onPanStart',
         'wheel': 'onWheel'
@@ -305,6 +306,12 @@
       onMouseEnter: function (e) {
         if (this.graph) {
           this.graph.onMouseEnter(e);
+        }
+      },
+
+      onMouseMove: function(e) {
+        if (this.graph) {
+          this.graph.onMouseMove(e);
         }
       },
 

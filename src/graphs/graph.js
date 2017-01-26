@@ -117,6 +117,11 @@ class Graph {
     return [vector.x, vector.y];
   }
 
+  clientToLocalCoords(clientPoint) {
+    let tX = clientPoint[0]/this.width, tY = 1-clientPoint[1]/this.height;
+    return [util.lerp(this.xRange, tX), util.lerp(this.yRange, tY)];
+  }
+
   translateRange(dx, dy) {
     if (dx) {
       let scale = (this.xRange[0]-this.xRange[1])/this.width;
@@ -141,6 +146,7 @@ class Graph {
     this.setRange(name, newRange);
   }
 
+
   get width() {
     return this.mathbox.three.canvas.offsetWidth;
   }
@@ -159,6 +165,7 @@ class Graph {
   static get syncedParameterNames() {return [];}
   //Mouse events
   onMouseEnter(e) {}
+  onMouseMove(e) {}
   onMouseLeave(e) {}
   onPanStart() {}
   onPan(dx, dy) {}

@@ -1,11 +1,14 @@
 class ScaleLabel {
-  constructor(parentDiv, textCallback, visibleCallback) {
+  constructor(overlayDiv, textCallback, visibleCallback) {
     this.textCallback = textCallback;
     this.visibleCallback = visibleCallback;
-    this.parentDiv = parentDiv;
+    this.overlayDiv = overlayDiv;
   }
 
   setup() {
+    this.parentDiv = document.createElement('div');
+    this.overlayDiv.appendChild(this.parentDiv);
+
     let divNames = ['xMinLabel', 'xMaxLabel', 'xAxisLabel', 
       'yMinLabel', 'yMaxLabel', 'yAxisLabel'];
     this.labels = {};
@@ -19,10 +22,7 @@ class ScaleLabel {
   }
 
   teardown() {
-    for (let name in this.labels) {
-      let node = this.labels[name];
-      this.parentDiv.removeChild(node);
-    } 
+    this.overlayDiv.removeChild(this.parentDiv);
     window.cancelAnimationFrame(this.requestId);
     this.requestId = null;
   }
@@ -34,24 +34,12 @@ class ScaleLabel {
     }
     if (this.visibleCallback) {
       if (this.visibleCallback()) {
-        this.show();
+        this.parentDiv.classList.remove('hidden');
       } else {
-        this.hide();
+        this.parentDiv.classList.add('hidden');
       }
     }
 
     this.requestId = window.requestAnimationFrame(this.updateLabels.bind(this));
-  }
-
-  show() {
-    for (let key in this.labels) {
-      this.labels[key].classList.remove('hidden');
-    }
-  }
-
-  hide() {
-    for (let key in this.labels) {
-      this.labels[key].classList.add('hidden');
-    }
   }
 }

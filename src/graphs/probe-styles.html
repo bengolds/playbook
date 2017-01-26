@@ -1,0 +1,35 @@
+<dom-module id='probe-styles'>
+  <template>
+    <style>
+      :root {
+        --probe-x-label: {
+          position: absolute;
+          bottom: 0px;
+        };
+        --probe-y-label: {
+          position: absolute;
+          left: 0px;
+        };
+        --probe-number-label: {
+          font-family: Symbola;
+          background-color: white;
+          border-radius: 4px;
+        };
+      }
+
+      .xLabel {
+        @apply --probe-x-label;
+        @apply --probe-number-label;
+      }
+
+      .yLabel {
+        @apply --probe-y-label;
+        @apply --probe-number-label;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </template>
+</dom-module>

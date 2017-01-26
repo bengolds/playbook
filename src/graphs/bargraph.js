@@ -60,7 +60,6 @@ class BarGraph extends Graph {
     this.data = view.array({
       channels: 2,
       items: 4,
-      fps: 60,
       id: this.dataId,
     }, {
       width: () => {
@@ -70,7 +69,7 @@ class BarGraph extends Graph {
     this.display = view.face({
       width: 5,
       color: '#3090FF',
-      zIndex: 2,
+      zIndex: 3,
       id: this.displayId
     });
     this.dataAnim = this.mathbox.play({
@@ -89,7 +88,6 @@ class BarGraph extends Graph {
   }
 
   teardown() {
-    // console.log('tearing down');
     this.getMinMax.terminate();
     this.mathbox.remove('#'+this.dataId);
     this.mathbox.remove('#'+this.displayId);
