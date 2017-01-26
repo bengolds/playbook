@@ -93,7 +93,7 @@
           el = fixture('basic');
           scope = helper.makeScope(['a','b','c']);
           baseMathbox = el.mathbox.toMarkup();
-          graph = new LineGraph(el.mathbox, {}, true);
+          graph = new LineGraph(el.mathbox, {}, true, document.createElement('div'));
           graph.setup();
         });
 
@@ -159,7 +159,7 @@
         setup(function() {
           el = fixture('basic');
           scope = helper.makeScope(['a','b','c'], [SETS.REAL, SETS.REAL, SETS.COMPLEX]);
-          graph = new ColorGraph(el.mathbox, {}, false);
+          graph = new ColorGraph(el.mathbox, {}, false, document.createElement('div'));
           graph.setup();
         });
 
@@ -214,7 +214,7 @@
 
         test('setup and teardown are opposites', function() {
           let oldHTML = el.innerHTML;
-          let label = new ScaleLabel(el, ()=>{return {}});
+          let label = new ScaleLabel(el, ()=>{return {};});
           expect(el.innerHTML).to.equal(oldHTML);
           label.setup();
           expect(el.innerHTML).to.not.equal(oldHTML);

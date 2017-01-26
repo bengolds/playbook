@@ -43,7 +43,12 @@ class Graph {
   }
 
   static humanizeBounds(minMax) {
+    let scale = 1.1;
     let minY = minMax[0], maxY = minMax[1];
+    let rangeHalfWidth = (maxY-minY)/2;
+    let center = minY + rangeHalfWidth;
+    minY = center-rangeHalfWidth*scale;
+    maxY = center+rangeHalfWidth*scale;
 
     // Apply some tricks to the resulting values to get a good range
     if (minY == Number.NEGATIVE_INFINITY) {
