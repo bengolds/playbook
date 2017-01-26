@@ -28,6 +28,10 @@ class BarGraph extends Graph {
     ];
   }
 
+  isNatural() {
+    return this.compiled.getDomain()[0] == SETS.NATURAL;
+  }
+
   //Setup & Teardown
 
   setup () {
@@ -54,10 +58,9 @@ class BarGraph extends Graph {
       channels: 2,
       items: 4,
       fps: 60,
-      id: this.dataId
+      id: this.dataId,
     }, {
       width: () => {
-        //TODO: RESIZING THIS IS SLOW
         return Math.ceil(this.xRange[1])-Math.floor(this.xRange[0]) + 1;
       }
     });
@@ -73,6 +76,11 @@ class BarGraph extends Graph {
       id: this.animId
     });
 
+    if (this.xRange[1]-this.xRange[0] < 10) {
+      let center = this.xRange[0] + (this.xRange[1]-this.xRange[0])/2;
+      let newXRange = [center-5, center+5];
+      this.setRange('xRange', newXRange);
+    }
   }
 
   teardown() {
@@ -90,6 +98,11 @@ class BarGraph extends Graph {
 
     this.changeExpr(this.makeExpr(compiledFunction));
     this.compiled = compiledFunction;
+
+    if (this.isNatural()) {
+      this.clampBounds(true);
+    }
+    
     this.resetBounds(this._exprAnimDuration, 'easeInOutSine');
     this.mathbox.inspect();
   }
@@ -120,6 +133,9 @@ class BarGraph extends Graph {
     }
     let newExpr = (emit, i) => {
       let x = Math.floor(this.xRange[0]) + i;
+      if (this.isNatural() && x < 0) {
+        return;
+      }
       let y = cachedEval({[cachedVarName]: x });
       emit(x-0.4, 0);
       emit(x-0.4, y);
@@ -163,6 +179,13 @@ class BarGraph extends Graph {
 
   //Mouse events
 
+  clampBounds(animated) {
+    let xRange = this.getFinal('xRange');
+    if (xRange[0] < 0) {
+      this.setRange('xRange', [0, xRange[1]-xRange[0]], animated);
+    }
+  }
+
   onMouseEnter(e) {
     this.labelsVisible = true;
   }
@@ -173,6 +196,9 @@ class BarGraph extends Graph {
 
   onPan(dx, dy) {
     this.translateRange(dx);
+    if (this.isNatural()) {
+      this.clampBounds(false);
+    }
   }
 
   onPanStop() {
@@ -184,6 +210,9 @@ class BarGraph extends Graph {
     let zoomAmount = 1 + zoomScale*amount;
     let t = mouseX/this.width;
     this.zoomRange('xRange', zoomAmount, t);
+    if (this.isNatural()) {
+      this.clampBounds(true);
+    }
 
     clearTimeout(this.resetBoundsTimeout);
     this.resetBoundsTimeout = setTimeout( () => {
