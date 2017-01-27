@@ -5,13 +5,22 @@ class LineGraph extends Graph {
 
     this._exprAnimDuration = 500;
     this._resetBoundsDuration = 250;
-    this.mousePoint = [0,0];
+    if (this.probeX === undefined) {
+      this.probeX = 0;
+    }
     this.scaleLabel = new ScaleLabel(overlayDiv, 
       this.getLabelText.bind(this),
       () => {return this.labelsVisible;});
-    this.probe = new Probe(mathbox, overlayDiv,
-      this.getProbePoint.bind(this),
-      () => {return this.probeVisible;} );
+    this.probe = new Probe({
+      mathbox: mathbox,
+      overlayDiv: overlayDiv,
+      locationCallback: this.getProbePoint.bind(this),
+      visibilityCallback: () => {return this.probeVisible;}, 
+      styles: {
+        topLine: {opacity: 0.5},
+        rightLine: {opacity: 0}
+      }
+    });
   }
 
   static get supportedSignatures() {
@@ -32,7 +41,8 @@ class LineGraph extends Graph {
     return [
       'xRange',
       'labelsVisible',
-      'probeVisible'
+      'probeVisible',
+      'probeX'
     ];
   }
 
@@ -149,13 +159,12 @@ class LineGraph extends Graph {
   }
 
   getProbePoint() {
-    let localMouseX = this.clientToLocalCoords(this.mousePoint)[0];
     let expr = this.data.get('expr');
     let targetPoint;
     if (expr) {
       expr((x, y)=> {
         targetPoint = [x, y];
-      }, localMouseX);
+      }, this.probeX);
       return targetPoint;
     }
   }
@@ -201,6 +210,7 @@ class LineGraph extends Graph {
 
   onMouseMove(e) {
     this.mousePoint = [e.offsetX, e.offsetY];
+    this.probeX = this.clientToLocalCoords(this.mousePoint)[0];
   }
 
   onMouseLeave(e) {

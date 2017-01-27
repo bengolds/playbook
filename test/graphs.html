@@ -243,7 +243,11 @@
           let oldHTML = overlay.innerHTML;
           let oldMathbox = mathbox.toMarkup();
 
-          probe = new Probe(mathbox, overlay, ()=>{return null;});
+          probe = new Probe({
+            mathbox: mathbox, 
+            overlayDiv: overlay, 
+            locationCallback: ()=>{return null;}
+          });
           expect(overlay.innerHTML).to.equal(oldHTML);
           expect(mathbox.toMarkup()).to.equal(oldMathbox);
 

@@ -1,9 +1,10 @@
 class Probe {
-  constructor(mathbox, overlayDiv, locationCallback, visibilityCallback) {
-    this.mathbox = mathbox;
-    this.overlayDiv = overlayDiv;
-    this.locationCallback = locationCallback;
-    this.visibilityCallback = visibilityCallback;
+  constructor(params) {
+    this.mathbox = params.mathbox;
+    this.overlayDiv = params.overlayDiv;
+    this.locationCallback = params.locationCallback;
+    this.visibilityCallback = params.visibilityCallback;
+    this.styles = params.styles || {};
   }
 
   setup() {
@@ -12,9 +13,16 @@ class Probe {
       id: 'probeGroup'
     });
 
-    let pointGroupNames = ['bottomLinePoints', 'topLinePoints', 
-      'leftLinePoints', 'rightLinePoints'];
+    let defaultLineStyle = {
+      width: 2,
+      color: '#FF0000',
+      zIndex: 2
+    };
+    let pointGroupNames = ['bottomLine', 'topLine', 
+      'leftLine', 'rightLine'];
     for (let name of pointGroupNames) {
+      let lineStyle = Object.assign({}, defaultLineStyle, this.styles[name]);
+
       this.group.array({
         channels: 2,
         expr: (emit, i) => {
@@ -22,11 +30,7 @@ class Probe {
         },
         width: 2
       })
-      .line({
-        width: 2,
-        color: '#FF0000',
-        zIndex: 2
-      });
+      .line(lineStyle);
     }
 
     //Add something for color graph here
@@ -71,13 +75,13 @@ class Probe {
       bottom = this.yRange[0], top = this.yRange[1];
 
     switch(name) {
-    case 'bottomLinePoints':
+    case 'bottomLine':
       return [[x, bottom], [x, y]];
-    case 'topLinePoints':
+    case 'topLine':
       return [[x, y],      [x, top]];
-    case 'leftLinePoints':
+    case 'leftLine':
       return [[left, y],   [x, y]];
-    case 'rightLinePoints':
+    case 'rightLine':
       return [[x, y],      [right, y]];
     }
   }
