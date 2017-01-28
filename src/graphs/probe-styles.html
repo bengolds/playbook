@@ -2,28 +2,28 @@
   <template>
     <style>
       :root {
-        --probe-x-label: {
-          position: absolute;
-          bottom: 0px;
-        };
-        --probe-y-label: {
-          position: absolute;
-          left: 0px;
-        };
         --probe-number-label: {
           font-family: Symbola;
-          background-color: white;
+          padding: 0 2px;
+          background-color: rgba(255, 255, 255, 0.75);
           border-radius: 4px;
         };
       }
 
       .xLabel {
-        @apply --probe-x-label;
+        position: absolute;
+        bottom: 0px;
         @apply --probe-number-label;
       }
 
       .yLabel {
-        @apply --probe-y-label;
+        position: absolute;
+        left: 0px;
+        @apply --probe-number-label;
+      }
+
+      .pointLabel {
+        position: absolute;
         @apply --probe-number-label;
       }
 

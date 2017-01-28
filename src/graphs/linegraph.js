@@ -3,11 +3,11 @@ class LineGraph extends Graph {
   constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
     super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
 
-    this._exprAnimDuration = 500;
-    this._resetBoundsDuration = 250;
     if (this.probeX === undefined) {
       this.probeX = 0;
     }
+    this._exprAnimDuration = 500;
+    this._resetBoundsDuration = 250;
     this.scaleLabel = new ScaleLabel(overlayDiv, 
       this.getLabelText.bind(this),
       () => {return this.labelsVisible;});

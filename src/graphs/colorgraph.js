@@ -3,9 +3,27 @@ class ColorGraph extends Graph {
   constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
     super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
 
+    if (this.probeX === undefined) {
+      this.probeX = 0;
+    }
+    if (this.probeY === undefined) {
+      this.probeY = 0;
+    }
     this.scaleLabel = new ScaleLabel(overlayDiv, 
       this.getLabelText.bind(this),
       () => {return this.labelsVisible;});
+
+    this.probe = new Probe({
+      mathbox: mathbox,
+      overlayDiv: overlayDiv,
+      locationCallback: this.getProbePoint.bind(this),
+      visibilityCallback: () => {return this.probeVisible;}, 
+      pointLabelCallback: this.getProbeLabel.bind(this),
+      styles: {
+        topLine: {opacity: 0.5},
+        rightLine: {opacity: 0.5}
+      }
+    });
   }
 
   static get supportedSignatures() {
@@ -26,7 +44,10 @@ class ColorGraph extends Graph {
     return [
       'xRange',
       'yRange',
-      'labelsVisible'
+      'labelsVisible',
+      'probeVisible',
+      'probeX',
+      'probeY'
     ];
   }
 
@@ -80,13 +101,17 @@ class ColorGraph extends Graph {
       id: this.animId
     });
 
+    this.mathbox.select('grid').set('visible', false);
+
     this.setRange('yRange', this.getFinal('xRange'));
 
     this.scaleLabel.setup();
+    this.probe.setup();
   }
 
   teardown() {
     // console.log('tearing down');
+    this.mathbox.select('grid').set('visible', true);
     this.getMinMax.terminate();
     this.getMinMax.postMessage('stop');
     this.mathbox.remove('#'+this.dataId);
@@ -94,6 +119,7 @@ class ColorGraph extends Graph {
     this.mathbox.remove('#'+this.animId);
     this.mathbox.remove('#'+this.flatId);
     this.scaleLabel.teardown();
+    this.probe.teardown();
   }
 
   showFunction(compiledFunction) {
@@ -149,6 +175,7 @@ class ColorGraph extends Graph {
       xAxisLabel = this.compiled.freeVariables[0].name;
       yAxisLabel = this.compiled.freeVariables[1].name;
     }
+    //Move this into the label class?
     return {
       xMinLabel: this.xRange[0].toFixed(numDigits),
       xMaxLabel: this.xRange[1].toFixed(numDigits),
@@ -157,6 +184,26 @@ class ColorGraph extends Graph {
       xAxisLabel: xAxisLabel,
       yAxisLabel: yAxisLabel,
     };
+  }
+
+  getProbePoint() {
+    return [this.probeX, this.probeY];
+  }
+
+  getProbeLabel() {
+    if (this.compiled) {
+      let freeVars = this.compiled.freeVariables;
+      let scope = {
+        [freeVars[0].name]: this.probeX,
+        [freeVars[1].name]: this.probeY,
+      };
+      let val = this.compiled.eval(scope);
+      if (val.toFixed) {
+        return val.toFixed(1);
+      } else {
+        return '';
+      }
+    }
   }
 
   //Ranges
@@ -211,10 +258,19 @@ class ColorGraph extends Graph {
   // Mouse events
   onMouseEnter(e) {
     this.labelsVisible = true;
+    this.probeVisible = true;
+  }
+
+  onMouseMove(e) {
+    let mousePoint = [e.offsetX, e.offsetY];
+    let localCoords = this.clientToLocalCoords(mousePoint);
+    this.probeX = localCoords[0];
+    this.probeY = localCoords[1];
   }
 
   onMouseLeave(e) {
     this.labelsVisible = false;
+    this.probeVisible = false;
   }
 
   onPan(dx, dy) {

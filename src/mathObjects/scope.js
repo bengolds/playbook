@@ -8,7 +8,7 @@
     get freeVariables() {
       return this.variables.filter( (variable) => {
         return this.isFree(variable.name);
-      });
+      }).sort(Variable.compare);
     }
 
     getForMathJS() {
