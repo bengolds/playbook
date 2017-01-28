@@ -53,29 +53,43 @@ class BarGraph extends Graph {
       return [this.xRange, this.yRange];
     });
 
-    this.dataId = 'data';
-    this.displayId = 'display';
-    this.animId = 'anim';
+    this.group = view.group({
+      id: 'barGraph'
+    });
 
-    this.data = view.array({
+
+    this.data = this.group.array({
       channels: 2,
       items: 4,
-      id: this.dataId,
+      id: 'barGraphData'
     }, {
-      width: () => {
-        return Math.ceil(this.xRange[1])-Math.floor(this.xRange[0]) + 1;
+      width: () => {return this.numBars; }
+    });
+
+    this.colors = this.group.array({
+      channels: 4,
+      id: 'barGraphColors',
+      expr: (emit, i) => {
+        if (this.indexToLocalCoord(i) == this.barProbeX) {
+          emit(0, 255, 0, 255);
+        } else {
+          emit(255, 0, 0, 255);
+        }
       }
+    }, {
+      width: () => {return this.numBars;}
     });
-    this.display = view.face({
+
+    this.group.face({
       width: 5,
-      color: '#3090FF',
+      colors: '#' + this.colors.get('id'),
+      points: '#' + this.data.get('id'),
       zIndex: 3,
-      id: this.displayId
     });
-    this.dataAnim = this.mathbox.play({
-      target: '#' + this.dataId,
+
+    this.dataAnim = this.group.play({
+      target: '#' + this.data.get('id'),
       pace: this._exprAnimDuration/1000,
-      id: this.animId
     });
 
     if (this.xRange[1]-this.xRange[0] < 10) {
@@ -84,15 +98,18 @@ class BarGraph extends Graph {
       this.setRange('xRange', newXRange);
     }
 
+    this.mathbox.inspect();
     this.scaleLabel.setup();
   }
 
   teardown() {
     this.getMinMax.terminate();
-    this.mathbox.remove('#'+this.dataId);
-    this.mathbox.remove('#'+this.displayId);
-    this.mathbox.remove('#'+this.animId);
+    this.mathbox.remove('#'+this.group.get('id'));
     this.scaleLabel.teardown();
+  }
+
+  get numBars() {
+    return Math.ceil(this.xRange[1])-Math.floor(this.xRange[0]) + 1;
   }
 
   showFunction(compiledFunction) {
@@ -128,6 +145,10 @@ class BarGraph extends Graph {
     }
   }
 
+  indexToLocalCoord(i) {
+    return Math.floor(this.xRange[0]) + i;
+  }
+
   makeExpr(compiledFunction) {
     let cachedEval = compiledFunction.eval.bind(compiledFunction);
     let freeVars = compiledFunction.freeVariables;
@@ -136,7 +157,7 @@ class BarGraph extends Graph {
       cachedVarName = freeVars[0].name;
     }
     let newExpr = (emit, i) => {
-      let x = Math.floor(this.xRange[0]) + i;
+      let x = this.indexToLocalCoord(i);
       if (this.isNatural() && x < 0) {
         return;
       }
@@ -210,6 +231,11 @@ class BarGraph extends Graph {
 
   onMouseLeave(e) {
     this.labelsVisible = false;
+  }
+
+  onMouseMove(e) {
+    let mousePoint = [e.offsetX, e.offsetY];
+    this.barProbeX = Math.round(this.clientToLocalCoords(mousePoint)[0]);
   }
 
   onPan(dx, dy) {

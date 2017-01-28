@@ -58,9 +58,6 @@ class ColorGraph extends Graph {
     this.displayId = 'display';
     this.animId = 'anim';
     this.flatId = 'flat';
-    this.domId = 'colordom';
-    this.htmlId = 'colorhtmldom';
-    this.labelPointsId = 'colorlabelpoints';
 
     //TODO: ADJUST BY ASPECT RATIO
     let dim = 100;
