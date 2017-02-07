@@ -4,7 +4,6 @@ class BarGraph extends Graph {
     super(params);
 
     this._exprAnimDuration = 500;
-    this._resetBoundsDuration = 250;
     this.scaleLabel = new ScaleLabel(this.overlayDiv, 
       this.getLabelText.bind(this),
       () => {return this.labelsVisible;});
@@ -59,11 +58,9 @@ class BarGraph extends Graph {
   //Setup & Teardown
 
   setup () {
-    this.getMinMax = new Worker('src/mathObjects/getMinMax.js');
-    this.getMinMax.onmessage = this.newRangeReceived.bind(this);
-    // this.getMinMax.onerror = (e) => {
-    //   console.error(e.detail.message + ' at ' + e.detail.filename + ':' + e.detail.lineno);
-    // };
+    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
+      boundsReceivedCallback: this.newRangeReceived.bind(this)
+    });
     let view = this.mathbox.select('cartesian'); 
     let ranges = view.get('range');
     this.setRange('xRange', this.vectorToRange(ranges[0]), false);
@@ -126,8 +123,8 @@ class BarGraph extends Graph {
   }
 
   teardown() {
-    this.getMinMax.terminate();
     this.mathbox.remove('#'+this.group.get('id'));
+    this.autoBoundsCalculator.teardown();
     this.scaleLabel.teardown();
     this.probe.teardown();
   }
@@ -148,12 +145,12 @@ class BarGraph extends Graph {
       this.clampBounds(true);
     }
     
-    this.resetBounds(this._exprAnimDuration, 'easeInOutSine');
+    this.autoBoundsCalculator.getNewBounds();
     this.mathbox.inspect();
   }
 
   pinnedVariablesChanged() {
-    this.resetBounds();
+    this.autoBoundsCalculator.getNewBounds();
   }
 
   changeExpr(newExpr) {
@@ -219,20 +216,13 @@ class BarGraph extends Graph {
       return [this.barProbeX, val];
     }
   }
-  //Ranges
 
-  resetBounds(animDuration=this._resetBoundsDuration, animEasing='easeOutSine') {
-    this.getMinMax.postMessage({
-      dehydratedFunction: this.compiled.dehydrate(),
-      unboundRanges: this.unboundRanges()
-    });
-  }
+  //Ranges
 
   newRangeReceived(e) {
     let newRange = this.constructor.humanizeBounds(e.data);
     if (this.animated) {
       this.animateRange('yRange', newRange);
-      // this.animateRange('yRange', newRange, animDuration, animEasing);
     } 
     else {
       this.setRange('yRange', newRange);
@@ -283,7 +273,7 @@ class BarGraph extends Graph {
   }
 
   onPanStop() {
-    this.resetBounds();
+    this.autoBoundsCalculator.getNewBounds();
   }
 
   onZoom(amount, mouseX, mouseY) {
@@ -295,10 +285,7 @@ class BarGraph extends Graph {
       this.clampBounds(true);
     }
 
-    clearTimeout(this.resetBoundsTimeout);
-    this.resetBoundsTimeout = setTimeout( () => {
-      this.resetBounds();
-    }, 50);
+    this.autoBoundsCalculator.getNewBounds(50);
   }
 
 }

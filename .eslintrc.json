@@ -118,6 +118,7 @@
         "FunctionDefinition": true,
         "CompiledFunction": true,
         "ResizeSensor": false,
+        "AutoBoundsCalculator": true,
         "ScaleLabel": true,
         "Probe": true,
         "util": true

@@ -195,12 +195,12 @@
         // });
       });
 
-      suite('getMinMax tests', function() {
-        let getMinMax;
+      suite('autoBoundsCalculator tests', function() {
+        let minMaxWorker;
         let unboundRanges;
 
         setup(function() {
-          getMinMax = new Worker('../src/mathObjects/getMinMax.js');
+          minMaxWorker = new Worker('../src/mathObjects/minMaxWorker.js');
           unboundRanges = {
             a: {
               bounds: [-5, 5],
@@ -214,22 +214,22 @@
         });
 
         teardown(function() {
-          getMinMax.terminate();
+          minMaxWorker.terminate();
         });
 
         let testMinMax = (done, funcString, allVars, expected) => {
           let scope = helper.makeScope(allVars);
           let f = helper.makeFakeCompiled(funcString, allVars, scope);
-          getMinMax.onmessage = (e) => {
+          minMaxWorker.onmessage = (e) => {
             let minMax = e.data;
             expect(minMax[0]).to.be.closeTo(expected[0], 0.1);
             expect(minMax[1]).to.be.closeTo(expected[1], 0.1);
             done();
           };
-          getMinMax.onerror = (e) => {
+          minMaxWorker.onerror = (e) => {
             throw Error(e.message + ' at ' + e.filename + ':' + e.lineno);
           };
-          getMinMax.postMessage({
+          minMaxWorker.postMessage({
             dehydratedFunction: f.dehydrate(),
             unboundRanges: unboundRanges
           });
@@ -254,14 +254,14 @@
         test('range missing', function(done) {
           let scope = helper.makeScope(['c']);
           let f = helper.makeFakeCompiled('c', ['c'], scope);
-          getMinMax.onmessage = (e) => {
+          minMaxWorker.onmessage = (e) => {
             done(new Error('Shouldn\'t receive a success message from getMinMax'));
           };
-          getMinMax.onerror = (e) => {
+          minMaxWorker.onerror = (e) => {
             expect(e.message).to.contain('No range found (unbound or pinned) for c');
             done();
           };
-          getMinMax.postMessage({
+          minMaxWorker.postMessage({
             dehydratedFunction: f.dehydrate(),
             unboundRanges: unboundRanges,
           });
@@ -280,14 +280,14 @@
               steps: 10
             }
           };
-          getMinMax.onmessage = (e) => {
+          minMaxWorker.onmessage = (e) => {
             let minMax = e.data;
             expect(minMax[0]).to.equal(-120);
             expect(minMax[1]).to.equal(120);
             done();
           };
           let f = helper.makeFakeCompiled('a*b*c*d', allVars, scope);
-          getMinMax.postMessage({
+          minMaxWorker.postMessage({
             dehydratedFunction: f.dehydrate(),
             unboundRanges: unboundRanges,
           });

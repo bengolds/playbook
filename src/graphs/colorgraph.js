@@ -52,8 +52,9 @@ class ColorGraph extends Graph {
   }
 
   setup () {
-    this.getMinMax = new Worker('src/mathObjects/getMinMax.js');
-    this.getMinMax.onmessage = this.newRangeReceived.bind(this);
+    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
+      boundsReceivedCallback: this.newRangeReceived.bind(this)
+    });
     this.dataId = 'data';
     this.displayId = 'display';
     this.animId = 'anim';
@@ -109,12 +110,11 @@ class ColorGraph extends Graph {
   teardown() {
     // console.log('tearing down');
     this.mathbox.select('grid').set('visible', true);
-    this.getMinMax.terminate();
-    this.getMinMax.postMessage('stop');
     this.mathbox.remove('#'+this.dataId);
     this.mathbox.remove('#'+this.displayId);
     this.mathbox.remove('#'+this.animId);
     this.mathbox.remove('#'+this.flatId);
+    this.autoBoundsCalculator.teardown();
     this.scaleLabel.teardown();
     this.probe.teardown();
   }
@@ -125,7 +125,7 @@ class ColorGraph extends Graph {
     }
     this.changeExpr(this.makeExpr(compiledFunction));
     this.compiled = compiledFunction;
-    this.resetBounds();
+    this.autoBoundsCalculator.getNewBounds();
   }
 
   changeExpr(newExpr) {
@@ -207,13 +207,6 @@ class ColorGraph extends Graph {
 
   //Ranges
 
-  resetBounds() {
-    this.getMinMax.postMessage({
-      dehydratedFunction: this.compiled.dehydrate(),
-      unboundRanges: this.unboundRanges()
-    });
-  }
-
   newRangeReceived(e) {
     let minMax = this.constructor.humanizeBounds(e.data);
     let largestDisplacement = Math.max(Math.abs(minMax[0]), Math.abs(minMax[1]));
@@ -277,7 +270,7 @@ class ColorGraph extends Graph {
   }
 
   onPanStop() {
-    this.resetBounds();
+    this.autoBoundsCalculator.getNewBounds();
   }
 
   onZoom(amount, mouseX, mouseY) {
@@ -287,9 +280,7 @@ class ColorGraph extends Graph {
     let tY = mouseY/this.height;
     this.zoomRange('xRange', zoomAmount, tX);
     this.zoomRange('yRange', zoomAmount, tY);
-    clearTimeout(this.resetBoundsTimeout);
-    this.resetBoundsTimeout = setTimeout( () => {
-      this.resetBounds();
-    }, 50);
+
+    this.autoBoundsCalculator.getNewBounds(50);
   }
 }

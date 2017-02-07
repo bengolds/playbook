@@ -49,11 +49,9 @@ class LineGraph extends Graph {
   //Setup & Teardown
 
   setup () {
-    this.getMinMax = new Worker('src/mathObjects/getMinMax.js');
-    this.getMinMax.onmessage = this.newRangeReceived.bind(this);
-    // this.getMinMax.onerror = (e) => {
-    //   console.error(e.detail.message + ' at ' + e.detail.filename + ':' + e.detail.lineno);
-    // };
+    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
+      boundsReceivedCallback: this.newRangeReceived.bind(this)
+    });
     let view = this.mathbox.select('cartesian'); 
     let ranges = view.get('range');
     this.setRange('xRange', this.vectorToRange(ranges[0]), false);
@@ -91,8 +89,7 @@ class LineGraph extends Graph {
   }
 
   teardown() {
-    // console.log('tearing down');
-    this.getMinMax.terminate();
+    this.autoBoundsCalculator.teardown();
     //REPLACE THIS WITH ONE GROUP OBJECT
     this.mathbox.remove('#'+this.dataId);
     this.mathbox.remove('#'+this.displayId);
@@ -108,11 +105,11 @@ class LineGraph extends Graph {
 
     this.changeExpr(this.makeExpr(compiledFunction));
     this.compiled = compiledFunction;
-    this.resetBounds(this._exprAnimDuration, 'easeInOutSine');
+    this.autoBoundsCalculator.getNewBounds();
   }
 
   pinnedVariablesChanged() {
-    this.resetBounds();
+    this.autoBoundsCalculator.getNewBounds();
   }
 
   changeExpr(newExpr) {
@@ -171,13 +168,6 @@ class LineGraph extends Graph {
 
   //Ranges
 
-  resetBounds(animDuration=this._resetBoundsDuration, animEasing='easeOutSine') {
-    this.getMinMax.postMessage({
-      dehydratedFunction: this.compiled.dehydrate(),
-      unboundRanges: this.unboundRanges()
-    });
-  }
-
   newRangeReceived(e) {
     let newRange = this.constructor.humanizeBounds(e.data);
     if (this.animated) {
@@ -223,7 +213,7 @@ class LineGraph extends Graph {
   }
 
   onPanStop() {
-    this.resetBounds();
+    this.autoBoundsCalculator.getNewBounds();
   }
 
   onZoom(amount, mouseX, mouseY) {
@@ -232,9 +222,6 @@ class LineGraph extends Graph {
     let t = mouseX/this.width;
     this.zoomRange('xRange', zoomAmount, t);
 
-    clearTimeout(this.resetBoundsTimeout);
-    this.resetBoundsTimeout = setTimeout( () => {
-      this.resetBounds();
-    }, 50);
+    this.autoBoundsCalculator.getNewBounds(50);
   }
 }
