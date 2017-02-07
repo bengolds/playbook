@@ -6,6 +6,12 @@ class Probe {
     this.visibilityCallback = params.visibilityCallback;
     this.pointLabelCallback = params.pointLabelCallback || function() {return '';};
     this.styles = params.styles || {};
+    if (params.labelMargin != undefined) {
+      this.labelMargin = params.labelMargin;
+    } else {
+      this.labelMargin = 4;
+    }
+
   }
 
   setup() {
@@ -39,6 +45,7 @@ class Probe {
     this.labels = {};
     for (let name of divNames) {
       let div = this.labels[name] = document.createElement('span');
+      div.style = this.styles[name];
       div.innerText = name;
       div.classList.add(name);
       this.parentDiv.appendChild(div);
@@ -104,12 +111,11 @@ class Probe {
     if (this.targetPoint) {
       let width = this.overlayDiv.offsetWidth, height = this.overlayDiv.offsetHeight;
       let bb = {left: 0, right: 0, top: 0, bottom: 0 };
-      let margin = 4;
 
       let tX = util.inverseLerp(this.xRange, this.targetPoint[0]);
       let tY = util.inverseLerp(this.yRange, this.targetPoint[1]);
-      let left = tX*width + margin;
-      let bottom = tY*height + margin;
+      let left = tX*width + this.labelMargin;
+      let bottom = tY*height + this.labelMargin;
 
       this.labels.pointLabel.innerText = this.pointLabelCallback();
       this.moveDivClamped(left, bottom, this.labels.pointLabel, bb);

@@ -98,7 +98,11 @@
           el = fixture('basic')[0];
           scope = helper.makeScope(['a','b','c']);
           baseMathbox = el.mathbox.toMarkup();
-          graph = new LineGraph(el.mathbox, {}, true, document.createElement('div'));
+          graph = new LineGraph({
+            mathbox: el.mathbox,
+            animated: true,
+            overlayDiv: document.createElement('div'),
+          });
           graph.setup();
         });
 
@@ -164,7 +168,10 @@
         setup(function() {
           el = fixture('basic')[0];
           scope = helper.makeScope(['a','b','c'], [SETS.REAL, SETS.REAL, SETS.COMPLEX]);
-          graph = new ColorGraph(el.mathbox, {}, false, document.createElement('div'));
+          graph = new ColorGraph({
+            mathbox: el.mathbox,
+            overlayDiv: document.createElement('div')
+          });
           graph.setup();
         });
 

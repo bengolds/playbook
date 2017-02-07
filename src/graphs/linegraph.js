@@ -1,19 +1,19 @@
 class LineGraph extends Graph {
 
-  constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
-    super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
+  constructor (params={}) {
+    super(params);
 
     if (this.probeX === undefined) {
       this.probeX = 0;
     }
     this._exprAnimDuration = 500;
     this._resetBoundsDuration = 250;
-    this.scaleLabel = new ScaleLabel(overlayDiv, 
+    this.scaleLabel = new ScaleLabel(this.overlayDiv, 
       this.getLabelText.bind(this),
       () => {return this.labelsVisible;});
     this.probe = new Probe({
-      mathbox: mathbox,
-      overlayDiv: overlayDiv,
+      mathbox: this.mathbox,
+      overlayDiv: this.overlayDiv,
       locationCallback: this.getProbePoint.bind(this),
       visibilityCallback: () => {return this.probeVisible;}, 
       styles: {

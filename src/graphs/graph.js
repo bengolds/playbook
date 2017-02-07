@@ -1,5 +1,9 @@
 class Graph {
-  constructor(mathbox, syncedParameters={}, animated, overlayDiv, auxDiv) {
+  constructor({mathbox = null,
+               syncedParameters = {}, 
+               animated = false, 
+               overlayDiv = null, 
+               auxDiv = null }) {
     if (new.target === Graph) {
       throw new TypeError('Cannot construct Graph instances directly');
     }

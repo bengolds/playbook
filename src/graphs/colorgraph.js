@@ -1,7 +1,7 @@
 class ColorGraph extends Graph {
 
-  constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
-    super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
+  constructor (params={}) {
+    super(params);
 
     if (this.probeX === undefined) {
       this.probeX = 0;
@@ -9,13 +9,13 @@ class ColorGraph extends Graph {
     if (this.probeY === undefined) {
       this.probeY = 0;
     }
-    this.scaleLabel = new ScaleLabel(overlayDiv, 
+    this.scaleLabel = new ScaleLabel(this.overlayDiv, 
       this.getLabelText.bind(this),
       () => {return this.labelsVisible;});
 
     this.probe = new Probe({
-      mathbox: mathbox,
-      overlayDiv: overlayDiv,
+      mathbox: this.mathbox,
+      overlayDiv: this.overlayDiv,
       locationCallback: this.getProbePoint.bind(this),
       visibilityCallback: () => {return this.probeVisible;}, 
       pointLabelCallback: this.getProbeLabel.bind(this),
@@ -149,7 +149,7 @@ class ColorGraph extends Graph {
         [freeVars[0].name]: x,
         [freeVars[1].name]: y
       });
-      emit (...this.colorMap(val), 255);
+      emit (...this.colorMap(val), 1);
     };
     return newExpr;
   }
@@ -161,7 +161,9 @@ class ColorGraph extends Graph {
     let t = (val-this.colorRange[0])/(this.colorRange[1]-this.colorRange[0]);
     let i = Math.round(t*warmCoolMap.length);
     i = Math.min(Math.max(0, i), warmCoolMap.length-1);
-    return warmCoolMap[i];
+    let color = warmCoolMap[i];
+    //FUCKING MATHBOX HAS COLORS IN A RANGE FROM 0-2
+    return [color[0]*2, color[1]*2, color[2]*2];
   }
    
   getLabelText() {

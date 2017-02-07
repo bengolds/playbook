@@ -1,13 +1,32 @@
 class BarGraph extends Graph {
 
-  constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
-    super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
+  constructor (params={}) {
+    super(params);
 
     this._exprAnimDuration = 500;
     this._resetBoundsDuration = 250;
-    this.scaleLabel = new ScaleLabel(overlayDiv, 
+    this.scaleLabel = new ScaleLabel(this.overlayDiv, 
       this.getLabelText.bind(this),
       () => {return this.labelsVisible;});
+
+    this.barProbeX = 0;
+    this.probe = new Probe({
+      mathbox: this.mathbox,
+      overlayDiv: this.overlayDiv,
+      locationCallback: this.getProbePoint.bind(this),
+      visibilityCallback: () => {return true;}, 
+      pointLabelCallback: () => {return 'hey';},
+      styles: {
+        topLine: {opacity: 0},
+        bottomLine: {opacity: 0},
+        leftLine: {opacity: 0},
+        rightLine: {opacity: 0},
+        xLabel: 'transform: translate(-50%, 0%)',        
+        pointLabel: 'transform: translate(-50%, 0%)',        
+        yLabel: 'display: none'
+      },
+      labelMargin: 0
+    });
   }
 
   static get supportedSignatures() {
@@ -27,7 +46,9 @@ class BarGraph extends Graph {
   static get syncedParameterNames() {
     return [
       'xRange',
-      'labelsVisible'
+      'labelsVisible',
+      'barProbeX',
+      'barProbeVisible'
     ];
   }
 
@@ -70,10 +91,11 @@ class BarGraph extends Graph {
       channels: 4,
       id: 'barGraphColors',
       expr: (emit, i) => {
-        if (this.indexToLocalCoord(i) == this.barProbeX) {
-          emit(0, 255, 0, 255);
+        //FUCKING MATHBOX HAS COLORS IN A RANGE FROM 0-2
+        if (this.barProbeVisible && this.indexToLocalCoord(i) == this.barProbeX) {
+          emit(2, 0, 0, 1);
         } else {
-          emit(255, 0, 0, 255);
+          emit(0.34375, 1.125, 2, 1);
         }
       }
     }, {
@@ -100,12 +122,14 @@ class BarGraph extends Graph {
 
     this.mathbox.inspect();
     this.scaleLabel.setup();
+    this.probe.setup();
   }
 
   teardown() {
     this.getMinMax.terminate();
     this.mathbox.remove('#'+this.group.get('id'));
     this.scaleLabel.teardown();
+    this.probe.teardown();
   }
 
   get numBars() {
@@ -184,6 +208,17 @@ class BarGraph extends Graph {
       xAxisLabel: xAxisLabel,
     };
   }
+
+  getProbePoint() {
+    if (this.compiled) {
+      let freeVars = this.compiled.freeVariables;
+      let scope = {
+        [freeVars[0].name]: this.barProbeX,
+      };
+      let val = this.compiled.eval(scope);
+      return [this.barProbeX, val];
+    }
+  }
   //Ranges
 
   resetBounds(animDuration=this._resetBoundsDuration, animEasing='easeOutSine') {
@@ -227,10 +262,12 @@ class BarGraph extends Graph {
 
   onMouseEnter(e) {
     this.labelsVisible = true;
+    this.barProbeVisible = true;
   }
 
   onMouseLeave(e) {
     this.labelsVisible = false;
+    this.barProbeVisible = false;
   }
 
   onMouseMove(e) {
@@ -263,4 +300,5 @@ class BarGraph extends Graph {
       this.resetBounds();
     }, 50);
   }
+
 }
