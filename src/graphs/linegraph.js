@@ -5,17 +5,14 @@ class LineGraph extends Graph {
 
     this.setupMathbox();
 
-    this.scaleLabel = new ScaleLabel(this.overlayDiv, 
-      this.getLabelText.bind(this),
-      () => {return this.labelsVisible;});
+    this.scaleLabel = new ScaleLabel(this, {
+      visibleCallback: () => {return this.labelsVisible;}
+    });
 
     if (this.probeX === undefined) {
       this.probeX = 0;
     }
-    this.probe = new Probe({
-      mathbox: this.mathbox,
-      overlayDiv: this.overlayDiv,
-      locationCallback: this.getProbePoint.bind(this),
+    this.probe = new Probe(this, {
       visibilityCallback: () => {return this.probeVisible;}, 
       styles: {
         topLine: {opacity: 0.5},
@@ -23,12 +20,7 @@ class LineGraph extends Graph {
       }
     });
 
-    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
-      boundsReceivedCallback: this.newRangeReceived.bind(this)
-    });
-
-    this.scaleLabel.setup();
-    this.probe.setup();
+    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {});
   }
 
   static get supportedSignatures() {

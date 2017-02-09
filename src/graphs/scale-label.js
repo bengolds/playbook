@@ -1,11 +1,10 @@
 class ScaleLabel {
-  constructor(overlayDiv, textCallback, visibleCallback) {
+  constructor(graph, {visibleCallback = function() {return true;},
+                      textCallback = graph.getLabelText.bind(graph)}) {
     this.textCallback = textCallback;
     this.visibleCallback = visibleCallback;
-    this.overlayDiv = overlayDiv;
-  }
+    this.overlayDiv = graph.overlayDiv;
 
-  setup() {
     this.parentDiv = document.createElement('div');
     this.overlayDiv.appendChild(this.parentDiv);
 
@@ -18,6 +17,7 @@ class ScaleLabel {
       div.classList.add(name);
       this.parentDiv.appendChild(div);
     }
+
     this.updateLabels();
   }
 
@@ -32,12 +32,10 @@ class ScaleLabel {
     for (let key in this.labels) {
       this.labels[key].innerText = labelTexts[key] || '';
     }
-    if (this.visibleCallback) {
-      if (this.visibleCallback()) {
-        this.parentDiv.classList.remove('hidden');
-      } else {
-        this.parentDiv.classList.add('hidden');
-      }
+    if (this.visibleCallback()) {
+      this.parentDiv.classList.remove('hidden');
+    } else {
+      this.parentDiv.classList.add('hidden');
     }
 
     this.requestId = window.requestAnimationFrame(this.updateLabels.bind(this));

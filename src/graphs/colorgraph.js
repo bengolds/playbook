@@ -4,9 +4,9 @@ class ColorGraph extends Graph {
     super(params);
     this.setupMathbox();
 
-    this.scaleLabel = new ScaleLabel(this.overlayDiv, 
-      this.getLabelText.bind(this),
-      () => {return this.labelsVisible;});
+    this.scaleLabel = new ScaleLabel(this, {
+      visibleCallback: () => {return this.labelsVisible;}
+    });
 
     if (this.probeX === undefined) {
       this.probeX = 0;
@@ -14,23 +14,16 @@ class ColorGraph extends Graph {
     if (this.probeY === undefined) {
       this.probeY = 0;
     }
-    this.probe = new Probe({
-      mathbox: this.mathbox,
-      overlayDiv: this.overlayDiv,
-      locationCallback: this.getProbePoint.bind(this),
-      visibilityCallback: () => {return this.probeVisible;}, 
+    this.probe = new Probe(this, {
       pointLabelCallback: this.getProbeLabel.bind(this),
+      visibilityCallback: () => {return this.probeVisible;}, 
       styles: {
         topLine: {opacity: 0.5},
         rightLine: {opacity: 0.5}
       }
     });
 
-    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
-      boundsReceivedCallback: this.newRangeReceived.bind(this)
-    });
-    this.scaleLabel.setup();
-    this.probe.setup();
+    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {});
   }
 
   static get supportedSignatures() {

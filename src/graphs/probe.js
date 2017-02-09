@@ -1,20 +1,25 @@
 class Probe {
-  constructor(params) {
-    this.mathbox = params.mathbox;
-    this.overlayDiv = params.overlayDiv;
-    this.locationCallback = params.locationCallback;
-    this.visibilityCallback = params.visibilityCallback;
-    this.pointLabelCallback = params.pointLabelCallback || function() {return '';};
-    this.styles = params.styles || {};
-    if (params.labelMargin != undefined) {
-      this.labelMargin = params.labelMargin;
-    } else {
-      this.labelMargin = 4;
-    }
+  constructor(graph, {
+    locationCallback = graph.getProbePoint.bind(graph),
+    visibilityCallback = function () {return true;},
+    pointLabelCallback = function () {return '';},
+    styles = {},
+    labelMargin = 4
+  }) {
+    this.mathbox = graph.mathbox;
+    this.overlayDiv = graph.overlayDiv;
+    this.locationCallback = locationCallback;
+    this.visibilityCallback = visibilityCallback;
+    this.pointLabelCallback = pointLabelCallback;
+    this.styles = styles;
+    this.labelMargin = labelMargin;
 
+    this.setupMathbox();
+    this.setupOverlay();
+    this.updateProbe();
   }
 
-  setup() {
+  setupMathbox() {
     this.view = this.mathbox.select('cartesian'); 
     this.group = this.view.group({
       id: 'probeGroup'
@@ -38,7 +43,9 @@ class Probe {
       })
       .line(lineStyle);
     }
+  }
 
+  setupOverlay() {
     this.parentDiv = document.createElement('div');
     this.overlayDiv.appendChild(this.parentDiv);
     let divNames = ['xLabel', 'yLabel', 'pointLabel'];
@@ -50,9 +57,6 @@ class Probe {
       div.classList.add(name);
       this.parentDiv.appendChild(div);
     }
-    this.mathbox.inspect();
-
-    this.updateProbe();
   }
 
   teardown() {

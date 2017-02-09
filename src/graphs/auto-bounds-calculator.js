@@ -1,9 +1,9 @@
 class AutoBoundsCalculator {
   constructor(graph, {
-    boundsReceivedCallback = function() {}
+    boundsReceivedCallback = graph.newRangeReceived.bind(graph)
   }) {
     this.graph = graph;
-    this.minMaxWorker = new Worker('src/mathObjects/minMaxWorker.js');
+    this.minMaxWorker = new Worker('/src/mathObjects/minMaxWorker.js');
     this.minMaxWorker.onmessage = boundsReceivedCallback;
     // this.getMinMax.onerror = (e) => {
     //   console.error(e.detail.message + ' at ' + e.detail.filename + ':' + e.detail.lineno);

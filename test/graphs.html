@@ -238,13 +238,11 @@
 
         test('setup and teardown', function() {
           graph.teardown();
-          console.log(baseMathbox);
-          console.log(el.mathbox.toMarkup());
           expect(el.mathbox.toMarkup()).to.equal(baseMathbox);
         });
       });
 
-      suite('label object', function() {
+      suite('scale label', function() {
         let overlay;
 
         setup(function() {
@@ -253,9 +251,12 @@
 
         test('setup and teardown are opposites', function() {
           let oldHTML = overlay.innerHTML;
-          let label = new ScaleLabel(overlay, ()=>{return {};});
-          expect(overlay.innerHTML).to.equal(oldHTML);
-          label.setup();
+          let graph = new Graph({
+            overlayDiv: overlay
+          });
+          let label = new ScaleLabel(graph, {
+            textCallback: function() {return [];}
+          });
           expect(overlay.innerHTML).to.not.equal(oldHTML);
           label.teardown();
           expect(overlay.innerHTML).to.equal(oldHTML);
@@ -274,18 +275,16 @@
         });
 
         test('setup and teardown are opposites', function() {
+          let graph = new Graph({
+            overlayDiv: overlay,
+            mathbox: mathbox
+          });
+
           let oldHTML = overlay.innerHTML;
           let oldMathbox = mathbox.toMarkup();
-
-          probe = new Probe({
-            mathbox: mathbox, 
-            overlayDiv: overlay, 
+          probe = new Probe(graph, {
             locationCallback: ()=>{return null;}
           });
-          expect(overlay.innerHTML).to.equal(oldHTML);
-          expect(mathbox.toMarkup()).to.equal(oldMathbox);
-
-          probe.setup();
           expect(overlay.innerHTML).to.not.equal(oldHTML);
           expect(mathbox.toMarkup()).to.not.equal(oldMathbox);
 
