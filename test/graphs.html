@@ -60,7 +60,7 @@
         });
 
         test('zoomRange', function() {
-          let graph = new LineGraph();
+          let graph = new Graph({});
 
           let expectZoom = function(scale, tFocus, expected) {
             graph.xRange = [-1, 1];
@@ -78,7 +78,9 @@
         });
 
         test('clientToLocalCoords', function () {
-          let graph = new LineGraph(el.mathbox);
+          let graph = new Graph({
+            mathbox: el.mathbox
+          });
 
           graph.xRange = [-10, 10];
           graph.yRange = [-5, 5];
@@ -103,16 +105,12 @@
             animated: true,
             overlayDiv: document.createElement('div'),
           });
-          graph.setup();
         });
 
-        // This won't work until bug in mathbox with removing html is done
-        // test('setup and teardown', function() {
-        //   el.mathbox.inspect();
-        //   graph.teardown();
-        //   el.mathbox.inspect();
-        //   expect(el.mathbox.toMarkup()).to.equal(baseMathbox);
-        // });
+        test('setup and teardown', function() {
+          graph.teardown();
+          expect(el.mathbox.toMarkup()).to.equal(baseMathbox);
+        });
 
         test('show incompatible function', function() {
           let f = new CompiledFunction(null, null, [new Variable('a'), new Variable('b')]);
@@ -164,15 +162,23 @@
         let el;
         let scope;
         let graph;
+        let baseMathbox;
 
         setup(function() {
           el = fixture('basic')[0];
           scope = helper.makeScope(['a','b','c'], [SETS.REAL, SETS.REAL, SETS.COMPLEX]);
+          //Just to make sure the setup and teardown work properly.
+          el.mathbox.select('grid').set('visible', true);
+          baseMathbox = el.mathbox.toMarkup();
           graph = new ColorGraph({
             mathbox: el.mathbox,
             overlayDiv: document.createElement('div')
           });
-          graph.setup();
+        });
+
+        test('setup and teardown', function() {
+          graph.teardown();
+          expect(el.mathbox.toMarkup()).to.equal(baseMathbox);
         });
 
         test('unboundRanges 2 real numbers', function() {
@@ -214,7 +220,28 @@
           expect(graph.showFunction.bind(graph, g)).to.throw(Error);
           expect(graph.compiled).to.be.not.ok;
         });
+      });
 
+      suite('bargraph', function() {
+        let el;
+        let graph;
+        let baseMathbox;
+
+        setup(function() {
+          el = fixture('basic')[0];
+          baseMathbox = el.mathbox.toMarkup();
+          graph = new BarGraph({
+            mathbox: el.mathbox,
+            overlayDiv: document.createElement('div')
+          });
+        });
+
+        test('setup and teardown', function() {
+          graph.teardown();
+          console.log(baseMathbox);
+          console.log(el.mathbox.toMarkup());
+          expect(el.mathbox.toMarkup()).to.equal(baseMathbox);
+        });
       });
 
       suite('label object', function() {

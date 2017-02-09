@@ -24,6 +24,7 @@ class ColorGraph extends Graph {
         rightLine: {opacity: 0.5}
       }
     });
+    this.setup();
   }
 
   static get supportedSignatures() {
@@ -55,10 +56,6 @@ class ColorGraph extends Graph {
     this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
       boundsReceivedCallback: this.newRangeReceived.bind(this)
     });
-    this.dataId = 'data';
-    this.displayId = 'display';
-    this.animId = 'anim';
-    this.flatId = 'flat';
 
     //TODO: ADJUST BY ASPECT RATIO
     let dim = 100;
@@ -68,38 +65,34 @@ class ColorGraph extends Graph {
     this.setRange('yRange', this.vectorToRange(ranges[1]), false);
     this.setRange('colorRange', [-5, 5]);
 
-    view.unbind('range');
     view.bind('range', ()=>{
       return [this.xRange, this.yRange];
     });
 
-    this.flat = view.area({
+    this.flat = this.mathboxGroup.area({
       channels: 3,
-      id: 'flat',
       width: dim,
       height: dim,
       expr: (emit, x, y) => {
         emit(x, y, 0);
       }
     });
-    this.data = view.area({
+    this.data = this.mathboxGroup.area({
       channels: 4,
-      id: this.dataId,
       width: dim,
       height: dim
     });
-    this.display = view.surface({
-      colors: '#' + this.dataId,
-      points: '#' + this.flatId,
-      id: this.displayId,
+    this.display = this.mathboxGroup.surface({
+      colors: '<',
+      points: '<<',
     });
-    this.dataAnim = this.mathbox.play({
-      target: '#' + this.dataId,
+    this.dataAnim = this.mathboxGroup.play({
+      target: '<',
       pace: 1,
-      id: this.animId
     });
 
     this.mathbox.select('grid').set('visible', false);
+    this.mathbox.inspect();
 
     this.setRange('yRange', this.getFinal('xRange'));
 
@@ -108,15 +101,12 @@ class ColorGraph extends Graph {
   }
 
   teardown() {
-    // console.log('tearing down');
+    super.teardown();
     this.mathbox.select('grid').set('visible', true);
-    this.mathbox.remove('#'+this.dataId);
-    this.mathbox.remove('#'+this.displayId);
-    this.mathbox.remove('#'+this.animId);
-    this.mathbox.remove('#'+this.flatId);
     this.autoBoundsCalculator.teardown();
     this.scaleLabel.teardown();
     this.probe.teardown();
+    this.view.unbind('range');
   }
 
   showFunction(compiledFunction) {

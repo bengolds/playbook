@@ -26,6 +26,8 @@ class BarGraph extends Graph {
       },
       labelMargin: 0
     });
+
+    this.setup();
   }
 
   static get supportedSignatures() {
@@ -66,17 +68,11 @@ class BarGraph extends Graph {
     this.setRange('xRange', this.vectorToRange(ranges[0]), false);
     this.setRange('yRange', this.vectorToRange(ranges[1]), false);
     
-    view.unbind('range');
     view.bind('range', ()=>{
       return [this.xRange, this.yRange];
     });
 
-    this.group = view.group({
-      id: 'barGraph'
-    });
-
-
-    this.data = this.group.array({
+    this.data = this.mathboxGroup.array({
       channels: 2,
       items: 4,
       id: 'barGraphData'
@@ -84,7 +80,7 @@ class BarGraph extends Graph {
       width: () => {return this.numBars; }
     });
 
-    this.colors = this.group.array({
+    this.colors = this.mathboxGroup.array({
       channels: 4,
       id: 'barGraphColors',
       expr: (emit, i) => {
@@ -99,14 +95,14 @@ class BarGraph extends Graph {
       width: () => {return this.numBars;}
     });
 
-    this.group.face({
+    this.mathboxGroup.face({
       width: 5,
       colors: '#' + this.colors.get('id'),
       points: '#' + this.data.get('id'),
       zIndex: 3,
     });
 
-    this.dataAnim = this.group.play({
+    this.dataAnim = this.mathboxGroup.play({
       target: '#' + this.data.get('id'),
       pace: this._exprAnimDuration/1000,
     });
@@ -123,7 +119,8 @@ class BarGraph extends Graph {
   }
 
   teardown() {
-    this.mathbox.remove('#'+this.group.get('id'));
+    super.teardown();
+    this.view.unbind('range');
     this.autoBoundsCalculator.teardown();
     this.scaleLabel.teardown();
     this.probe.teardown();

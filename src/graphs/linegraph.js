@@ -21,6 +21,7 @@ class LineGraph extends Graph {
         rightLine: {opacity: 0}
       }
     });
+    this.setup();
   }
 
   static get supportedSignatures() {
@@ -52,36 +53,27 @@ class LineGraph extends Graph {
     this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
       boundsReceivedCallback: this.newRangeReceived.bind(this)
     });
-    let view = this.mathbox.select('cartesian'); 
-    let ranges = view.get('range');
+    let ranges = this.view.get('range');
     this.setRange('xRange', this.vectorToRange(ranges[0]), false);
     this.setRange('yRange', this.vectorToRange(ranges[1]), false);
     
-    view.unbind('range');
-    view.bind('range', ()=>{
+    this.view.bind('range', ()=>{
       return [this.xRange, this.yRange];
     });
 
-    this.dataId = 'data';
-    this.displayId = 'display';
-    this.animId = 'anim';
-
-    this.data = view.interval({
+    this.data = this.mathboxGroup.interval({
       channels: 2,
       fps: 60,
-      id: this.dataId,
       width: 500
     });
-    this.display = view.line({
+    this.display = this.mathboxGroup.line({
       width: 5,
       color: '#3090FF',
       zIndex: 3,
-      id: this.displayId
     });
-    this.dataAnim = this.mathbox.play({
-      target: '#' + this.dataId,
+    this.dataAnim = this.mathboxGroup.play({
+      target: '<<',
       pace: this._exprAnimDuration/1000,
-      id: this.animId
     });
 
     this.scaleLabel.setup();
@@ -89,13 +81,11 @@ class LineGraph extends Graph {
   }
 
   teardown() {
+    super.teardown();
     this.autoBoundsCalculator.teardown();
-    //REPLACE THIS WITH ONE GROUP OBJECT
-    this.mathbox.remove('#'+this.dataId);
-    this.mathbox.remove('#'+this.displayId);
-    this.mathbox.remove('#'+this.animId);
     this.scaleLabel.teardown();
     this.probe.teardown();
+    this.view.unbind('range');
   }
 
   showFunction(compiledFunction) {

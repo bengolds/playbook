@@ -4,9 +4,6 @@ class Graph {
                animated = false, 
                overlayDiv = null, 
                auxDiv = null }) {
-    if (new.target === Graph) {
-      throw new TypeError('Cannot construct Graph instances directly');
-    }
     this.mathbox = mathbox;
     this.animated = animated;
     this.syncedParameters = syncedParameters;
@@ -15,6 +12,13 @@ class Graph {
     this.auxDiv = auxDiv;
     this.tweeners = {};
     this.tweenerTargets = {};
+
+    if (this.mathbox) {
+      this.view = this.mathbox.select('cartesian');
+      this.mathboxGroup = this.view.group({
+        id: this.constructor.name
+      });
+    }
   }
 
   setupSyncedParameters(syncedParameters) {
@@ -29,6 +33,10 @@ class Graph {
         },
       });
     }
+  }
+
+  teardown() {
+    this.mathbox.remove('#'+this.mathboxGroup.get('id'));
   }
 
   static isSupported(signature) {
@@ -161,7 +169,6 @@ class Graph {
 
   //TO IMPLEMENT:
   setup() {}
-  teardown() {}
   showFunction(compiledFunction) {}
   pinnedVariablesChanged() {}
   unboundRanges() {}
