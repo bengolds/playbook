@@ -2,6 +2,11 @@ class ColorGraph extends Graph {
 
   constructor (params={}) {
     super(params);
+    this.setupMathbox();
+
+    this.scaleLabel = new ScaleLabel(this.overlayDiv, 
+      this.getLabelText.bind(this),
+      () => {return this.labelsVisible;});
 
     if (this.probeX === undefined) {
       this.probeX = 0;
@@ -9,10 +14,6 @@ class ColorGraph extends Graph {
     if (this.probeY === undefined) {
       this.probeY = 0;
     }
-    this.scaleLabel = new ScaleLabel(this.overlayDiv, 
-      this.getLabelText.bind(this),
-      () => {return this.labelsVisible;});
-
     this.probe = new Probe({
       mathbox: this.mathbox,
       overlayDiv: this.overlayDiv,
@@ -24,7 +25,12 @@ class ColorGraph extends Graph {
         rightLine: {opacity: 0.5}
       }
     });
-    this.setup();
+
+    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
+      boundsReceivedCallback: this.newRangeReceived.bind(this)
+    });
+    this.scaleLabel.setup();
+    this.probe.setup();
   }
 
   static get supportedSignatures() {
@@ -52,10 +58,7 @@ class ColorGraph extends Graph {
     ];
   }
 
-  setup () {
-    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
-      boundsReceivedCallback: this.newRangeReceived.bind(this)
-    });
+  setupMathbox () {
 
     //TODO: ADJUST BY ASPECT RATIO
     let dim = 100;
@@ -92,12 +95,8 @@ class ColorGraph extends Graph {
     });
 
     this.mathbox.select('grid').set('visible', false);
-    this.mathbox.inspect();
 
     this.setRange('yRange', this.getFinal('xRange'));
-
-    this.scaleLabel.setup();
-    this.probe.setup();
   }
 
   teardown() {

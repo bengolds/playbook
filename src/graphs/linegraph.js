@@ -3,14 +3,15 @@ class LineGraph extends Graph {
   constructor (params={}) {
     super(params);
 
-    if (this.probeX === undefined) {
-      this.probeX = 0;
-    }
-    this._exprAnimDuration = 500;
-    this._resetBoundsDuration = 250;
+    this.setupMathbox();
+
     this.scaleLabel = new ScaleLabel(this.overlayDiv, 
       this.getLabelText.bind(this),
       () => {return this.labelsVisible;});
+
+    if (this.probeX === undefined) {
+      this.probeX = 0;
+    }
     this.probe = new Probe({
       mathbox: this.mathbox,
       overlayDiv: this.overlayDiv,
@@ -21,7 +22,13 @@ class LineGraph extends Graph {
         rightLine: {opacity: 0}
       }
     });
-    this.setup();
+
+    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
+      boundsReceivedCallback: this.newRangeReceived.bind(this)
+    });
+
+    this.scaleLabel.setup();
+    this.probe.setup();
   }
 
   static get supportedSignatures() {
@@ -47,12 +54,8 @@ class LineGraph extends Graph {
     ];
   }
 
-  //Setup & Teardown
-
-  setup () {
-    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
-      boundsReceivedCallback: this.newRangeReceived.bind(this)
-    });
+  setupMathbox () {
+    this._exprAnimDuration = 500;
     let ranges = this.view.get('range');
     this.setRange('xRange', this.vectorToRange(ranges[0]), false);
     this.setRange('yRange', this.vectorToRange(ranges[1]), false);
@@ -75,9 +78,6 @@ class LineGraph extends Graph {
       target: '<<',
       pace: this._exprAnimDuration/1000,
     });
-
-    this.scaleLabel.setup();
-    this.probe.setup();
   }
 
   teardown() {

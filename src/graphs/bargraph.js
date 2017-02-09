@@ -2,6 +2,7 @@ class BarGraph extends Graph {
 
   constructor (params={}) {
     super(params);
+    this.setupMathbox();
 
     this._exprAnimDuration = 500;
     this.scaleLabel = new ScaleLabel(this.overlayDiv, 
@@ -27,7 +28,13 @@ class BarGraph extends Graph {
       labelMargin: 0
     });
 
-    this.setup();
+    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
+      boundsReceivedCallback: this.newRangeReceived.bind(this)
+    });
+
+    this.scaleLabel.setup();
+    this.probe.setup();
+
   }
 
   static get supportedSignatures() {
@@ -59,10 +66,7 @@ class BarGraph extends Graph {
 
   //Setup & Teardown
 
-  setup () {
-    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {
-      boundsReceivedCallback: this.newRangeReceived.bind(this)
-    });
+  setupMathbox () {
     let view = this.mathbox.select('cartesian'); 
     let ranges = view.get('range');
     this.setRange('xRange', this.vectorToRange(ranges[0]), false);
@@ -113,9 +117,6 @@ class BarGraph extends Graph {
       this.setRange('xRange', newXRange);
     }
 
-    this.mathbox.inspect();
-    this.scaleLabel.setup();
-    this.probe.setup();
   }
 
   teardown() {
