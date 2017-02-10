@@ -4,8 +4,10 @@ class BarGraph extends Graph {
     super(params);
     this.setupMathbox();
 
+    this.rangeBinder = new RangeBinder(this);
     this.scaleLabel = new ScaleLabel(this, {
-      visibleCallback: () => {return this.labelsVisible;}
+      visibleCallback: () => {return this.labelsVisible;},
+      rangeBinder: this.rangeBinder
     });
 
     this.barProbeX = 0;
@@ -58,15 +60,6 @@ class BarGraph extends Graph {
 
   setupMathbox () {
     this._exprAnimDuration = 500;
-    
-    let view = this.mathbox.select('cartesian'); 
-    let ranges = view.get('range');
-    this.setRange('xRange', this.vectorToRange(ranges[0]), false);
-    this.setRange('yRange', this.vectorToRange(ranges[1]), false);
-    
-    view.bind('range', ()=>{
-      return [this.xRange, this.yRange];
-    });
 
     this.data = this.mathboxGroup.array({
       channels: 2,
@@ -103,7 +96,7 @@ class BarGraph extends Graph {
       pace: this._exprAnimDuration/1000,
     });
 
-    if (this.xRange[1]-this.xRange[0] < 10) {
+    if (this.xRange && this.xRange[1]-this.xRange[0] < 10) {
       let center = this.xRange[0] + (this.xRange[1]-this.xRange[0])/2;
       let newXRange = [center-5, center+5];
       this.setRange('xRange', newXRange);
@@ -113,10 +106,10 @@ class BarGraph extends Graph {
 
   teardown() {
     super.teardown();
-    this.view.unbind('range');
     this.autoBoundsCalculator.teardown();
     this.scaleLabel.teardown();
     this.probe.teardown();
+    this.rangeBinder.teardown();
   }
 
   get numBars() {

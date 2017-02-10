@@ -294,7 +294,52 @@
           expect(overlay.innerHTML).to.equal(oldHTML);
           expect(mathbox.toMarkup()).to.equal(oldMathbox);
         });
+      });
 
+      suite('range binder', function() {
+        let mathbox;
+        let graph;
+
+        setup(function() {
+          let els = fixture('basic');
+          mathbox = els[0].mathbox;
+          graph = new Graph({mathbox: mathbox, animated: false});
+        });
+
+        test('setup and teardown are opposites', function() {
+          let oldMathboxMarkup = mathbox.toMarkup();
+          let rangeBinder = new RangeBinder(graph);
+          expect(mathbox.toMarkup()).to.not.equal(oldMathboxMarkup);
+
+          rangeBinder.teardown();
+          expect(mathbox.toMarkup()).to.equal(oldMathboxMarkup);
+        });
+
+
+        test('orig values matched', function() {
+          let view = mathbox.select('cartesian'); 
+          view.set('range', [[-5, 5], [-3, 3]]);
+
+          let rangeBinder = new RangeBinder(graph);
+          expect(graph.xRange).to.deep.equal([-5, 5]);
+          expect(graph.yRange).to.deep.equal([-3, 3]);
+        });
+
+        test('changing xRange/yRange changes mathbox', function(done) {
+          let rangeBinder = new RangeBinder(graph);
+          graph.xRange = [-5, 5];
+          graph.yRange = [-3, 3];
+
+          //Let a frame pass so the 'bind' action works
+          setTimeout(function() {
+            let ranges = rangeBinder.view.get('range');
+            expect(ranges[0].x).to.equal(-5);
+            expect(ranges[0].y).to.equal(5);
+            expect(ranges[1].x).to.equal(-3);
+            expect(ranges[1].y).to.equal(3);
+            done();
+          }, 0);
+        });
       });
 
     </script>

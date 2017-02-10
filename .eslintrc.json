@@ -120,6 +120,7 @@
         "ResizeSensor": false,
         "AutoBoundsCalculator": true,
         "ScaleLabel": true,
+        "RangeBinder": true,
         "Probe": true,
         "util": true
     }

@@ -5,8 +5,10 @@ class LineGraph extends Graph {
 
     this.setupMathbox();
 
+    this.rangeBinder = new RangeBinder(this);
     this.scaleLabel = new ScaleLabel(this, {
-      visibleCallback: () => {return this.labelsVisible;}
+      visibleCallback: () => {return this.labelsVisible;},
+      rangeBinder: this.rangeBinder
     });
 
     if (this.probeX === undefined) {
@@ -48,13 +50,6 @@ class LineGraph extends Graph {
 
   setupMathbox () {
     this._exprAnimDuration = 500;
-    let ranges = this.view.get('range');
-    this.setRange('xRange', this.vectorToRange(ranges[0]), false);
-    this.setRange('yRange', this.vectorToRange(ranges[1]), false);
-    
-    this.view.bind('range', ()=>{
-      return [this.xRange, this.yRange];
-    });
 
     this.data = this.mathboxGroup.interval({
       channels: 2,
@@ -77,7 +72,7 @@ class LineGraph extends Graph {
     this.autoBoundsCalculator.teardown();
     this.scaleLabel.teardown();
     this.probe.teardown();
-    this.view.unbind('range');
+    this.rangeBinder.teardown();
   }
 
   showFunction(compiledFunction) {

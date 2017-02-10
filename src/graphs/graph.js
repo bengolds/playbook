@@ -125,10 +125,6 @@ class Graph {
     } 
   }
 
-  vectorToRange(vector) {
-    return [vector.x, vector.y];
-  }
-
   clientToLocalCoords(clientPoint) {
     let tX = clientPoint[0]/this.width, tY = 1-clientPoint[1]/this.height;
     return [util.lerp(this.xRange, tX), util.lerp(this.yRange, tY)];

@@ -4,8 +4,10 @@ class ColorGraph extends Graph {
     super(params);
     this.setupMathbox();
 
+    this.rangeBinder = new RangeBinder(this);
     this.scaleLabel = new ScaleLabel(this, {
-      visibleCallback: () => {return this.labelsVisible;}
+      visibleCallback: () => {return this.labelsVisible;},
+      rangeBinder: this.rangeBinder
     });
 
     if (this.probeX === undefined) {
@@ -55,15 +57,7 @@ class ColorGraph extends Graph {
 
     //TODO: ADJUST BY ASPECT RATIO
     let dim = 100;
-    let view = this.mathbox.select('cartesian'); 
-    let ranges = view.get('range');
-    this.setRange('xRange', this.vectorToRange(ranges[0]), false);
-    this.setRange('yRange', this.vectorToRange(ranges[1]), false);
     this.setRange('colorRange', [-5, 5]);
-
-    view.bind('range', ()=>{
-      return [this.xRange, this.yRange];
-    });
 
     this.flat = this.mathboxGroup.area({
       channels: 3,
@@ -98,7 +92,7 @@ class ColorGraph extends Graph {
     this.autoBoundsCalculator.teardown();
     this.scaleLabel.teardown();
     this.probe.teardown();
-    this.view.unbind('range');
+    this.rangeBinder.teardown();
   }
 
   showFunction(compiledFunction) {
