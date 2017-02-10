@@ -254,6 +254,8 @@
           let graph = new Graph({
             overlayDiv: overlay
           });
+          graph.xRange = [0,0];
+          graph.yRange = [0,0];
           let label = new ScaleLabel(graph, {
             textCallback: function() {return [];}
           });

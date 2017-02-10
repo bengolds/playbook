@@ -188,10 +188,6 @@ class BarGraph extends Graph {
       xAxisLabel = this.compiled.freeVariables[0].name;
     }
     return {
-      xMinLabel: this.xRange[0].toFixed(numDigits),
-      xMaxLabel: this.xRange[1].toFixed(numDigits),
-      yMinLabel: this.yRange[0].toFixed(numDigits),
-      yMaxLabel: this.yRange[1].toFixed(numDigits),
       xAxisLabel: xAxisLabel,
     };
   }
