@@ -4,7 +4,9 @@ class Probe {
     visibilityCallback = function () {return true;},
     pointLabelCallback = function () {return '';},
     styles = {},
-    labelMargin = 4
+    horizAlign = 'right',
+    vertAlign = 'top',
+    labelMargin = 0
   }) {
     this.mathbox = graph.mathbox;
     this.overlayDiv = graph.overlayDiv;
@@ -13,6 +15,8 @@ class Probe {
     this.pointLabelCallback = pointLabelCallback;
     this.styles = styles;
     this.labelMargin = labelMargin;
+    this.horizAlign = horizAlign;
+    this.vertAlign = vertAlign;
 
     this.setupMathbox();
     this.setupOverlay();
@@ -76,6 +80,28 @@ class Probe {
     return range[1].toArray();
   }
 
+  get xMargin() {
+    switch(this.horizAlign) {
+    case 'center':
+      return 0;
+    case 'left':
+      return -this.labelMargin;
+    case 'right':
+      return this.labelMargin;
+    }
+  }
+
+  get yMargin() {
+    switch(this.vertAlign) {
+    case 'center':
+      return 0;
+    case 'top':
+      return this.labelMargin;
+    case 'bottom':
+      return -this.labelMargin;
+    }
+  }
+
   getPoints(name) {
     if (!this.targetPoint) {
       return [[0,0],[0,0]];
@@ -96,43 +122,14 @@ class Probe {
     }
   }
 
-  moveDivClamped(left, bottom, div, boundingBox) {
-    let width = this.overlayDiv.offsetWidth, height = this.overlayDiv.offsetHeight;
-    if (left != null) {
-      let clampedLeft = Math.min(left, width-boundingBox.right-div.offsetWidth);
-      clampedLeft = Math.max(clampedLeft, boundingBox.left);
-      div.style.left = clampedLeft + 'px';
-    }
-    if (bottom != null) {
-      let clampedBottom = Math.min(bottom, height-boundingBox.top-div.offsetHeight);
-      clampedBottom = Math.max(clampedBottom, boundingBox.bottom);
-      div.style.bottom = clampedBottom + 'px';
-    }
-  }
-
   updateProbe() {
     this.targetPoint = this.locationCallback();
     if (this.targetPoint) {
-      let width = this.overlayDiv.offsetWidth, height = this.overlayDiv.offsetHeight;
-      let bb = {left: 0, right: 0, top: 0, bottom: 0 };
-
-      let tX = util.inverseLerp(this.xRange, this.targetPoint[0]);
-      let tY = util.inverseLerp(this.yRange, this.targetPoint[1]);
-      let left = tX*width + this.labelMargin;
-      let bottom = tY*height + this.labelMargin;
-
       this.labels.pointLabel.innerText = this.pointLabelCallback();
-      this.moveDivClamped(left, bottom, this.labels.pointLabel, bb);
-
-      bb = {left: 0, right: 0, top: height-bottom, bottom: -Number.MAX_VALUE};
       this.labels.xLabel.innerText = this.targetPoint[0].toFixed(1);
-      this.moveDivClamped(left, 0, this.labels.xLabel, bb);
-
-      bb = {left: -Number.MAX_VALUE, right: width-left, top: 0, bottom: 0};
       this.labels.yLabel.innerText = this.targetPoint[1].toFixed(1);
-      this.moveDivClamped(0, bottom, this.labels.yLabel, bb);
 
-      bb.left += this.labels.yLabel.offsetWidth;
+      this.layoutLabels();
     }
 
     if (this.visibilityCallback) {
@@ -146,5 +143,68 @@ class Probe {
     }
 
     this.requestId = window.requestAnimationFrame(this.updateProbe.bind(this));
+  }
+
+  layoutLabels() {
+    let width = this.overlayDiv.offsetWidth, height = this.overlayDiv.offsetHeight;
+    let bb = {left: 0, right: 0, top: 0, bottom: 0 };
+
+    let tX = util.inverseLerp(this.xRange, this.targetPoint[0]);
+    let tY = util.inverseLerp(this.yRange, this.targetPoint[1]);
+    let x = tX*width + this.xMargin;
+    let y = tY*height + this.yMargin;
+
+    //Place the point Label first
+    let [plLeft, plBottom] = this.moveDivClamped(x, y,
+     this.labels.pointLabel, bb, 
+     this.horizAlign, this.vertAlign);
+
+    //Place the xLabel so that it's to the left of the main label.
+    bb = {left: 0, right: 0, top: height-plBottom, bottom: -Number.MAX_VALUE};
+    this.moveDivClamped(x, 0, this.labels.xLabel, bb, this.horizAlign, 'top');
+
+    //Place the yLabel so that it's to the bottom of the main label.
+    bb = {left: -Number.MAX_VALUE, right: width-plLeft, top: 0, bottom: 0};
+    this.moveDivClamped(0, y, this.labels.yLabel, bb, 'right', this.vertAlign);
+  }
+
+  moveDivClamped(targetX, targetY, div, boundingBox, horizAlign, vertAlign) {
+    let width = this.overlayDiv.offsetWidth, height = this.overlayDiv.offsetHeight;
+
+    //Set the X direction
+    let targetLeft;
+    switch (horizAlign) {
+    case 'center':
+      targetLeft = targetX - div.offsetWidth/2;
+      break;
+    case 'right':
+      targetLeft = targetX;
+      break;
+    case 'left':
+      targetLeft = targetX - div.offsetWidth;
+      break;
+    }
+    let clampedLeft = Math.min(targetLeft, width-boundingBox.right-div.offsetWidth);
+    clampedLeft = Math.max(clampedLeft, boundingBox.left);
+    div.style.left = clampedLeft + 'px';
+
+    //Set the Y direction
+    let targetBottom;
+    switch (vertAlign) {
+    case 'center':
+      targetBottom = targetY - div.offsetHeight/2;
+      break;
+    case 'top':
+      targetBottom = targetY;
+      break;
+    case 'bottom':
+      targetBottom = targetY - div.offsetHeight; 
+      break;
+    }
+    let clampedBottom = Math.min(targetBottom, height-boundingBox.top-div.offsetHeight);
+    clampedBottom = Math.max(clampedBottom, boundingBox.bottom);
+    div.style.bottom = clampedBottom + 'px';
+
+    return [clampedLeft, clampedBottom];
   }
 }

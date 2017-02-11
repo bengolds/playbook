@@ -22,7 +22,8 @@ class ColorGraph extends Graph {
       styles: {
         topLine: {opacity: 0.5},
         rightLine: {opacity: 0.5}
-      }
+      },
+      labelMargin: 4
     });
 
     this.autoBoundsCalculator = new AutoBoundsCalculator(this, {});

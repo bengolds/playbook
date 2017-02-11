@@ -19,7 +19,8 @@ class LineGraph extends Graph {
       styles: {
         topLine: {opacity: 0.5},
         rightLine: {opacity: 0}
-      }
+      },
+      labelMargin: 4
     });
 
     this.autoBoundsCalculator = new AutoBoundsCalculator(this, {});

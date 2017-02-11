@@ -6,24 +6,22 @@ class BarGraph extends Graph {
 
     this.rangeBinder = new RangeBinder(this);
     this.scaleLabel = new ScaleLabel(this, {
-      visibleCallback: () => {return this.labelsVisible;},
+      visibleCallback: () => {return this.mouseOver;},
       rangeBinder: this.rangeBinder
     });
 
     this.barProbeX = 0;
     this.probe = new Probe(this, {
-      visibilityCallback: () => {return true;}, 
-      pointLabelCallback: () => {return 'hey';},
+      visibilityCallback: () => {return this.mouseOver;}, 
+      pointLabelCallback: this.getProbeLabel.bind(this),
       styles: {
         topLine: {opacity: 0},
         bottomLine: {opacity: 0},
         leftLine: {opacity: 0},
         rightLine: {opacity: 0},
-        xLabel: 'transform: translate(-50%, 0%)',        
-        pointLabel: 'transform: translate(-50%, 0%)',        
         yLabel: 'display: none'
       },
-      labelMargin: 0
+      horizAlign: 'center'
     });
 
     this.autoBoundsCalculator = new AutoBoundsCalculator(this, {});
@@ -46,7 +44,7 @@ class BarGraph extends Graph {
   static get syncedParameterNames() {
     return [
       'xRange',
-      'labelsVisible',
+      'mouseOver',
       'barProbeX',
       'barProbeVisible'
     ];
@@ -185,15 +183,24 @@ class BarGraph extends Graph {
     };
   }
 
-  getProbePoint() {
+  evalAt(x) {
     if (this.compiled) {
       let freeVars = this.compiled.freeVariables;
       let scope = {
-        [freeVars[0].name]: this.barProbeX,
+        [freeVars[0].name]: x
       };
       let val = this.compiled.eval(scope);
-      return [this.barProbeX, val];
+      return val;
     }
+    else { return 0; }
+  }
+
+  getProbePoint() {
+    return [this.barProbeX, this.evalAt(this.barProbeX)];
+  }
+
+  getProbeLabel() {
+    return this.evalAt(this.barProbeX).toFixed(1);
   }
 
   //Ranges
@@ -230,12 +237,12 @@ class BarGraph extends Graph {
   }
 
   onMouseEnter(e) {
-    this.labelsVisible = true;
+    this.mouseOver = true;
     this.barProbeVisible = true;
   }
 
   onMouseLeave(e) {
-    this.labelsVisible = false;
+    this.mouseOver = false;
     this.barProbeVisible = false;
   }
 
