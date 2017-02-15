@@ -243,7 +243,8 @@ class ColorGraph extends Graph {
   }
 
   onPanStop() {
-    this.autoBoundsCalculator.getNewBounds();
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name,
+      this.compiled.freeVariables[1].name]);
   }
 
   onZoom(amount, mouseX, mouseY) {
@@ -254,6 +255,7 @@ class ColorGraph extends Graph {
     this.zoomRange('xRange', zoomAmount, tX);
     this.zoomRange('yRange', zoomAmount, tY);
 
-    this.autoBoundsCalculator.getNewBounds(50);
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name,
+      this.compiled.freeVariables[1].name], 50);
   }
 }

@@ -255,7 +255,7 @@ class BarGraph extends Graph {
   }
 
   onPanStop() {
-    this.autoBoundsCalculator.getNewBounds();
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
   }
 
   onZoom(amount, mouseX, mouseY) {
@@ -267,7 +267,7 @@ class BarGraph extends Graph {
       this.clampBounds(true);
     }
 
-    this.autoBoundsCalculator.getNewBounds(50);
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name], 50);
   }
 
 }

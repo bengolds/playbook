@@ -30,6 +30,9 @@ class AutoBoundsCalculator {
   }
 
   recalculateBoundsReceived(e) {
+    if (this._shouldRecalculate(e.detail.variables)) {
+      this.getNewBounds(e.detail.debounceTimeout);
+    }
   }
 
   _shouldRecalculate(variables) {
@@ -43,5 +46,15 @@ class AutoBoundsCalculator {
         return variable.name === varName;
       });
     });
+  }
+
+  static fireRecalcEvent(variables, debounceTimeout = 0) {
+    let e = new CustomEvent('recalculate-bounds', {
+      detail: {
+        variables: variables,
+        debounceTimeout: debounceTimeout
+      }
+    });
+    document.dispatchEvent(e);
   }
 }

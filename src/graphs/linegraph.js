@@ -147,7 +147,6 @@ class LineGraph extends Graph {
     let newRange = this.constructor.humanizeBounds(e.data);
     if (this.animated) {
       this.animateRange('yRange', newRange);
-      // this.animateRange('yRange', newRange, animDuration, animEasing);
     } 
     else {
       this.setRange('yRange', newRange);
@@ -188,7 +187,7 @@ class LineGraph extends Graph {
   }
 
   onPanStop() {
-    this.autoBoundsCalculator.getNewBounds();
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
   }
 
   onZoom(amount, mouseX, mouseY) {
@@ -197,6 +196,6 @@ class LineGraph extends Graph {
     let t = mouseX/this.width;
     this.zoomRange('xRange', zoomAmount, t);
 
-    this.autoBoundsCalculator.getNewBounds(50);
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name], 50);
   }
 }
