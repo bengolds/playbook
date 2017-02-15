@@ -87,6 +87,7 @@ class LineGraph extends Graph {
   }
 
   pinnedVariablesChanged() {
+    //THIS IS USED WHEN GOING FROM 0 -> 1 DIMS
     this.autoBoundsCalculator.getNewBounds();
   }
 

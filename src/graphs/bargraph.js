@@ -130,10 +130,6 @@ class BarGraph extends Graph {
     this.mathbox.inspect();
   }
 
-  pinnedVariablesChanged() {
-    this.autoBoundsCalculator.getNewBounds();
-  }
-
   changeExpr(newExpr) {
     if (this.animated && this.data.get('expr')) {
       var currExpr = this.data.get('expr');

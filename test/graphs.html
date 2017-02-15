@@ -342,6 +342,56 @@
         });
       });
 
+      suite('auto bounds calculator', function() {
+        let mathbox;
+        let graph;
+
+        setup(function() {
+          let els = fixture('basic');
+          mathbox = els[0].mathbox;
+          graph = new Graph({mathbox: mathbox, animated: false});
+          graph.newRangeReceived = function(range) {};
+        });
+
+        test('setup and teardown are opposites', function() {
+          let oldMathboxMarkup = mathbox.toMarkup();
+          let autoBoundsCalculator = new AutoBoundsCalculator(graph, {});
+
+          autoBoundsCalculator.teardown();
+          expect(mathbox.toMarkup()).to.equal(oldMathboxMarkup);
+        });
+
+        test('properly filter recalculate events', function() {
+          let autoBoundsCalculator = new AutoBoundsCalculator(graph, {});
+          let scope = helper.makeScope(['a','b','c','d'], null, ['c','d']);
+          graph.compiled = helper.makeFakeCompiled('a+c', ['a','c'], scope);
+
+          let expectFilter = function(variables, shouldSucceed) {
+            let success = autoBoundsCalculator._shouldRecalculate(variables);
+            expect(success).to.equal(shouldSucceed);
+          };
+
+          // free variable
+          expectFilter(['a'], true);
+
+          // pinned variable
+          expectFilter(['c'], true);
+
+          // multiple variables
+          expectFilter(['b','a','d'], true);
+
+          // no matching variables
+          expectFilter(['b', 'd', 'q'], false);
+
+          // no compiled function
+          graph.compiled = undefined;
+          expectFilter([], false);
+
+        });
+
+
+      });
+
     </script>
   </body>
 </html>

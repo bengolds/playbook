@@ -8,12 +8,15 @@ class AutoBoundsCalculator {
     // this.getMinMax.onerror = (e) => {
     //   console.error(e.detail.message + ' at ' + e.detail.filename + ':' + e.detail.lineno);
     // };
+    this._recalcHandler = this.recalculateBoundsReceived.bind(this);
+    document.addEventListener('recalculate-bounds', this._recalcHandler);
   }
 
   teardown() {
     this.minMaxWorker.terminate();
     this.minMaxWorker.postMessage('stop');
     clearTimeout(this.timeout);
+    document.removeEventListener('recalculate-bounds', this._recalcHandler);
   }
 
   getNewBounds(debounceTimeout = 0) {
@@ -24,5 +27,21 @@ class AutoBoundsCalculator {
         unboundRanges: this.graph.unboundRanges()
       });
     }, debounceTimeout);
+  }
+
+  recalculateBoundsReceived(e) {
+  }
+
+  _shouldRecalculate(variables) {
+    let compiled = this.graph.compiled;
+    if (!compiled) {
+      return false;
+    }
+
+    return variables.some((varName) => {
+      return compiled.variables.some( (variable) => {
+        return variable.name === varName;
+      });
+    });
   }
 }
