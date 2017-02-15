@@ -1,11 +1,32 @@
 class ColorGraph extends Graph {
 
-  constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
-    super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
+  constructor (params={}) {
+    super(params);
+    this.setupMathbox();
 
-    this.scaleLabel = new ScaleLabel(overlayDiv, 
-      this.getLabelText.bind(this),
-      () => {return this.labelsVisible;});
+    this.rangeBinder = new RangeBinder(this);
+    this.scaleLabel = new ScaleLabel(this, {
+      visibleCallback: () => {return this.labelsVisible;},
+      rangeBinder: this.rangeBinder
+    });
+
+    if (this.probeX === undefined) {
+      this.probeX = 0;
+    }
+    if (this.probeY === undefined) {
+      this.probeY = 0;
+    }
+    this.probe = new Probe(this, {
+      pointLabelCallback: this.getProbeLabel.bind(this),
+      visibilityCallback: () => {return this.probeVisible;}, 
+      styles: {
+        topLine: {opacity: 0.5},
+        rightLine: {opacity: 0.5}
+      },
+      labelMargin: 4
+    });
+
+    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {});
   }
 
   static get supportedSignatures() {
@@ -26,75 +47,53 @@ class ColorGraph extends Graph {
     return [
       'xRange',
       'yRange',
-      'labelsVisible'
+      'labelsVisible',
+      'probeVisible',
+      'probeX',
+      'probeY'
     ];
   }
 
-  setup () {
-    this.getMinMax = new Worker('src/mathObjects/getMinMax.js');
-    this.getMinMax.onmessage = this.newRangeReceived.bind(this);
-    this.dataId = 'data';
-    this.displayId = 'display';
-    this.animId = 'anim';
-    this.flatId = 'flat';
-    this.domId = 'colordom';
-    this.htmlId = 'colorhtmldom';
-    this.labelPointsId = 'colorlabelpoints';
+  setupMathbox () {
 
     //TODO: ADJUST BY ASPECT RATIO
     let dim = 100;
-    let view = this.mathbox.select('cartesian'); 
-    let ranges = view.get('range');
-    this.setRange('xRange', this.vectorToRange(ranges[0]), false);
-    this.setRange('yRange', this.vectorToRange(ranges[1]), false);
     this.setRange('colorRange', [-5, 5]);
 
-    view.unbind('range');
-    view.bind('range', ()=>{
-      return [this.xRange, this.yRange];
-    });
-
-    this.flat = view.area({
+    this.flat = this.mathboxGroup.area({
       channels: 3,
-      id: 'flat',
       width: dim,
       height: dim,
       expr: (emit, x, y) => {
         emit(x, y, 0);
       }
     });
-    this.data = view.area({
+    this.data = this.mathboxGroup.area({
       channels: 4,
-      id: this.dataId,
       width: dim,
       height: dim
     });
-    this.display = view.surface({
-      colors: '#' + this.dataId,
-      points: '#' + this.flatId,
-      id: this.displayId,
+    this.display = this.mathboxGroup.surface({
+      colors: '<',
+      points: '<<',
     });
-    this.dataAnim = this.mathbox.play({
-      target: '#' + this.dataId,
+    this.dataAnim = this.mathboxGroup.play({
+      target: '<',
       pace: 1,
-      id: this.animId
     });
+
+    this.mathbox.select('grid').set('visible', false);
 
     this.setRange('yRange', this.getFinal('xRange'));
-
-    this.scaleLabel.setup();
-    this.scaleLabel.hide();
   }
 
   teardown() {
-    // console.log('tearing down');
-    this.getMinMax.terminate();
-    this.getMinMax.postMessage('stop');
-    this.mathbox.remove('#'+this.dataId);
-    this.mathbox.remove('#'+this.displayId);
-    this.mathbox.remove('#'+this.animId);
-    this.mathbox.remove('#'+this.flatId);
+    super.teardown();
+    this.mathbox.select('grid').set('visible', true);
+    this.autoBoundsCalculator.teardown();
     this.scaleLabel.teardown();
+    this.probe.teardown();
+    this.rangeBinder.teardown();
   }
 
   showFunction(compiledFunction) {
@@ -103,7 +102,7 @@ class ColorGraph extends Graph {
     }
     this.changeExpr(this.makeExpr(compiledFunction));
     this.compiled = compiledFunction;
-    this.resetBounds();
+    this.autoBoundsCalculator.getNewBounds();
   }
 
   changeExpr(newExpr) {
@@ -127,7 +126,7 @@ class ColorGraph extends Graph {
         [freeVars[0].name]: x,
         [freeVars[1].name]: y
       });
-      emit (...this.colorMap(val), 255);
+      emit (...this.colorMap(val), 1);
     };
     return newExpr;
   }
@@ -139,7 +138,9 @@ class ColorGraph extends Graph {
     let t = (val-this.colorRange[0])/(this.colorRange[1]-this.colorRange[0]);
     let i = Math.round(t*warmCoolMap.length);
     i = Math.min(Math.max(0, i), warmCoolMap.length-1);
-    return warmCoolMap[i];
+    let color = warmCoolMap[i];
+    //FUCKING MATHBOX HAS COLORS IN A RANGE FROM 0-2
+    return [color[0]*2, color[1]*2, color[2]*2];
   }
    
   getLabelText() {
@@ -150,24 +151,34 @@ class ColorGraph extends Graph {
       xAxisLabel = this.compiled.freeVariables[0].name;
       yAxisLabel = this.compiled.freeVariables[1].name;
     }
+    //Move this into the label class?
     return {
-      xMinLabel: this.xRange[0].toFixed(numDigits),
-      xMaxLabel: this.xRange[1].toFixed(numDigits),
-      yMinLabel: this.yRange[0].toFixed(numDigits),
-      yMaxLabel: this.yRange[1].toFixed(numDigits),
       xAxisLabel: xAxisLabel,
       yAxisLabel: yAxisLabel,
     };
   }
 
-  //Ranges
-
-  resetBounds() {
-    this.getMinMax.postMessage({
-      dehydratedFunction: this.compiled.dehydrate(),
-      unboundRanges: this.unboundRanges()
-    });
+  getProbePoint() {
+    return [this.probeX, this.probeY];
   }
+
+  getProbeLabel() {
+    if (this.compiled) {
+      let freeVars = this.compiled.freeVariables;
+      let scope = {
+        [freeVars[0].name]: this.probeX,
+        [freeVars[1].name]: this.probeY,
+      };
+      let val = this.compiled.eval(scope);
+      if (val.toFixed) {
+        return val.toFixed(1);
+      } else {
+        return '';
+      }
+    }
+  }
+
+  //Ranges
 
   newRangeReceived(e) {
     let minMax = this.constructor.humanizeBounds(e.data);
@@ -212,10 +223,19 @@ class ColorGraph extends Graph {
   // Mouse events
   onMouseEnter(e) {
     this.labelsVisible = true;
+    this.probeVisible = true;
+  }
+
+  onMouseMove(e) {
+    let mousePoint = [e.offsetX, e.offsetY];
+    let localCoords = this.clientToLocalCoords(mousePoint);
+    this.probeX = localCoords[0];
+    this.probeY = localCoords[1];
   }
 
   onMouseLeave(e) {
     this.labelsVisible = false;
+    this.probeVisible = false;
   }
 
   onPan(dx, dy) {
@@ -223,7 +243,8 @@ class ColorGraph extends Graph {
   }
 
   onPanStop() {
-    this.resetBounds();
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name,
+      this.compiled.freeVariables[1].name]);
   }
 
   onZoom(amount, mouseX, mouseY) {
@@ -233,9 +254,8 @@ class ColorGraph extends Graph {
     let tY = mouseY/this.height;
     this.zoomRange('xRange', zoomAmount, tX);
     this.zoomRange('yRange', zoomAmount, tY);
-    clearTimeout(this.resetBoundsTimeout);
-    this.resetBoundsTimeout = setTimeout( () => {
-      this.resetBounds();
-    }, 50);
+
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name,
+      this.compiled.freeVariables[1].name], 50);
   }
 }

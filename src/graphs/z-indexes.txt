@@ -1,0 +1,6 @@
+Color surfaces: 0
+Axes: 1
+Grids: 1
+Probes: 2
+Lines: 3
+Bars: 3

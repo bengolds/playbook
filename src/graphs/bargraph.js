@@ -1,13 +1,30 @@
 class BarGraph extends Graph {
 
-  constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
-    super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
+  constructor (params={}) {
+    super(params);
+    this.setupMathbox();
 
-    this._exprAnimDuration = 500;
-    this._resetBoundsDuration = 250;
-    this.scaleLabel = new ScaleLabel(overlayDiv, 
-      this.getLabelText.bind(this),
-      () => {return this.labelsVisible;});
+    this.rangeBinder = new RangeBinder(this);
+    this.scaleLabel = new ScaleLabel(this, {
+      visibleCallback: () => {return this.mouseOver;},
+      rangeBinder: this.rangeBinder
+    });
+
+    this.barProbeX = 0;
+    this.probe = new Probe(this, {
+      visibilityCallback: () => {return this.mouseOver;}, 
+      pointLabelCallback: this.getProbeLabel.bind(this),
+      styles: {
+        topLine: {opacity: 0},
+        bottomLine: {opacity: 0},
+        leftLine: {opacity: 0},
+        rightLine: {opacity: 0},
+        yLabel: 'display: none'
+      },
+      horizAlign: 'center'
+    });
+
+    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {});
   }
 
   static get supportedSignatures() {
@@ -27,7 +44,9 @@ class BarGraph extends Graph {
   static get syncedParameterNames() {
     return [
       'xRange',
-      'labelsVisible'
+      'mouseOver',
+      'barProbeX',
+      'barProbeVisible'
     ];
   }
 
@@ -37,64 +56,62 @@ class BarGraph extends Graph {
 
   //Setup & Teardown
 
-  setup () {
-    this.getMinMax = new Worker('src/mathObjects/getMinMax.js');
-    this.getMinMax.onmessage = this.newRangeReceived.bind(this);
-    // this.getMinMax.onerror = (e) => {
-    //   console.error(e.detail.message + ' at ' + e.detail.filename + ':' + e.detail.lineno);
-    // };
-    let view = this.mathbox.select('cartesian'); 
-    let ranges = view.get('range');
-    this.setRange('xRange', this.vectorToRange(ranges[0]), false);
-    this.setRange('yRange', this.vectorToRange(ranges[1]), false);
-    
-    view.unbind('range');
-    view.bind('range', ()=>{
-      return [this.xRange, this.yRange];
-    });
+  setupMathbox () {
+    this._exprAnimDuration = 500;
 
-    this.dataId = 'data';
-    this.displayId = 'display';
-    this.animId = 'anim';
-
-    this.data = view.array({
+    this.data = this.mathboxGroup.array({
       channels: 2,
       items: 4,
-      fps: 60,
-      id: this.dataId,
+      id: 'barGraphData'
     }, {
-      width: () => {
-        return Math.ceil(this.xRange[1])-Math.floor(this.xRange[0]) + 1;
-      }
-    });
-    this.display = view.face({
-      width: 5,
-      color: '#3090FF',
-      zIndex: 2,
-      id: this.displayId
-    });
-    this.dataAnim = this.mathbox.play({
-      target: '#' + this.dataId,
-      pace: this._exprAnimDuration/1000,
-      id: this.animId
+      width: () => {return this.numBars; }
     });
 
-    if (this.xRange[1]-this.xRange[0] < 10) {
+    this.colors = this.mathboxGroup.array({
+      channels: 4,
+      id: 'barGraphColors',
+      expr: (emit, i) => {
+        //FUCKING MATHBOX HAS COLORS IN A RANGE FROM 0-2
+        if (this.barProbeVisible && this.indexToLocalCoord(i) == this.barProbeX) {
+          emit(2, 0, 0, 1);
+        } else {
+          emit(0.34375, 1.125, 2, 1);
+        }
+      }
+    }, {
+      width: () => {return this.numBars;}
+    });
+
+    this.mathboxGroup.face({
+      width: 5,
+      colors: '#' + this.colors.get('id'),
+      points: '#' + this.data.get('id'),
+      zIndex: 3,
+    });
+
+    this.dataAnim = this.mathboxGroup.play({
+      target: '#' + this.data.get('id'),
+      pace: this._exprAnimDuration/1000,
+    });
+
+    if (this.xRange && this.xRange[1]-this.xRange[0] < 10) {
       let center = this.xRange[0] + (this.xRange[1]-this.xRange[0])/2;
       let newXRange = [center-5, center+5];
       this.setRange('xRange', newXRange);
     }
 
-    this.scaleLabel.setup();
   }
 
   teardown() {
-    // console.log('tearing down');
-    this.getMinMax.terminate();
-    this.mathbox.remove('#'+this.dataId);
-    this.mathbox.remove('#'+this.displayId);
-    this.mathbox.remove('#'+this.animId);
+    super.teardown();
+    this.autoBoundsCalculator.teardown();
     this.scaleLabel.teardown();
+    this.probe.teardown();
+    this.rangeBinder.teardown();
+  }
+
+  get numBars() {
+    return Math.ceil(this.xRange[1])-Math.floor(this.xRange[0]) + 1;
   }
 
   showFunction(compiledFunction) {
@@ -109,12 +126,8 @@ class BarGraph extends Graph {
       this.clampBounds(true);
     }
     
-    this.resetBounds(this._exprAnimDuration, 'easeInOutSine');
+    this.autoBoundsCalculator.getNewBounds();
     this.mathbox.inspect();
-  }
-
-  pinnedVariablesChanged() {
-    this.resetBounds();
   }
 
   changeExpr(newExpr) {
@@ -130,6 +143,10 @@ class BarGraph extends Graph {
     }
   }
 
+  indexToLocalCoord(i) {
+    return Math.floor(this.xRange[0]) + i;
+  }
+
   makeExpr(compiledFunction) {
     let cachedEval = compiledFunction.eval.bind(compiledFunction);
     let freeVars = compiledFunction.freeVariables;
@@ -138,7 +155,7 @@ class BarGraph extends Graph {
       cachedVarName = freeVars[0].name;
     }
     let newExpr = (emit, i) => {
-      let x = Math.floor(this.xRange[0]) + i;
+      let x = this.indexToLocalCoord(i);
       if (this.isNatural() && x < 0) {
         return;
       }
@@ -158,27 +175,36 @@ class BarGraph extends Graph {
       xAxisLabel = this.compiled.freeVariables[0].name;
     }
     return {
-      xMinLabel: this.xRange[0].toFixed(numDigits),
-      xMaxLabel: this.xRange[1].toFixed(numDigits),
-      yMinLabel: this.yRange[0].toFixed(numDigits),
-      yMaxLabel: this.yRange[1].toFixed(numDigits),
       xAxisLabel: xAxisLabel,
     };
   }
-  //Ranges
 
-  resetBounds(animDuration=this._resetBoundsDuration, animEasing='easeOutSine') {
-    this.getMinMax.postMessage({
-      dehydratedFunction: this.compiled.dehydrate(),
-      unboundRanges: this.unboundRanges()
-    });
+  evalAt(x) {
+    if (this.compiled) {
+      let freeVars = this.compiled.freeVariables;
+      let scope = {
+        [freeVars[0].name]: x
+      };
+      let val = this.compiled.eval(scope);
+      return val;
+    }
+    else { return 0; }
   }
+
+  getProbePoint() {
+    return [this.barProbeX, this.evalAt(this.barProbeX)];
+  }
+
+  getProbeLabel() {
+    return this.evalAt(this.barProbeX).toFixed(1);
+  }
+
+  //Ranges
 
   newRangeReceived(e) {
     let newRange = this.constructor.humanizeBounds(e.data);
     if (this.animated) {
       this.animateRange('yRange', newRange);
-      // this.animateRange('yRange', newRange, animDuration, animEasing);
     } 
     else {
       this.setRange('yRange', newRange);
@@ -207,11 +233,18 @@ class BarGraph extends Graph {
   }
 
   onMouseEnter(e) {
-    this.labelsVisible = true;
+    this.mouseOver = true;
+    this.barProbeVisible = true;
   }
 
   onMouseLeave(e) {
-    this.labelsVisible = false;
+    this.mouseOver = false;
+    this.barProbeVisible = false;
+  }
+
+  onMouseMove(e) {
+    let mousePoint = [e.offsetX, e.offsetY];
+    this.barProbeX = Math.round(this.clientToLocalCoords(mousePoint)[0]);
   }
 
   onPan(dx, dy) {
@@ -222,7 +255,7 @@ class BarGraph extends Graph {
   }
 
   onPanStop() {
-    this.resetBounds();
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
   }
 
   onZoom(amount, mouseX, mouseY) {
@@ -234,9 +267,7 @@ class BarGraph extends Graph {
       this.clampBounds(true);
     }
 
-    clearTimeout(this.resetBoundsTimeout);
-    this.resetBoundsTimeout = setTimeout( () => {
-      this.resetBounds();
-    }, 50);
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name], 50);
   }
+
 }

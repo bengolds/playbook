@@ -1,11 +1,16 @@
 class ScaleLabel {
-  constructor(parentDiv, textCallback, visibleCallback) {
+  constructor(graph, {visibleCallback = function() {return true;},
+                      textCallback = graph.getLabelText.bind(graph),
+                      rangeBinder = null}) {
     this.textCallback = textCallback;
     this.visibleCallback = visibleCallback;
-    this.parentDiv = parentDiv;
-  }
+    this.overlayDiv = graph.overlayDiv;
+    this.graph = graph;
+    this.rangeBinder = rangeBinder;
 
-  setup() {
+    this.parentDiv = document.createElement('div');
+    this.overlayDiv.appendChild(this.parentDiv);
+
     let divNames = ['xMinLabel', 'xMaxLabel', 'xAxisLabel', 
       'yMinLabel', 'yMaxLabel', 'yAxisLabel'];
     this.labels = {};
@@ -15,43 +20,42 @@ class ScaleLabel {
       div.classList.add(name);
       this.parentDiv.appendChild(div);
     }
+
     this.updateLabels();
   }
 
   teardown() {
-    for (let name in this.labels) {
-      let node = this.labels[name];
-      this.parentDiv.removeChild(node);
-    } 
+    this.overlayDiv.removeChild(this.parentDiv);
     window.cancelAnimationFrame(this.requestId);
     this.requestId = null;
   }
 
   updateLabels() {
+    let numDigits = 1;
+    let defaultLabels = {};
+    if (this.rangeBinder){
+      defaultLabels = {
+        xMinLabel: this.graph.xRange[0].toFixed(numDigits),
+        xMaxLabel: this.graph.xRange[1].toFixed(numDigits),
+        yMinLabel: this.graph.yRange[0].toFixed(numDigits),
+        yMaxLabel: this.graph.yRange[1].toFixed(numDigits),
+        xAxisLabel: '',
+        yAxisLabel: '',
+      };
+    }
+
     let labelTexts = this.textCallback();
+    labelTexts = Object.assign({}, defaultLabels, labelTexts);
+
     for (let key in this.labels) {
       this.labels[key].innerText = labelTexts[key] || '';
     }
-    if (this.visibleCallback) {
-      if (this.visibleCallback()) {
-        this.show();
-      } else {
-        this.hide();
-      }
+    if (this.visibleCallback()) {
+      this.parentDiv.classList.remove('hidden');
+    } else {
+      this.parentDiv.classList.add('hidden');
     }
 
     this.requestId = window.requestAnimationFrame(this.updateLabels.bind(this));
-  }
-
-  show() {
-    for (let key in this.labels) {
-      this.labels[key].classList.remove('hidden');
-    }
-  }
-
-  hide() {
-    for (let key in this.labels) {
-      this.labels[key].classList.add('hidden');
-    }
   }
 }

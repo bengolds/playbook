@@ -35,7 +35,7 @@ class CompiledFunction {
   get freeVariables() {
     return this.variables.filter( (variable) => {
       return !this.globalScope.isPinned(variable.name);
-    });
+    }).sort(Variable.compare);
   }
 
   dehydrate() {

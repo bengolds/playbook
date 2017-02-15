@@ -1,13 +1,29 @@
 class LineGraph extends Graph {
 
-  constructor (mathbox, syncedParameters, animated, overlayDiv, auxDiv) {
-    super(mathbox, syncedParameters, animated, overlayDiv, auxDiv);
+  constructor (params={}) {
+    super(params);
 
-    this._exprAnimDuration = 500;
-    this._resetBoundsDuration = 250;
-    this.scaleLabel = new ScaleLabel(overlayDiv, 
-      this.getLabelText.bind(this),
-      () => {return this.labelsVisible;});
+    this.setupMathbox();
+
+    this.rangeBinder = new RangeBinder(this);
+    this.scaleLabel = new ScaleLabel(this, {
+      visibleCallback: () => {return this.labelsVisible;},
+      rangeBinder: this.rangeBinder
+    });
+
+    if (this.probeX === undefined) {
+      this.probeX = 0;
+    }
+    this.probe = new Probe(this, {
+      visibilityCallback: () => {return this.probeVisible;}, 
+      styles: {
+        topLine: {opacity: 0.5},
+        rightLine: {opacity: 0}
+      },
+      labelMargin: 4
+    });
+
+    this.autoBoundsCalculator = new AutoBoundsCalculator(this, {});
   }
 
   static get supportedSignatures() {
@@ -27,60 +43,37 @@ class LineGraph extends Graph {
   static get syncedParameterNames() {
     return [
       'xRange',
-      'labelsVisible'
+      'labelsVisible',
+      'probeVisible',
+      'probeX'
     ];
   }
 
-  //Setup & Teardown
+  setupMathbox () {
+    this._exprAnimDuration = 500;
 
-  setup () {
-    this.getMinMax = new Worker('src/mathObjects/getMinMax.js');
-    this.getMinMax.onmessage = this.newRangeReceived.bind(this);
-    // this.getMinMax.onerror = (e) => {
-    //   console.error(e.detail.message + ' at ' + e.detail.filename + ':' + e.detail.lineno);
-    // };
-    let view = this.mathbox.select('cartesian'); 
-    let ranges = view.get('range');
-    this.setRange('xRange', this.vectorToRange(ranges[0]), false);
-    this.setRange('yRange', this.vectorToRange(ranges[1]), false);
-    
-    view.unbind('range');
-    view.bind('range', ()=>{
-      return [this.xRange, this.yRange];
-    });
-
-    this.dataId = 'data';
-    this.displayId = 'display';
-    this.animId = 'anim';
-
-    this.data = view.interval({
+    this.data = this.mathboxGroup.interval({
       channels: 2,
       fps: 60,
-      id: this.dataId,
       width: 500
     });
-    this.display = view.line({
+    this.display = this.mathboxGroup.line({
       width: 5,
       color: '#3090FF',
-      zIndex: 2,
-      id: this.displayId
+      zIndex: 3,
     });
-    this.dataAnim = this.mathbox.play({
-      target: '#' + this.dataId,
+    this.dataAnim = this.mathboxGroup.play({
+      target: '<<',
       pace: this._exprAnimDuration/1000,
-      id: this.animId
     });
-
-    this.scaleLabel.setup();
   }
 
   teardown() {
-    // console.log('tearing down');
-    this.getMinMax.terminate();
-    this.mathbox.remove('#'+this.dataId);
-    this.mathbox.remove('#'+this.displayId);
-    this.mathbox.remove('#'+this.animId);
+    super.teardown();
+    this.autoBoundsCalculator.teardown();
     this.scaleLabel.teardown();
+    this.probe.teardown();
+    this.rangeBinder.teardown();
   }
 
   showFunction(compiledFunction) {
@@ -90,11 +83,12 @@ class LineGraph extends Graph {
 
     this.changeExpr(this.makeExpr(compiledFunction));
     this.compiled = compiledFunction;
-    this.resetBounds(this._exprAnimDuration, 'easeInOutSine');
+    this.autoBoundsCalculator.getNewBounds();
   }
 
   pinnedVariablesChanged() {
-    this.resetBounds();
+    //THIS IS USED WHEN GOING FROM 0 -> 1 DIMS
+    this.autoBoundsCalculator.getNewBounds();
   }
 
   changeExpr(newExpr) {
@@ -132,28 +126,27 @@ class LineGraph extends Graph {
       xAxisLabel = this.compiled.freeVariables[0].name;
     }
     return {
-      xMinLabel: this.xRange[0].toFixed(numDigits),
-      xMaxLabel: this.xRange[1].toFixed(numDigits),
-      yMinLabel: this.yRange[0].toFixed(numDigits),
-      yMaxLabel: this.yRange[1].toFixed(numDigits),
       xAxisLabel: xAxisLabel,
     };
   }
 
-  //Ranges
-
-  resetBounds(animDuration=this._resetBoundsDuration, animEasing='easeOutSine') {
-    this.getMinMax.postMessage({
-      dehydratedFunction: this.compiled.dehydrate(),
-      unboundRanges: this.unboundRanges()
-    });
+  getProbePoint() {
+    let expr = this.data.get('expr');
+    let targetPoint;
+    if (expr) {
+      expr((x, y)=> {
+        targetPoint = [x, y];
+      }, this.probeX);
+      return targetPoint;
+    }
   }
+
+  //Ranges
 
   newRangeReceived(e) {
     let newRange = this.constructor.humanizeBounds(e.data);
     if (this.animated) {
       this.animateRange('yRange', newRange);
-      // this.animateRange('yRange', newRange, animDuration, animEasing);
     } 
     else {
       this.setRange('yRange', newRange);
@@ -176,10 +169,17 @@ class LineGraph extends Graph {
 
   onMouseEnter(e) {
     this.labelsVisible = true;
+    this.probeVisible = true;
+  }
+
+  onMouseMove(e) {
+    this.mousePoint = [e.offsetX, e.offsetY];
+    this.probeX = this.clientToLocalCoords(this.mousePoint)[0];
   }
 
   onMouseLeave(e) {
     this.labelsVisible = false;
+    this.probeVisible = false;
   }
 
   onPan(dx, dy) {
@@ -187,7 +187,7 @@ class LineGraph extends Graph {
   }
 
   onPanStop() {
-    this.resetBounds();
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
   }
 
   onZoom(amount, mouseX, mouseY) {
@@ -196,9 +196,6 @@ class LineGraph extends Graph {
     let t = mouseX/this.width;
     this.zoomRange('xRange', zoomAmount, t);
 
-    clearTimeout(this.resetBoundsTimeout);
-    this.resetBoundsTimeout = setTimeout( () => {
-      this.resetBounds();
-    }, 50);
+    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name], 50);
   }
 }

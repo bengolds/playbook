@@ -2,51 +2,51 @@
   <template>
     <style>
       :root {
-        --x-label: {
+        --scale-x-label: {
           position: absolute;
           top: 100%;
         };
-        --y-label: {
+        --scale-y-label: {
           position: absolute;
           right: 100%;
           margin-right: 4px;
         };
-        --number-label: {
+        --scale-number-label: {
           font-family: Symbola;
         };
-        --text-label: {
+        --scale-text-label: {
           font-family: Times New Roman;
           font-style: italic;
         };
       }
 
       .xMinLabel {
-        @apply --x-label;
-        @apply --number-label;
+        @apply --scale-x-label;
+        @apply --scale-number-label;
       }
       .xMaxLabel {
-        @apply --x-label;
-        @apply --number-label;
+        @apply --scale-x-label;
+        @apply --scale-number-label;
         right: 0px;
       }
       .xAxisLabel {
-        @apply --x-label;
-        @apply --text-label;
+        @apply --scale-x-label;
+        @apply --scale-text-label;
         left: 50%;
         transform: translate(-50%, 0);
       }
       .yMinLabel {
-        @apply --y-label;
-        @apply --number-label;
+        @apply --scale-y-label;
+        @apply --scale-number-label;
         bottom: 0px;
       }
       .yMaxLabel {
-        @apply --y-label;
-        @apply --number-label;
+        @apply --scale-y-label;
+        @apply --scale-number-label;
       }
       .yAxisLabel {
-        @apply --y-label;
-        @apply --text-label;
+        @apply --scale-y-label;
+        @apply --scale-text-label;
         top: 50%;
         transform: translate(0, -50%);
       }

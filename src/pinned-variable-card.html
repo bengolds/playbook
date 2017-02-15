@@ -72,9 +72,19 @@
         }
       },
 
+      observers: [
+        '_rangeChanged(range.*)'
+      ],
+
       unpin: function() {
         this.fire('unpin-var', this.variable.name);
       },
+
+      _rangeChanged: function() {
+        if (this.variable) {
+          AutoBoundsCalculator.fireRecalcEvent([this.variable.name]);
+        }
+      }
 
     });
   </script>

@@ -1,8 +1,9 @@
 class Graph {
-  constructor(mathbox, syncedParameters={}, animated, overlayDiv, auxDiv) {
-    if (new.target === Graph) {
-      throw new TypeError('Cannot construct Graph instances directly');
-    }
+  constructor({mathbox = null,
+               syncedParameters = {}, 
+               animated = false, 
+               overlayDiv = null, 
+               auxDiv = null }) {
     this.mathbox = mathbox;
     this.animated = animated;
     this.syncedParameters = syncedParameters;
@@ -11,6 +12,13 @@ class Graph {
     this.auxDiv = auxDiv;
     this.tweeners = {};
     this.tweenerTargets = {};
+
+    if (this.mathbox) {
+      this.view = this.mathbox.select('cartesian');
+      this.mathboxGroup = this.view.group({
+        id: this.constructor.name
+      });
+    }
   }
 
   setupSyncedParameters(syncedParameters) {
@@ -25,6 +33,10 @@ class Graph {
         },
       });
     }
+  }
+
+  teardown() {
+    this.mathbox.remove('#'+this.mathboxGroup.get('id'));
   }
 
   static isSupported(signature) {
@@ -113,8 +125,9 @@ class Graph {
     } 
   }
 
-  vectorToRange(vector) {
-    return [vector.x, vector.y];
+  clientToLocalCoords(clientPoint) {
+    let tX = clientPoint[0]/this.width, tY = 1-clientPoint[1]/this.height;
+    return [util.lerp(this.xRange, tX), util.lerp(this.yRange, tY)];
   }
 
   translateRange(dx, dy) {
@@ -141,6 +154,7 @@ class Graph {
     this.setRange(name, newRange);
   }
 
+
   get width() {
     return this.mathbox.three.canvas.offsetWidth;
   }
@@ -151,7 +165,6 @@ class Graph {
 
   //TO IMPLEMENT:
   setup() {}
-  teardown() {}
   showFunction(compiledFunction) {}
   pinnedVariablesChanged() {}
   unboundRanges() {}
@@ -159,6 +172,7 @@ class Graph {
   static get syncedParameterNames() {return [];}
   //Mouse events
   onMouseEnter(e) {}
+  onMouseMove(e) {}
   onMouseLeave(e) {}
   onPanStart() {}
   onPan(dx, dy) {}

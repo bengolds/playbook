@@ -110,6 +110,7 @@
 
       listeners: {
         'mouseenter': 'onMouseEnter',
+        'mousemove': 'onMouseMove',
         'mouseleave': 'onMouseLeave',
         'down': 'onPanStart',
         'wheel': 'onWheel'
@@ -239,8 +240,13 @@
             if (this.graph) {
               this.graph.teardown();
             }
-            this.graph = new graphConstructor(this.mathbox, this.syncedParameters, this.animated, this.$.overlay, this.auxDiv);
-            this.graph.setup();
+            this.graph = new graphConstructor({
+              mathbox: this.mathbox, 
+              syncedParameters: this.syncedParameters, 
+              animated: this.animated, 
+              overlayDiv: this.$.overlay, 
+              auxDiv: this.auxDiv,
+            });
             this._setNoGraphFound(false);
             this.fire('graph-ok');
             return true;
@@ -305,6 +311,12 @@
       onMouseEnter: function (e) {
         if (this.graph) {
           this.graph.onMouseEnter(e);
+        }
+      },
+
+      onMouseMove: function(e) {
+        if (this.graph) {
+          this.graph.onMouseMove(e);
         }
       },
 
