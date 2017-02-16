@@ -52,8 +52,9 @@
     <template is='dom-repeat' id='functionRepeater' items='{{scope.functions}}'>
       <function-row 
         function-definition='{{item}}'
+        primary-color='{{item.primaryColor}}'
         scope='{{scope}}'
-        graph-parameters='{{graphParameters}}'
+        synced-parameters='{{syncedParameters}}'
       ></function-row>
     </template>
     <paper-fab id='addButton' icon="add" 
@@ -62,7 +63,7 @@
       on-blur='buttonBlurred'></paper-fab>
 
     <hover-graph id='hoverGraph' hidden
-      graph-parameters='{{graphParameters}}'
+      synced-parameters='{{syncedParameters}}'
       scope='{{scope}}'
       ></hover-graph>
 
@@ -76,7 +77,7 @@
           type: Object,
           value: function() {return new Scope();},
         },
-        graphParameters: {
+        syncedParameters: {
           type: Object,
           value: function() {
             return {xRange: [-5, 5], yRange: [-5, 5]};
@@ -107,6 +108,7 @@
 
       addRow: function () {
         let nextFunc = new FunctionDefinition(this.getNextName());
+        nextFunc.primaryColor = this.getNextColor();
         this.push('scope.functions', nextFunc);
       },
 
@@ -124,16 +126,33 @@
       },
 
       getNextName: function() {
-        let isNameInRow = (name) => {
+        let isNameInRows = (name) => {
           return this.scope.functions.some((func) => {
             return func.name === name;
           });
         };
         let nextName = this.startNamesAt;
-        while (isNameInRow(nextName)) {
+        while (isNameInRows(nextName)) {
           nextName = String.fromCharCode(nextName.charCodeAt(0)+1);
         }
         return nextName;
+      },
+
+      getNextColor: function() {
+        let colors = ['blue','green','purple','black'];
+        let isColorInRows = (color) => {
+          return this.scope.functions.some((func) => {
+            return func.primaryColor === color;
+          });
+        };
+
+        for (let i = 0; i < colors.length; i++) {
+          if (!isColorInRows(colors[i])) {
+            return colors[i];
+          }
+        }
+
+        return 'grey';
       },
 
       pinVar: function(e) {

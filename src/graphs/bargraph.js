@@ -72,10 +72,11 @@ class BarGraph extends Graph {
       id: 'barGraphColors',
       expr: (emit, i) => {
         //FUCKING MATHBOX HAS COLORS IN A RANGE FROM 0-2
+        let scaleEmit = (r, g, b, a) => {emit(r*2,g*2,b*2,a);};
         if (this.barProbeVisible && this.indexToLocalCoord(i) == this.barProbeX) {
-          emit(2, 0, 0, 1);
+          scaleEmit(1, 0, 0, 1);
         } else {
-          emit(0.34375, 1.125, 2, 1);
+          scaleEmit(...this.primaryColor.toArray(), 1);
         }
       }
     }, {

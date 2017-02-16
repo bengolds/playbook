@@ -59,7 +59,7 @@ class LineGraph extends Graph {
     });
     this.display = this.mathboxGroup.line({
       width: 5,
-      color: '#3090FF',
+      color: this.primaryColor.getStyle(),
       zIndex: 3,
     });
     this.dataAnim = this.mathboxGroup.play({
