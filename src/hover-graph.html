@@ -30,6 +30,7 @@
       <mathbox-plot id='plot' animated
         compiled-function='{{compiledFunction}}'
         scope='{{scope}}'
+        primary-color='{{primaryColor}}'
         synced-parameters='{{syncedParameters}}'></mathbox-plot>
     </arrow-box>
     <div id='outline'></div>
@@ -44,6 +45,7 @@
           notify: true,
           value: function() {return {};}
         },
+        primaryColor: String,
         scope: {
           type: Object,
           notify: false,
