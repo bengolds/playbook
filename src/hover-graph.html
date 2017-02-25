@@ -30,7 +30,8 @@
       <mathbox-plot id='plot' animated
         compiled-function='{{compiledFunction}}'
         scope='{{scope}}'
-        synced-parameters='{{graphParameters}}'></mathbox-plot>
+        primary-color='{{primaryColor}}'
+        synced-parameters='{{syncedParameters}}'></mathbox-plot>
     </arrow-box>
     <div id='outline'></div>
     
@@ -39,11 +40,12 @@
     Polymer({
       is: 'hover-graph',
       properties: {
-        graphParameters: {
+        syncedParameters: {
           type: Object,
           notify: true,
           value: function() {return {};}
         },
+        primaryColor: String,
         scope: {
           type: Object,
           notify: false,

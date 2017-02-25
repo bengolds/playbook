@@ -45,27 +45,60 @@ class LineGraph extends Graph {
       'xRange',
       'labelsVisible',
       'probeVisible',
-      'probeX'
+      'probeX',
+      'selectedLineGraph'
     ];
   }
 
   setupMathbox () {
     this._exprAnimDuration = 500;
 
+    //Set up primary graph
     this.data = this.mathboxGroup.interval({
       channels: 2,
       fps: 60,
       width: 500
     });
-    this.display = this.mathboxGroup.line({
+    this.mathboxGroup.line({
       width: 5,
-      color: '#3090FF',
+      color: this.primaryColor.getStyle(),
       zIndex: 3,
     });
     this.dataAnim = this.mathboxGroup.play({
       target: '<<',
       pace: this._exprAnimDuration/1000,
     });
+
+    //Set up secondary graph
+    let shouldShowSecondary = () => {
+      return (this.selectedLineGraph && this.selectedLineGraph != this);
+    };
+    this.secondaryLine = this.mathboxGroup.interval({
+      channels: 2,
+      width: 500,
+    }, {
+      expr: () => { 
+        if (shouldShowSecondary()) {
+          return this.selectedLineGraph.data.get('expr');
+        } else {
+          return (emit, x) => {emit(x, 0);};
+        }
+      },
+    })
+    .line({
+      width: 5,
+      zIndex: 3,
+    }, {
+      opacity: () => { return shouldShowSecondary() ? 0.5 : 0; },
+      color: () => { 
+        if (shouldShowSecondary()) {
+          return this.selectedLineGraph.primaryColor.getStyle();
+        } else {
+          return 'red';
+        }
+      }
+    });
+    this.mathbox.inspect();
   }
 
   teardown() {
@@ -170,6 +203,7 @@ class LineGraph extends Graph {
   onMouseEnter(e) {
     this.labelsVisible = true;
     this.probeVisible = true;
+    this.selectedLineGraph = this;
   }
 
   onMouseMove(e) {
@@ -180,6 +214,7 @@ class LineGraph extends Graph {
   onMouseLeave(e) {
     this.labelsVisible = false;
     this.probeVisible = false;
+    this.selectedLineGraph = null;
   }
 
   onPan(dx, dy) {

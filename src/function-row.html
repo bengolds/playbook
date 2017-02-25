@@ -79,7 +79,8 @@
       <mathbox-plot id='plot' animated
         compiled-function='{{compiled}}'
         scope='{{scope}}'
-        synced-parameters='{{graphParameters}}'
+        primary-color='{{primaryColor}}'
+        synced-parameters='{{syncedParameters}}'
         ></mathbox-plot>
     </paper-card>
   </template>
@@ -93,7 +94,8 @@
           notify: true,
           value: function() {return new FunctionDefinition();},
         },
-        graphParameters: {
+        primaryColor: String,
+        syncedParameters: {
           type: Object,
           notify: true,
           value: function() {return {};},

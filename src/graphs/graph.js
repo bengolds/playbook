@@ -3,13 +3,15 @@ class Graph {
                syncedParameters = {}, 
                animated = false, 
                overlayDiv = null, 
-               auxDiv = null }) {
+               auxDiv = null,
+               primaryColor = 'blue'}) {
     this.mathbox = mathbox;
     this.animated = animated;
     this.syncedParameters = syncedParameters;
     this.setupSyncedParameters(syncedParameters);
     this.overlayDiv = overlayDiv;
     this.auxDiv = auxDiv;
+    this.primaryColor = new THREE.Color(primaryColor);
     this.tweeners = {};
     this.tweenerTargets = {};
 
