@@ -388,7 +388,29 @@
           expectFilter([], false);
 
         });
+      });
 
+      suite('graph buttons', function() {
+        let overlay;
+        let graph;
+
+        setup(function() {
+          let els = fixture('basic');
+          overlay = els[1];
+          graph = new Graph({
+            overlayDiv: overlay
+          });
+        });
+
+        test('setup and teardown are opposites', function() {
+          let oldHTML = overlay.innerHTML;
+
+          let graphButton = new GraphButton(graph, {});
+          expect(overlay.innerHTML).to.not.deep.equal(oldHTML);
+
+          graphButton.teardown();
+          expect(overlay.innerHTML).to.deep.equal(oldHTML);
+        });
 
       });
 

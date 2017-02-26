@@ -24,6 +24,20 @@ class LineGraph extends Graph {
     });
 
     this.autoBoundsCalculator = new AutoBoundsCalculator(this, {});
+
+    this.autoButton = new GraphButton(this, {
+      css: `transform: translate(-100%, -50%);
+            left: -4px;
+            top: 50%; `,
+      toggles: true,
+      icon: 'http',
+      onTap: () => {
+        if (this.autoButton.active) {
+          AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
+        }
+      }
+    });
+    this.autoButton.active = true;
   }
 
   static get supportedSignatures() {
@@ -98,7 +112,6 @@ class LineGraph extends Graph {
         }
       }
     });
-    this.mathbox.inspect();
   }
 
   teardown() {
@@ -107,6 +120,7 @@ class LineGraph extends Graph {
     this.scaleLabel.teardown();
     this.probe.teardown();
     this.rangeBinder.teardown();
+    this.autoButton.teardown();
   }
 
   showFunction(compiledFunction) {
@@ -218,19 +232,30 @@ class LineGraph extends Graph {
   }
 
   onPan(dx, dy) {
-    this.translateRange(dx);
+    if (this.autoButton.active) {
+      this.translateRange(dx);
+    } else {
+      this.translateRange(dx, dy);
+    }
   }
 
   onPanStop() {
-    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
+    if (this.autoButton.active) {
+      AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
+    }
   }
 
   onZoom(amount, mouseX, mouseY) {
     let zoomScale = .001;
     let zoomAmount = 1 + zoomScale*amount;
-    let t = mouseX/this.width;
-    this.zoomRange('xRange', zoomAmount, t);
+    let tX = mouseX/this.width;
+    this.zoomRange('xRange', zoomAmount, tX);
 
-    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name], 50);
+    if (this.autoButton.active) {
+      AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name], 50);
+    } else {
+      let tY = mouseY/this.height;
+      this.zoomRange('yRange', zoomAmount, tY);
+    }
   }
 }

@@ -122,6 +122,7 @@
         "ScaleLabel": true,
         "RangeBinder": true,
         "Probe": true,
+        "GraphButton": true,
         "util": true
     }
 }
