@@ -29,7 +29,8 @@
     "paper-item": "PolymerElements/paper-item#^1.2.1",
     "css-element-queries": "marcj/css-element-queries#^0.4.0",
     "iron-range-behavior": "PolymerElements/iron-range-behavior#^1.0.6",
-    "paper-progress": "PolymerElements/paper-progress#^1.0.11"
+    "paper-progress": "PolymerElements/paper-progress#^1.0.11",
+    "paper-button": "PolymerElements/paper-button#^1.0.14"
   },
   "devDependencies": {
     "web-component-tester": "^4.0.0"
