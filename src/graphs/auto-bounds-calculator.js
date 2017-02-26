@@ -36,6 +36,7 @@ class AutoBoundsCalculator {
   }
 
   _shouldRecalculate(variables) {
+    // TODO: Add enable/disable switch to this in case the thing is locked.
     let compiled = this.graph.compiled;
     if (!compiled) {
       return false;

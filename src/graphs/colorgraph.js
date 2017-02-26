@@ -6,7 +6,7 @@ class ColorGraph extends Graph {
 
     this.rangeBinder = new RangeBinder(this);
     this.scaleLabel = new ScaleLabel(this, {
-      visibleCallback: () => {return this.labelsVisible;},
+      visibleCallback: () => {return this.isMouseOver;},
       rangeBinder: this.rangeBinder
     });
 
@@ -18,7 +18,7 @@ class ColorGraph extends Graph {
     }
     this.probe = new Probe(this, {
       pointLabelCallback: this.getProbeLabel.bind(this),
-      visibilityCallback: () => {return this.probeVisible;}, 
+      visibleCallback: () => {return this.isMouseOver;}, 
       styles: {
         topLine: {opacity: 0.5},
         rightLine: {opacity: 0.5}
@@ -47,8 +47,7 @@ class ColorGraph extends Graph {
     return [
       'xRange',
       'yRange',
-      'labelsVisible',
-      'probeVisible',
+      'isMouseOver',
       'probeX',
       'probeY'
     ];

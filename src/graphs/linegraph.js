@@ -7,7 +7,7 @@ class LineGraph extends Graph {
 
     this.rangeBinder = new RangeBinder(this);
     this.scaleLabel = new ScaleLabel(this, {
-      visibleCallback: () => {return this.labelsVisible;},
+      visibleCallback: () => {return this.isMouseOver;},
       rangeBinder: this.rangeBinder
     });
 
@@ -15,7 +15,7 @@ class LineGraph extends Graph {
       this.probeX = 0;
     }
     this.probe = new Probe(this, {
-      visibilityCallback: () => {return this.probeVisible;}, 
+      visibleCallback: () => {return this.isMouseOver;}, 
       styles: {
         topLine: {opacity: 0.5},
         rightLine: {opacity: 0}
@@ -24,6 +24,21 @@ class LineGraph extends Graph {
     });
 
     this.autoBoundsCalculator = new AutoBoundsCalculator(this, {});
+
+    this.autoButton = new GraphButton(this, {
+      css: `transform: translate(-100%, -50%);
+            left: -4px;
+            top: 50%; `,
+      toggles: true,
+      text: 'auto',
+      onTap: () => {
+        if (this.autoButton.active) {
+          AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
+        }
+      },
+      visibleCallback: () => {return this.isMouseOver;}
+    });
+    this.autoButton.active = true;
   }
 
   static get supportedSignatures() {
@@ -43,8 +58,7 @@ class LineGraph extends Graph {
   static get syncedParameterNames() {
     return [
       'xRange',
-      'labelsVisible',
-      'probeVisible',
+      'isMouseOver',
       'probeX',
       'selectedLineGraph'
     ];
@@ -98,7 +112,6 @@ class LineGraph extends Graph {
         }
       }
     });
-    this.mathbox.inspect();
   }
 
   teardown() {
@@ -107,6 +120,7 @@ class LineGraph extends Graph {
     this.scaleLabel.teardown();
     this.probe.teardown();
     this.rangeBinder.teardown();
+    this.autoButton.teardown();
   }
 
   showFunction(compiledFunction) {
@@ -201,8 +215,7 @@ class LineGraph extends Graph {
   //Mouse events
 
   onMouseEnter(e) {
-    this.labelsVisible = true;
-    this.probeVisible = true;
+    this.isMouseOver = true;
     this.selectedLineGraph = this;
   }
 
@@ -212,25 +225,35 @@ class LineGraph extends Graph {
   }
 
   onMouseLeave(e) {
-    this.labelsVisible = false;
-    this.probeVisible = false;
+    this.isMouseOver = false;
     this.selectedLineGraph = null;
   }
 
   onPan(dx, dy) {
-    this.translateRange(dx);
+    if (this.autoButton.active) {
+      this.translateRange(dx);
+    } else {
+      this.translateRange(dx, dy);
+    }
   }
 
   onPanStop() {
-    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
+    if (this.autoButton.active) {
+      AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
+    }
   }
 
   onZoom(amount, mouseX, mouseY) {
     let zoomScale = .001;
     let zoomAmount = 1 + zoomScale*amount;
-    let t = mouseX/this.width;
-    this.zoomRange('xRange', zoomAmount, t);
+    let tX = mouseX/this.width;
+    this.zoomRange('xRange', zoomAmount, tX);
 
-    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name], 50);
+    if (this.autoButton.active) {
+      AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name], 50);
+    } else {
+      let tY = mouseY/this.height;
+      this.zoomRange('yRange', zoomAmount, tY);
+    }
   }
 }

@@ -1,3 +1,6 @@
+// Adding the RangeBinder to your graph hooks up the plot's
+// x and y ranges to your graph's xRange and yRange variables.
+
 class RangeBinder {
   constructor(graph) {
     this.view = graph.mathbox.select('cartesian');
