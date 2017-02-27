@@ -1,10 +1,10 @@
-//TODO: figure out some 'scope' object that can contain the eval'ed functions
   class Scope {
     constructor(variables = [], functions = []) {
       this.variables = variables;
       this.pinnedVariables = [];
-      //Rename this to Functors
+      //TODO: Rename this to Functors
       this.functions = functions;
+      this._loadedFunctions = {};
     }
 
     get freeVariables() {
@@ -14,7 +14,7 @@
     }
 
     getForMathJS() {
-      let ret = {};
+      let ret = Object.assign({}, this._loadedFunctions);
       for (let pinned of this.pinnedVariables) {
         ret[pinned.variable.name] = pinned.value; 
       }

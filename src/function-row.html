@@ -57,12 +57,12 @@
       <function-compiler id='compiler'
         definition='{{functor.definition}}'
         scope='{{scope}}'
-        compiled='{{compiled}}'
+        compiled='{{functor.compiled}}'
         ></function-compiler>
 
       <function-signature id='signature'
         name='{{functor.name}}'
-        parameters='{{compiled.variables}}'
+        parameters='{{functor.variables}}'
         scope='{{scope}}'
         ></function-signature>
       <div id= 'inputContainer'>
@@ -77,7 +77,7 @@
       </div>
       <div id='auxInfo'> </div>
       <mathbox-plot id='plot' animated
-        compiled-function='{{compiled}}'
+        functor='{{functor}}'
         scope='{{scope}}'
         primary-color='{{primaryColor}}'
         synced-parameters='{{syncedParameters}}'
@@ -104,10 +104,6 @@
           type: Object,
           notify: true,
           value: function() {return new Scope();},
-        },
-        compiled: {
-          type: Object,
-          notify: false,
         },
         errorMessage: {
           type: String,

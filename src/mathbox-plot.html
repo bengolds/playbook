@@ -73,10 +73,7 @@
       properties: {
         animated: Boolean,
         primaryColor: String,
-        compiledFunction: {
-          type: Object,
-          observer: 'compiledFunctionChanged'
-        },
+        functor: Object,
         scope: {
           type: Object,
           notify: false,
@@ -205,6 +202,7 @@
       },
 
       compiledFunctionChanged: function() {
+        //TODO: HOW WILL WE WATCH THIS NOW?
         if (!this.initialized)
           return;
 
