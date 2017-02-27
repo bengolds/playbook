@@ -1,8 +1,9 @@
 class Functor {
-  constructor(name, scope, definition) {
+  constructor(name, scope=new Scope(), definition) {
     this.name = name;
     this.scope = scope;
     this.definition = definition;
+    this.latex = definition;
   } 
 
   get definition() {
@@ -14,13 +15,44 @@ class Functor {
     //TODO: LOAD DEFINITION INTO SCOPE UNLESS THAT'S TOO UNWATCHABLE
   }
 
+  get domain() {
+    return this.freeVariables.map((variable) => {
+      return variable.set;
+    });
+  }
+
+  get range() {
+    return [SETS.REAL];
+  }
+
+  get signature() {
+    return {
+      domain: this.domain,
+      range: this.range
+    };
+  }
+
+  get freeVariables() {
+    return this.variables.filter( (variable) => {
+      return !this.scope.isPinned(variable.name);
+    }).sort(Variable.compare);
+  }
+
   eval(localScope) {
     let combinedScope = Object.assign({}, localScope, this.scope.getForMathJS());
     return this._compiled.eval(combinedScope);
   }
 
+  dehydrate() {
+
+  }
+
+  static rehydrate(dehydrated) {
+
+  }
+
   _compile() {
-    let getVariableNames = function(definition) {
+    let getVariableNames = (definition) => {
       let names = [];
       let parsedFunction = math.parse(definition);
       parsedFunction.traverse( (node) => {
@@ -28,17 +60,20 @@ class Functor {
           names.push(node.name);
         }
       });
-
-      // let variables = symbols.map( (symbol) => {
-      //   if (scope.hasVariable(symbol)) {
-      //     return scope.getVariable(symbol);
-      //   }
-      //   else {
-      //     return new Variable(symbol);
-      //   }
-      // });
-
       return names; 
+    };
+
+    let variablesFromNames = (names) => {
+      return names.map( (symbol) => {
+        if (this.scope.hasVariable(symbol)) {
+          return this.scope.getVariable(symbol);
+        }
+        else {
+          let variable = new Variable(symbol);
+          this.scope.variables.push(variable);
+          return variable;
+        }
+      });
     };
 
     // if (!skipPreprocessing) {
@@ -47,17 +82,27 @@ class Functor {
       definition = '0';
     }
     definition = Algebrite.simplify(definition).toString();
-    // definition = this._insertMultipliers(definition, this.scope);
+    definition = Functor._insertMultipliers(definition, this.scope);
     // }
 
     let variableNames = getVariableNames(definition);
     let functionSignature = this.name + '(' + variableNames.join(',') + ')';
-    console.log(functionSignature);
     //TODO: I don't love this _loadedFunctions bit
     math.eval(functionSignature + '=' + definition, this.scope._loadedFunctions);
 
     //TODO: then this part just becomes loading math.compile('f(x)')
     this._compiled = math.compile(functionSignature);
+    this.variables = variablesFromNames(variableNames);
   }
 
+  static _insertMultipliers(funcString, scope) {
+    let re = /([a-z]+)\s*\(/g;
+    return funcString.replace(re, (match, symbol) => {
+      if (symbol.length > 1 || scope.isFunction(symbol)){
+        return match;
+      } else {
+        return symbol+'*(';
+      }
+    });
+  }
 }

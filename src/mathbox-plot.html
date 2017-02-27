@@ -73,7 +73,10 @@
       properties: {
         animated: Boolean,
         primaryColor: String,
-        functor: Object,
+        functor: {
+          type: Object,
+          observer: 'functorChanged'
+        },
         scope: {
           type: Object,
           notify: false,
@@ -103,7 +106,7 @@
 
       observers: [
         'pinnedVariablesChanged(scope.pinnedVariables.splices)',
-        'compiledFunctionChanged(scope.variables.*)'
+        'functorChanged(scope.variables.*)'
       ],
 
       listeners: {
@@ -201,12 +204,12 @@
         });
       },
 
-      compiledFunctionChanged: function() {
+      functorChanged: function() {
         //TODO: HOW WILL WE WATCH THIS NOW?
         if (!this.initialized)
           return;
 
-        if (!this.compiledFunction) {
+        if (!this.functor) {
           if (this.graph) {
             this.graph.teardown();
             this.graph = null;
@@ -216,23 +219,23 @@
 
         this.tryChangeGraph();
         if (!this.noGraphFound) {
-          this.graph.showFunction(this.compiledFunction);
+          this.graph.showFunction(this.functor);
         }
       },
 
       pinnedVariablesChanged: function(_) {
-        if (!this.initialized || !this.compiledFunction)
+        if (!this.initialized || !this.functor)
           return;
 
         if (this.tryChangeGraph()) {
-          this.graph.showFunction(this.compiledFunction);
+          this.graph.showFunction(this.functor);
         } else {
           this.graph.pinnedVariablesChanged();
         }
       },
 
       tryChangeGraph: function () {
-        let newSignature = this.compiledFunction.getSignature();
+        let newSignature = this.functor.signature;
         if (!this.graph || !this.graph.constructor.isSupported(newSignature)) {
           let graphConstructor = this._getCompatibleGraph();
           if (graphConstructor) {
@@ -268,7 +271,7 @@
 
       _getCompatibleGraph: function() {
         let matchingGraphs = this.supportedGraphs.filter((graph) => {
-          return graph.isSupported(this.compiledFunction.getSignature());
+          return graph.isSupported(this.functor.signature);
         });
         if (matchingGraphs.length != 0) {
           return matchingGraphs[0];

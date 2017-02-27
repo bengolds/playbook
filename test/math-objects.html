@@ -59,7 +59,7 @@
 
         test('clone', function() {
           let scope = helper.makeScope(['a','b','c'], [SETS.INTEGER, SETS.REAL, SETS.COMPLEX], ['b']);
-          scope.functions.push(new Functor('g'));
+          scope.functions.push(new Functor('g', scope));
           expect(scope.clone()).to.deep.equal(scope);
         });
 
@@ -142,7 +142,7 @@
 
         test('insert multipliers behaves properly', function() {
           let scope = new Scope();
-          scope.functions.push(new Functor('g'));
+          scope.functions.push(new Functor('g', scope));
 
           let expectTransform = (input, expected) => {
             let transformed = Functor._insertMultipliers(input, scope);
@@ -160,9 +160,9 @@
             ['a','g','b','c'],
             [SETS.REAL, SETS.REAL, SETS.INTEGER, SETS.COMPLEX],
             ['c','g']);
-          let f = helper.makeFakeCompiled('a*g*b*c', ['a','g','b','c'], scope);
+          let functor = new Functor('f', scope, 'a*g*b*c');
 
-          expect(f.getDomain()).to.deep.equal([SETS.REAL, SETS.INTEGER]);
+          expect(functor.domain).to.deep.equal([SETS.REAL, SETS.INTEGER]);
         });
 
         test('dehydrate/rehydrate', function() {

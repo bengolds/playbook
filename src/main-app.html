@@ -108,7 +108,7 @@
       },
 
       addRow: function () {
-        let nextFunc = new Functor(this.getNextName());
+        let nextFunc = new Functor(this.getNextName(), this.scope);
         nextFunc.primaryColor = this.getNextColor();
         this.push('scope.functions', nextFunc);
       },

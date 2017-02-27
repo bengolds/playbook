@@ -51,11 +51,10 @@
         });
 
         test('initialization', function() {
-          let f = new Functor('f');
-          f.definition = 'x^2';
+          let f = new Functor('f', new Scope(), 'x^2');
           el.functor = f;
 
-          expect(el.$.signature.name).to.equal('f');
+          expect(el.$.signature.functor.name).to.equal('f');
           expect(el.$.input.latex).to.equal('x^2');
           expect(el.$.input.definition).to.equal('(x^2)');
         });
@@ -76,31 +75,20 @@
           let signature = el.$.signature;
           el.set('functor.name', 'testme');
 
-          expect(signature.name).to.equal('testme');
+          expect(signature.functor.name).to.equal('testme');
           expect(signature.$.nameQuill.latex).to.equal('testme');
         });
 
         test('receive changes from function-signature', function() {
           let signature = el.$.signature;
 
-          signature.name = 'g';
+          signature.set('functor.name', 'g');
           expect(el.functor.name).to.equal('g');
 
           signature.editing = true;
           signature.$.nameQuill.focus();
           signature.$.nameQuill.typedText('h\n');
           expect(el.functor.name).to.equal('gh');
-        });
-
-        test('function compiler recompiles appropriately', function() {
-          el.functor = new Functor('f', 'x^2');
-
-          expect(el.compiled).to.be.ok;
-
-          let oldFunc = el.compiled;
-          el.set('functor.definition','3xy^3');
-          expect(el.compiled).to.be.ok;
-          expect(el.compiled).to.not.equal(oldFunc);
         });
 
         test('integration: automatic parameters', function() {

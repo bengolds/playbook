@@ -124,7 +124,7 @@
 
         test('unboundRanges', function() {
           graph.setRange('xRange', [-5, 5]);
-          graph.compiled = helper.makeFakeCompiled('a', ['a'], scope);
+          graph.compiled = new Functor('f', scope, 'a');
 
           expect(graph.unboundRanges()).to.deep.equal({
             a: {
@@ -137,7 +137,7 @@
         test('show function', function() {
           graph.setRange('xRange', [-5, 5]);
 
-          let compiled = helper.makeFakeCompiled('a^2', ['a'], scope);
+          let compiled = new Functor('f', scope, 'a^2');
           graph.showFunction(compiled);
 
           expect(graph.compiled).to.equal(compiled);
@@ -145,11 +145,11 @@
 
         test('function animations should be right', function() {
           graph.animated = false;
-          let f = helper.makeFakeCompiled('a', ['a'], scope);
+          let f = new Functor('f', scope, 'a');
           graph.showFunction(f);
 
           graph.animated = true;
-          let g = helper.makeFakeCompiled('a^2', ['a'], scope);
+          let g = new Functor('g', scope, 'a^2');
           graph.showFunction(g);
 
           let exprDuration = graph.dataAnim.get('pace')*1000;

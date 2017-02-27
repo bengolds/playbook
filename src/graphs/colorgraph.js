@@ -96,8 +96,8 @@ class ColorGraph extends Graph {
   }
 
   showFunction(compiledFunction) {
-    if (!this.constructor.isSupported(compiledFunction.getSignature())) {
-      throw Error('The function signature ' + compiledFunction.getSignature() + 'is unsupported');
+    if (!this.constructor.isSupported(compiledFunction.signature)) {
+      throw Error('The function signature ' + compiledFunction.signature + 'is unsupported');
     }
     this.changeExpr(this.makeExpr(compiledFunction));
     this.compiled = compiledFunction;

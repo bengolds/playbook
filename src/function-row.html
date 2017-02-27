@@ -61,8 +61,7 @@
         ></function-compiler>
 
       <function-signature id='signature'
-        name='{{functor.name}}'
-        parameters='{{functor.variables}}'
+        functor='{{functor}}'
         scope='{{scope}}'
         ></function-signature>
       <div id= 'inputContainer'>
@@ -112,6 +111,10 @@
         }
       },
 
+      observers: [
+        'definitionChanged(functor.definition)'
+      ],
+
       listeners: {
         'compile-ok': 'compileOk',
         'compile-error': 'compileError',
@@ -124,6 +127,10 @@
         this.isCompileError = false;
         this.isGraphError = false;
         this.$.plot.auxDiv = this.$.auxInfo;
+      },
+
+      definitionChanged: function() {
+        this.$.plot.functorChanged();
       },
 
       removeRow: function() {

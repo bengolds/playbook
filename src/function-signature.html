@@ -26,7 +26,7 @@
     on-element-mouseover='onNameMouseOver' 
     on-mouseleave='onNameMouseLeave'
     on-enter='stopEditingName'
-    latex='{{name}}'
+    latex='{{functor.name}}'
     editable='[[editing]]'>
   </mathquill-element>
   <mathquill-element id="parametersQuill"
@@ -39,15 +39,7 @@
     Polymer({
       is: 'function-signature',
       properties: {
-        name: {
-          type: String,
-          notify: true
-        },
-        parameters: {
-          type: Array,
-          value: function() {return [];},
-          observer: 'updateSignature'
-        },
+        functor: Object,
         scope: {
           type: Object,
           value: function() {return new Scope();},
@@ -61,7 +53,7 @@
       },
 
       observers: [
-        'updateSignature(parameters.splices)',
+        'updateSignature(functor.definition)',
         'updateSignature(scope.pinnedVariables)',
         'updateSignature(scope.pinnedVariables.splices)',
       ],
@@ -80,8 +72,8 @@
           return;
 
         let latex = '\\left(';
-        if (this.parameters && this.parameters.length > 0) {
-          let names = this.parameters.map( (variable) => {
+        if (this.functor.variables && this.functor.variables.length > 0) {
+          let names = this.functor.variables.map( (variable) => {
             return variable.name;
           });
           let sorted = names.sort();
@@ -108,12 +100,12 @@
 
       editingChanged: function (_) {
         if (this.editing) {
-          this.oldName = this.name;
+          this.oldName = this.functor.name;
           this.listen(this.$.nameQuill, 'blur', 'stopEditingName');
         }
         else {
           if (this.$.nameQuill.latex == '') {
-            this.name = this.oldName;
+            this.functor.name = this.oldName;
           }
         }
       },
