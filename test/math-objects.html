@@ -59,10 +59,14 @@
 
         test('clone', function() {
           let scope = helper.makeScope(['a','b','c'], [SETS.INTEGER, SETS.REAL, SETS.COMPLEX], ['b']);
-          scope.functions.push(new FunctionDefinition('g', 'a+a'));
+          scope.functions.push(new Functor('g'));
           expect(scope.clone()).to.deep.equal(scope);
         });
 
+      });
+
+      suite ('functor tests', function() {
+        
       });
 
       suite ('compiledFunction tests', function() {
@@ -142,7 +146,7 @@
 
         test('insert multipliers behaves properly', function() {
           let scope = new Scope();
-          scope.functions.push(new FunctionDefinition('g'));
+          scope.functions.push(new Functor('g'));
 
           let expectTransform = (input, expected) => {
             let transformed = CompiledFunction._insertMultipliers(input, scope);
@@ -193,6 +197,18 @@
         // test('should resolve other functions', function() {
         //   //Test here
         // });
+      });
+
+      suite('function referencing', function() {
+
+        //Compiling a function writes it into the scope properly.
+        //change of 'names' works (defined as g(x), evaled as g(t))
+        //Evaluation works properly
+        //Handle cycles properly
+        //Removing functions from the scope works properly
+        //Renaming functions updates the scope properly
+        //de/rehydration works properly
+
       });
 
       suite('autoBoundsCalculator tests', function() {

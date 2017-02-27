@@ -1,7 +1,9 @@
+//TODO: figure out some 'scope' object that can contain the eval'ed functions
   class Scope {
     constructor(variables = [], functions = []) {
       this.variables = variables;
       this.pinnedVariables = [];
+      //Rename this to Functors
       this.functions = functions;
     }
 
@@ -68,6 +70,7 @@
     }
 
     clone() {
+      //TODO: Make sure functions are loaded into new scope
       let newScope = new Scope();
       //Variables themselves are copied by reference
       newScope.variables = this.variables.slice();

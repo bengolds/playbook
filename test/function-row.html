@@ -51,8 +51,9 @@
         });
 
         test('initialization', function() {
-          let f = new FunctionDefinition('f', 'x^2');
-          el.functionDefinition = f;
+          let f = new Functor('f');
+          f.definition = 'x^2';
+          el.functor = f;
 
           expect(el.$.signature.name).to.equal('f');
           expect(el.$.input.latex).to.equal('x^2');
@@ -63,17 +64,17 @@
           let input = el.$.input;
 
           el.$.input.latex = 'a+b';
-          expect(el.functionDefinition.latex).to.equal('a+b');
-          expect(el.functionDefinition.parseableString).to.equal('(a+b)');
+          expect(el.functor.latex).to.equal('a+b');
+          expect(el.functor.definition).to.equal('(a+b)');
 
           el.$.input.$.quill.typedText('+c');
-          expect(el.functionDefinition.latex).to.equal('a+b+c');
-          expect(el.functionDefinition.parseableString).to.equal('((a+b)+c)');
+          expect(el.functor.latex).to.equal('a+b+c');
+          expect(el.functor.definition).to.equal('((a+b)+c)');
         });
 
         test('pass changes to function-signature', function() {
           let signature = el.$.signature;
-          el.set('functionDefinition.name', 'testme');
+          el.set('functor.name', 'testme');
 
           expect(signature.name).to.equal('testme');
           expect(signature.$.nameQuill.latex).to.equal('testme');
@@ -83,21 +84,21 @@
           let signature = el.$.signature;
 
           signature.name = 'g';
-          expect(el.functionDefinition.name).to.equal('g');
+          expect(el.functor.name).to.equal('g');
 
           signature.editing = true;
           signature.$.nameQuill.focus();
           signature.$.nameQuill.typedText('h\n');
-          expect(el.functionDefinition.name).to.equal('gh');
+          expect(el.functor.name).to.equal('gh');
         });
 
         test('function compiler recompiles appropriately', function() {
-          el.functionDefinition = new FunctionDefinition('f', 'x^2');
+          el.functor = new Functor('f', 'x^2');
 
           expect(el.compiled).to.be.ok;
 
           let oldFunc = el.compiled;
-          el.set('functionDefinition.parseableString','3xy^3');
+          el.set('functor.definition','3xy^3');
           expect(el.compiled).to.be.ok;
           expect(el.compiled).to.not.equal(oldFunc);
         });
@@ -110,10 +111,10 @@
         });
 
         test('close button', function(done) {
-          el.functionDefinition = new FunctionDefinition('f');
+          el.functor = new Functor('f');
 
           el.addEventListener('remove-row', function(e) {
-            expect(e.detail.name) === el.functionDefinition.name;
+            expect(e.detail.name) === el.functor.name;
             done();
           });
 
@@ -130,13 +131,15 @@
 
           el.scope = new Scope();
 
-          let f = new FunctionDefinition('f', 'a*b*c', 'a*b*c');
-          let g = new FunctionDefinition('g', 'x*y*z', 'x*y*z');
+          let f = new Functor('f');
+          f.definition = 'a*b*c';
+          let g = new Functor('g');
+          g.definition = 'x*y*z';
 
-          el.functionDefinition = f;
+          el.functor = f;
           expectVariablesInScope(['a','b','c']);
 
-          el.functionDefinition = g;
+          el.functor = g;
           expectVariablesInScope(['a','b','c','x','y','z']);
 
         });

@@ -55,20 +55,20 @@
       </div>
 
       <function-compiler id='compiler'
-        definition='{{functionDefinition.parseableString}}'
+        definition='{{functor.definition}}'
         scope='{{scope}}'
         compiled='{{compiled}}'
         ></function-compiler>
 
       <function-signature id='signature'
-        name='{{functionDefinition.name}}'
+        name='{{functor.name}}'
         parameters='{{compiled.variables}}'
         scope='{{scope}}'
         ></function-signature>
       <div id= 'inputContainer'>
         <function-input id='input'
-          definition='{{functionDefinition.parseableString}}'
-          latex='{{functionDefinition.latex}}'
+          definition='{{functor.definition}}'
+          latex='{{functor.latex}}'
           on-semantic-text-ok='semanticTextOk'
           on-semantic-text-error='semanticTextError'
           ></function-input>
@@ -89,10 +89,10 @@
     Polymer({
       is: 'function-row',
       properties: {
-        functionDefinition: {
+        functor: {
           type: Object,
           notify: true,
-          value: function() {return new FunctionDefinition();},
+          value: function() {return new Functor();},
         },
         primaryColor: String,
         syncedParameters: {
@@ -131,7 +131,7 @@
       },
 
       removeRow: function() {
-        this.fire('remove-row', this.functionDefinition.name);
+        this.fire('remove-row', this.functor.name);
       },
 
       semanticTextOk: function() {

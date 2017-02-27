@@ -51,7 +51,7 @@
 
     <template is='dom-repeat' id='functionRepeater' items='{{scope.functions}}'>
       <function-row 
-        function-definition='{{item}}'
+        functor='{{item}}'
         primary-color='{{item.primaryColor}}'
         scope='{{scope}}'
         synced-parameters='{{syncedParameters}}'
@@ -108,7 +108,7 @@
       },
 
       addRow: function () {
-        let nextFunc = new FunctionDefinition(this.getNextName());
+        let nextFunc = new Functor(this.getNextName());
         nextFunc.primaryColor = this.getNextColor();
         this.push('scope.functions', nextFunc);
       },
