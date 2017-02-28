@@ -56,7 +56,8 @@ class Functor {
       let names = [];
       let parsedFunction = math.parse(definition);
       parsedFunction.traverse( (node) => {
-        if (node.type == 'SymbolNode' && !names.includes(node.name)) {
+        if (node.type == 'SymbolNode' && !names.includes(node.name)
+          && !this.scope.isFunction(node.name)) {
           names.push(node.name);
         }
       });
@@ -81,8 +82,8 @@ class Functor {
     if (!definition || definition == '') {
       definition = '0';
     }
-    definition = Algebrite.simplify(definition).toString();
-    definition = Functor._insertMultipliers(definition, this.scope);
+    // definition = Algebrite.simplify(definition).toString();
+    // definition = Functor._insertMultipliers(definition, this.scope);
     // }
 
     let variableNames = getVariableNames(definition);
