@@ -39,7 +39,10 @@
     Polymer({
       is: 'function-signature',
       properties: {
-        functor: Object,
+        functor: {
+          type: Object,
+          value: function() {return new Functor();},
+        },
         scope: {
           type: Object,
           value: function() {return new Scope();},
@@ -54,6 +57,7 @@
 
       observers: [
         'updateSignature(functor.definition)',
+        'updateSignature(functor.variables.*)',
         'updateSignature(scope.pinnedVariables)',
         'updateSignature(scope.pinnedVariables.splices)',
       ],
@@ -105,7 +109,7 @@
         }
         else {
           if (this.$.nameQuill.latex == '') {
-            this.functor.name = this.oldName;
+            this.set('functor.name', this.oldName);
           }
         }
       },

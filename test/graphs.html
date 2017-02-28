@@ -182,7 +182,7 @@
         });
 
         test('unboundRanges 2 real numbers', function() {
-          graph.compiled = helper.makeFakeCompiled('a*b', ['a', 'b'], scope);
+          graph.compiled = new Functor('f', scope, 'a*b');
           graph.setRange('xRange', [-5, 5]);
           graph.setRange('yRange', [-5, 5]);
 
@@ -199,7 +199,7 @@
         });
 
         test('unboundRanges 1 complex number', function() {
-          graph.compiled = helper.makeFakeCompiled('c', ['c'], scope);
+          graph.compiled = new Functor('f', scope, 'c');
           graph.setRange('xRange', [-5, 5]);
           graph.setRange('yRange', [-3, 3]);
 
@@ -364,7 +364,7 @@
         test('properly filter recalculate events', function() {
           let autoBoundsCalculator = new AutoBoundsCalculator(graph, {});
           let scope = helper.makeScope(['a','b','c','d'], null, ['c','d']);
-          graph.compiled = helper.makeFakeCompiled('a+c', ['a','c'], scope);
+          graph.compiled = new Functor('f', scope, 'a+c');
 
           let expectFilter = function(variables, shouldSucceed) {
             let success = autoBoundsCalculator._shouldRecalculate(variables);

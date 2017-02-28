@@ -66,7 +66,7 @@ class BarGraph extends Graph {
   }
 
   isNatural() {
-    return this.compiled.getDomain()[0] == SETS.NATURAL;
+    return this.compiled.domain[0] == SETS.NATURAL;
   }
 
   //Setup & Teardown

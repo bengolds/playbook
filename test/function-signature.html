@@ -17,7 +17,7 @@
   <body>
     <test-fixture id="basic">
       <template>
-        <function-signature name='f'></function-signature>
+        <function-signature></function-signature>
       </template>
     </test-fixture>
 
@@ -28,17 +28,11 @@
 
         setup(function() {
           el = fixture('basic');
-          el.parameters = [
-            new Variable('v'),
-            new Variable('w'),
-            new Variable('x'),
-            new Variable('y'),
-            new Variable('z'),
-          ];
+          el.functor = new Functor('f', new Scope(), 'v*w*x*y*z');
         });
 
         let nameEquals = function(name) {
-          expect(el.name).to.equal(name);
+          expect(el.functor.name).to.equal(name);
           expect(el.$.nameQuill.latex).to.equal(name);
         };
 
@@ -53,7 +47,7 @@
         });
 
         test('editing name from outside', function() {
-          el.name = 'g';
+          el.set('functor.name', 'g');
           nameEquals('g');
         });
 
@@ -74,12 +68,12 @@
         });
 
         test('blurring after deleting name', function() {
-          el.name = 'lazarus';
+          el.set('functor.name', 'lazarus');
 
           el.editing = true;
           el.$.nameQuill.latex = '';
           expect(el.$.nameQuill.latex).to.equal('');
-          expect(el.name).to.equal('');
+          expect(el.functor.name).to.equal('');
           testEditing(true);
 
           el.editing = false;
@@ -96,20 +90,20 @@
         });
 
         test('changing parameters', function() {
-          el.parameters = [
+          el.set('functor.variables', [
             new Variable('b'),
             new Variable('a'),
             new Variable('c')
-          ];
+          ]);
           parametersShouldRead('a,b,c');
 
-          el.push('parameters', new Variable('g'));
+          el.push('functor.variables', new Variable('g'));
           parametersShouldRead('a,b,c,g');
 
-          el.push('parameters', new Variable('d'));
+          el.push('functor.variables', new Variable('d'));
           parametersShouldRead('a,b,c,d,g');
 
-          el.splice('parameters', 2, 1);
+          el.splice('functor.variables', 2, 1);
           parametersShouldRead('a,b,d,g');
         });
 
@@ -133,7 +127,7 @@
           el.push('scope.pinnedVariables', {variable: b});
           parametersShouldRead('v,y');
 
-          el.push('parameters', new Variable('a'));
+          el.push('functor.variables', new Variable('a'));
           parametersShouldRead('v,y');
         });
 

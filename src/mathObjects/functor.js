@@ -88,9 +88,9 @@ class Functor {
     let variableNames = getVariableNames(definition);
     let functionSignature = this.name + '(' + variableNames.join(',') + ')';
     //TODO: I don't love this _loadedFunctions bit
+    //TODO: THIS BECOMES FULL SUBSTITUTION WITH DEPENDENCY GRAPHS
     math.eval(functionSignature + '=' + definition, this.scope._loadedFunctions);
 
-    //TODO: then this part just becomes loading math.compile('f(x)')
     this._compiled = math.compile(functionSignature);
     this.variables = variablesFromNames(variableNames);
   }
