@@ -95,7 +95,6 @@ var Letter = P(Variable, function(_, super_) {
   };
   _.italicize = function(bool) {
     this.isItalic = bool;
-    this.isPartOfOperator = !bool;
     this.jQ.toggleClass('mq-operator-name', !bool);
     return this;
   };
@@ -103,11 +102,13 @@ var Letter = P(Variable, function(_, super_) {
     // don't auto-un-italicize if the sibling to my right changed (dir === R or
     // undefined) and it's now a Letter, it will un-italicize everyone
     if (dir !== L && this[R] instanceof Letter) return;
-    this.autoUnItalicize(opts);
+    this.autoFlagOperators(opts);
   };
-  _.autoUnItalicize = function(opts) {
+  _.autoFlagOperators = function(opts) {
     var autoOps = opts.autoOperatorNames;
-    if (autoOps._maxLength === 0) return;
+    var externalOps = opts.externalOperators;
+    var maxLength = max(autoOps._maxLength, externalOps._maxLength);
+    if (maxLength === 0) return;
     // want longest possible operator names, so join together entire contiguous
     // sequence of letters
     var str = this.letter;
@@ -118,24 +119,28 @@ var Letter = P(Variable, function(_, super_) {
     // which, if any, are part of an operator name
     Fragment(l[R] || this.parent.ends[L], r[L] || this.parent.ends[R]).each(function(el) {
       el.italicize(true).jQ.removeClass('mq-first mq-last mq-followed-by-supsub');
+      el.isPartOfOperator = false;
+      el.endOfOperator = false;
       el.ctrlSeq = el.letter;
     });
 
     // check for operator names: at each position from left to right, check
     // substrings from longest to shortest
     outer: for (var i = 0, first = l[R] || this.parent.ends[L]; i < str.length; i += 1, first = first[R]) {
-      for (var len = min(autoOps._maxLength, str.length - i); len > 0; len -= 1) {
+      for (var len = min(maxLength, str.length - i); len > 0; len -= 1) {
         var word = str.slice(i, i + len);
-        if (autoOps.hasOwnProperty(word)) {
+        if (autoOps.hasOwnProperty(word) || externalOps.hasOwnProperty(word)) {
+          let isExternalOp = externalOps.hasOwnProperty(word);
           for (var j = 0, letter = first; j < len; j += 1, letter = letter[R]) {
-            letter.italicize(false);
+            letter.italicize(isExternalOp);
+            letter.isPartOfOperator = true;
             var last = letter;
           }
           last.endOfOperator = true;
 
           var isBuiltIn = BuiltInOpNames.hasOwnProperty(word);
-          first.ctrlSeq = (isBuiltIn ? '\\' : '\\operatorname{') + first.ctrlSeq;
-          last.ctrlSeq += (isBuiltIn ? ' ' : '}');
+          first.ctrlSeq = (isBuiltIn || isExternalOp ? '\\' : '\\operatorname{') + first.ctrlSeq;
+          last.ctrlSeq += (isBuiltIn || isExternalOp ? ' ' : '}');
           if (TwoWordOpNames.hasOwnProperty(word)) last[L][L][L].jQ.addClass('mq-last');
           if (!shouldOmitPadding(first[L])) first.jQ.addClass('mq-first');
           if (!shouldOmitPadding(last[R])) {
@@ -257,6 +262,22 @@ LatexCmds.f = P(Letter, function(_, super_) {
     return super_.italicize.apply(this, arguments);
   };
 });
+
+// External operators -- for user-defined functions.
+Options.p.externalOperators = { _maxLength: 0 }; 
+optionProcessors.externalOperators = function(cmds) {
+  if (!/^[a-z]+(?: [a-z]+)*$/i.test(cmds)) {
+    throw '"'+cmds+'" not a space-delimited list of only letters';
+  }
+  var list = cmds.split(' '), dict = {}, maxLength = 0;
+  for (var i = 0; i < list.length; i += 1) {
+    var cmd = list[i];
+    dict[cmd] = 1;
+    maxLength = max(maxLength, cmd.length);
+  }
+  dict._maxLength = maxLength;
+  return dict;
+};
 
 // VanillaSymbol's
 LatexCmds[' '] = LatexCmds.space = bind(VanillaSymbol, '\\ ', '&nbsp;');

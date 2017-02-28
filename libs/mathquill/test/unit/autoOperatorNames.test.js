@@ -14,10 +14,10 @@ suite('autoOperatorNames', function() {
   test('simple LaTeX parsing, typing', function() {
     function assertAutoOperatorNamesWork(str, latex) {
       var count = 0;
-      var _autoUnItalicize = Letter.prototype.autoUnItalicize;
-      Letter.prototype.autoUnItalicize = function() {
+      var _autoFlagOperators = Letter.prototype.autoFlagOperators;
+      Letter.prototype.autoFlagOperators = function() {
         count += 1;
-        return _autoUnItalicize.apply(this, arguments);
+        return _autoFlagOperators.apply(this, arguments);
       };
 
       mq.latex(str);
@@ -46,10 +46,10 @@ suite('autoOperatorNames', function() {
 
   test('deleting', function() {
     var count = 0;
-    var _autoUnItalicize = Letter.prototype.autoUnItalicize;
-    Letter.prototype.autoUnItalicize = function() {
+    var _autoFlagOperators = Letter.prototype.autoFlagOperators;
+    Letter.prototype.autoFlagOperators = function() {
       count += 1;
-      return _autoUnItalicize.apply(this, arguments);
+      return _autoFlagOperators.apply(this, arguments);
     };
 
     var str = 'cscscscscscsc';
