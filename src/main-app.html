@@ -219,9 +219,9 @@
         // FILTER THIS TO MAKE SURE WE'RE ONLY DOING THIS OCCASIONALLY
         if (MathQuill && this.scope && this.scope.functions.length > 0) {
           var MQ = MathQuill.getInterface(1);
-          // MQ.config({
-          //   externalOperators: this.scope.allFunctionNames.join(' '),
-          // });
+          MQ.config({
+            externalOperators: this.scope.allFunctionNames.join(' '),
+          });
         console.log(this.scope.allFunctionNames.join(' '));
         }
       },

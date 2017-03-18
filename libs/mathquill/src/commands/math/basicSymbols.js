@@ -140,8 +140,10 @@ var Letter = P(Variable, function(_, super_) {
           last.endOfOperator = true;
 
           var isBuiltIn = BuiltInOpNames.hasOwnProperty(word);
-          first.ctrlSeq = (isBuiltIn || isExternalOp ? '\\' : '\\operatorname{') + first.ctrlSeq;
-          last.ctrlSeq += (isBuiltIn || isExternalOp ? ' ' : '}');
+          if (!isExternalOp) {
+            first.ctrlSeq = (isBuiltIn ? '\\' : '\\operatorname{') + first.ctrlSeq;
+            last.ctrlSeq += (isBuiltIn ? ' ' : '}');
+          }
           if (TwoWordOpNames.hasOwnProperty(word)) last[L][L][L].jQ.addClass('mq-last');
           if (!shouldOmitPadding(first[L])) first.jQ.addClass('mq-first');
           if (!shouldOmitPadding(last[R])) {
@@ -267,7 +269,7 @@ LatexCmds.f = P(Letter, function(_, super_) {
 // External operators -- for user-defined functions.
 Options.p.externalOperators = { _maxLength: 0 }; 
 optionProcessors.externalOperators = function(cmds) {
-  if (!/^[a-z]+(?: [a-z]+)*$/i.test(cmds)) {
+  if (!/^[A-ZA-zΑ-Ωα-ω]+(?: [A-ZA-zΑ-Ωα-ω]+)*$/i.test(cmds)) {
     throw '"'+cmds+'" not a space-delimited list of only letters';
   }
   var list = cmds.split(' '), dict = {}, maxLength = 0;
