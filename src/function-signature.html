@@ -26,7 +26,7 @@
     on-element-mouseover='onNameMouseOver' 
     on-mouseleave='onNameMouseLeave'
     on-enter='stopEditingName'
-    latex='{{functor.name}}'
+    on-edit='onNameQuillEdited'
     editable='[[editing]]'>
   </mathquill-element>
   <mathquill-element id="parametersQuill"
@@ -60,6 +60,7 @@
         'updateSignature(functor.variables.*)',
         'updateSignature(scope.pinnedVariables)',
         'updateSignature(scope.pinnedVariables.splices)',
+        'onNameChanged(functor.name)'
       ],
 
       listeners: {
@@ -69,6 +70,8 @@
       attached: function () {
         this.initialized = true;
         this.updateSignature();
+        //TODO REPLACE WITH BETTER TWO WAY BINDING
+        this.$.nameQuill.latex = 'f';
       },
       
       updateSignature: function () {
@@ -108,10 +111,29 @@
           this.listen(this.$.nameQuill, 'blur', 'stopEditingName');
         }
         else {
-          if (this.$.nameQuill.latex == '') {
+          if (this.$.nameQuill.text() == '') {
             this.set('functor.name', this.oldName);
+            this.onNameChanged(this.oldName);
           }
         }
+      },
+
+      onNameQuillEdited: function(_) {
+        if (this.alreadyChangingName)
+          return;
+
+        this.alreadyChangingName = true;
+        this.set('functor.name', this.$.nameQuill.text());
+        this.alreadyChangingName = false;
+      },
+
+      onNameChanged: function(newName) {
+        if (this.alreadyChangingName)
+          return;
+
+        this.alreadyChangingName = true;
+        this.$.nameQuill.latex = newName;
+        this.alreadyChangingName = false;
       },
 
       onParameterMouseOver: function (e, details) {

@@ -25,23 +25,24 @@ var Variable = P(Symbol, function(_, super_) {
     super_.init.call(this, ch, '<var>'+(html || ch)+'</var>');
   };
   _.text = function() {
-    var text = this.ctrlSeq;
-    if (this.isPartOfOperator) {
-      if (text[0] == '\\') {
-        text = text.slice(1, text.length);
-      }
-      else if (text[text.length-1] == ' ') {
-        text = text.slice (0, text.length-1);
-      }
-    } else {
-      if (this[L] && !(this[L] instanceof Variable)
-          && !(this[L] instanceof BinaryOperator)
-          && this[L].ctrlSeq !== '\\ ')
-        text = '*' + text;
-      if (this[R] && !(this[R] instanceof BinaryOperator)
-          && !(this[R] instanceof SupSub))
-        text += '*';
-    }
+    // var text = this.ctrlSeq;
+    var text = this.jQ[0].textContent;
+    // if (this.isPartOfOperator) {
+    //   if (text[0] == '\\') {
+    //     text = text.slice(1, text.length);
+    //   }
+    //   else if (text[text.length-1] == ' ') {
+    //     text = text.slice (0, text.length-1);
+    //   }
+    // } else {
+    //   // if (this[L] && !(this[L] instanceof Variable)
+    //   //     && !(this[L] instanceof BinaryOperator)
+    //   //     && this[L].ctrlSeq !== '\\ ')
+    //   //   text = '*' + text;
+    //   // if (this[R] && !(this[R] instanceof BinaryOperator)
+    //   //     && !(this[R] instanceof SupSub))
+    //   //   text += '*';
+    // }
     return text;
   };
 });
@@ -294,6 +295,9 @@ LatexCmds.$ = bind(VanillaSymbol, '\\$', '$');
 var NonSymbolaSymbol = P(Symbol, function(_, super_) {
   _.init = function(ch, html) {
     super_.init.call(this, ch, '<var class="mq-nonSymbola">'+(html || ch)+'</var>');
+  };
+  _.text = function() {
+    return this.jQ[0].textContent;
   };
 });
 

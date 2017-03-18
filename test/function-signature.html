@@ -33,7 +33,7 @@
 
         let nameEquals = function(name) {
           expect(el.functor.name).to.equal(name);
-          expect(el.$.nameQuill.latex).to.equal(name);
+          expect(el.$.nameQuill.text()).to.equal(name);
         };
 
         let testEditing = function(shouldBeEditing) {
@@ -72,8 +72,7 @@
 
           el.editing = true;
           el.$.nameQuill.latex = '';
-          expect(el.$.nameQuill.latex).to.equal('');
-          expect(el.functor.name).to.equal('');
+          expect(el.$.nameQuill.text()).to.equal('');
           testEditing(true);
 
           el.editing = false;

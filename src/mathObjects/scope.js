@@ -13,6 +13,12 @@
       }).sort(Variable.compare);
     }
 
+    get allFunctionNames() {
+      return this.functions.map((functor) => {
+        return functor.name;
+      });
+    }
+
     getForMathJS() {
       let ret = Object.assign({}, this._loadedFunctions);
       for (let pinned of this.pinnedVariables) {

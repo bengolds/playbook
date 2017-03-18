@@ -63,6 +63,14 @@
           expect(scope.clone()).to.deep.equal(scope);
         });
 
+        test('allFunctionNames', function() {
+          let scope = new Scope();
+          scope.functions.push(new Functor('f', scope));
+          scope.functions.push(new Functor('g', scope));
+          scope.functions.push(new Functor('voltage', scope));
+          expect(scope.allFunctionNames).to.deep.equal(['f','g','voltage']);
+        });
+
       });
 
       suite ('functor tests', function() {
