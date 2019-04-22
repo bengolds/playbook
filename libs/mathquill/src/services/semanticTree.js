@@ -559,6 +559,7 @@ Variable.open(function(_) {
 });
 
 
+//Merge with variable code for \lambda and \pi
 NonSymbolaSymbol.open(function (_) {
   _.toSemanticNodes = function (remainingNodes) {
     var semanticNode = VariableNode(this.jQ[0].textContent);

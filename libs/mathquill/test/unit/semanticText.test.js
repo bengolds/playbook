@@ -7,8 +7,13 @@ suite('Semantic Tree', function() {
     $(mq.el()).remove();
   });
 
-  function assertSemanticText(inputLatex, expectedText) {
-    mq.latex(inputLatex); 
+  function assertSemanticText(inputLatex, expectedText, typed = true) {
+    if (typed) {
+      mq.latex('');
+      mq.typedText(inputLatex); 
+    } else {
+      mq.latex(inputLatex);
+    }
     try {
       var text = mq.semanticText();
     } 
@@ -18,27 +23,42 @@ suite('Semantic Tree', function() {
     assert.equal(text, expectedText);
   }
 
+  test('external operators', function() {
+    var testFuncs = ['f','g', 'abc', 'voltage'];
+    let processed = optionProcessors.externalOperators(testFuncs.join(' '));
+    for (var name of testFuncs) {
+      assert.equal(processed[name], 1);
+    }
+    assert.equal(processed._maxLength, 7);
+
+    mq.config({ externalOperators: testFuncs.join(' ')});
+
+    assertSemanticText('f(x)', 'f (x)');
+    assertSemanticText('abc(x)', 'abc(x)');
+    assertSemanticText('voltage(x)', 'voltage(x)');
+  });
+
   test('integration tests', function() {
     //Test basic sin(x)
-    assertSemanticText('\\sin\\left(x\\right)', 'sin(x)');
+    assertSemanticText('sin(x)', 'sin(x)');
     //Test sin cos xy
-    assertSemanticText('\\sin\\cos xy', 'sin(cos((x*y)))');
+    assertSemanticText('sincos xy', 'sin(cos((x*y)))');
     //Test some fractions and spaces
-    assertSemanticText('4\\ \\frac{x}{y}', '(4*(x/y))');
+    assertSemanticText('4 x/y', '(4*(x/y))');
     //Test order of operations and associativity
-    assertSemanticText('a+b-cde^{fg}-h-j', '((((a+b)-((c*d)*(e^(f*g))))-h)-j)');
+    assertSemanticText('a+b-cde^{fg}-h-j', '((((a+b)-((c*d)*(e^(f*g))))-h)-j)', false);
     //Test multipliers being inserted between variables and functions
-    assertSemanticText('a\\sin x', '(a*sin(x))');
+    assertSemanticText('asin x', '(a*sin(x))');
     //Test sin(a)b(c)
-    assertSemanticText('\\sin\\left(a\\right)b\\left(c\\right)', '((sin(a)*b)*(c))');
+    assertSemanticText('sin(a)b(c)', '((sin(a)*b)*(c))');
     //Test exponentiation associativity
-    assertSemanticText('a^{b^{c^d}}', '(a^(b^(c^d)))');
+    assertSemanticText('a^{b^{c^d}}', '(a^(b^(c^d)))', false);
     //Test sin^2(x)
-    assertSemanticText('\\sin^2\\left(x\\right)', '(sin(x)^2)');
+    assertSemanticText('\\sin^2\\left(x\\right)', '(sin(x)^2)', false);
     //Test first-order derivatives
-    assertSemanticText('\\frac{d}{dx}xy^z+w', '(d((x*(y^z)),x,1)+w)');
+    assertSemanticText('\\frac{d}{dx}xy^z+w', '(d((x*(y^z)),x,1)+w)', false);
     //Test second-order derivatives
-    assertSemanticText('\\frac{d^5}{dx^5}x', 'd(x,x,5)');
+    assertSemanticText('\\frac{d^5}{dx^5}x', 'd(x,x,5)', false);
     //Test left associativity
     assertSemanticText('a-b+c', '((a-b)+c)');
   });
@@ -55,12 +75,12 @@ suite('Semantic Tree', function() {
       var lowerCaseCmd = '\\' + letterName;
       var upperCaseCmd = '\\' + letterName.charAt(0).toUpperCase() + letterName.slice(1);
       if (!skipLowerCase.includes(letterName)) {
-        assertSemanticText(lowerCaseCmd, lowerCaseSymbols[i]);
-        assertSemanticText(lowerCaseSymbols[i], lowerCaseSymbols[i]);
+        assertSemanticText(lowerCaseCmd, lowerCaseSymbols[i], false);
+        assertSemanticText(lowerCaseSymbols[i], lowerCaseSymbols[i], false);
       }
       if (!skipUpperCase.includes(letterName)) {
-        assertSemanticText(upperCaseCmd, upperCaseSymbols[i]);
-        assertSemanticText(upperCaseSymbols[i], upperCaseSymbols[i]);
+        assertSemanticText(upperCaseCmd, upperCaseSymbols[i], false);
+        assertSemanticText(upperCaseSymbols[i], upperCaseSymbols[i], false);
       }
     }
   });

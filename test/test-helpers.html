@@ -47,20 +47,21 @@ helper = {
     return vars;
   },
 
-  makeFakeCompiled: function (funcString, varNames, scope) {
-    let compiled = math.compile(funcString);
-    let allVars = varNames.map( (name) => {
-      return scope.getVariable(name);
-    });
-    return new CompiledFunction(compiled, funcString, allVars, scope);
-  },
+  //TODO: REPLACE ALL INSTANCES OF THIS WITH new Functor(name, scope, defn)
+  // makeFakeCompiled: function (funcString, varNames, scope) {
+  //   let compiled = math.compile(funcString);
+  //   let allVars = varNames.map( (name) => {
+  //     return scope.getVariable(name);
+  //   });
+  //   return new CompiledFunction(compiled, funcString, allVars, scope);
+  // },
 
-  makeFunctionWithSignature: function (domain, range) {
+  makeFunctionWithSignature: function (domain, range, name='f') {
     let varNames = ['a','b','c','d','e','f','g'];
     let usedNames = varNames.slice(0, domain.length);
     let scope = helper.makeScope(varNames, domain);
     let funcString = usedNames.join('*');
-    return helper.makeFakeCompiled(funcString, usedNames, scope);
+    return new Functor(name, scope, funcString);
   },
 
   makeScope: function (varNames, varSets = null, pinnedNames = null, pinnedBounds = null, pinnedValues = null) {

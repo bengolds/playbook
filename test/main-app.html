@@ -156,9 +156,9 @@
 
         test('rows match scope', function() {
           el.set('scope.functions', [
-            new FunctionDefinition(),
-            new FunctionDefinition(),
-            new FunctionDefinition(),
+            new Functor(),
+            new Functor(),
+            new Functor(),
           ]);
 
           expect(numberOfRows()).to.equal(3);
@@ -166,7 +166,7 @@
           el.splice('scope.functions', 1, 1)  ;
           expect(numberOfRows()).to.equal(2);
 
-          el.push('scope.functions', new FunctionDefinition());
+          el.push('scope.functions', new Functor());
           expect(numberOfRows()).to.equal(3);
         });
 
@@ -181,22 +181,22 @@
 
           let rows = getRows();
           expect(rows.length).to.equal(2);
-          expect(rows[0].functionDefinition.name).to.equal('a');
-          expect(rows[1].functionDefinition.name).to.equal('b');
+          expect(rows[0].functor.name).to.equal('a');
+          expect(rows[1].functor.name).to.equal('b');
         });
 
         test('removeRow works', function() {
           el.set('scope.functions', [
-            new FunctionDefinition('a'),
-            new FunctionDefinition('b'),
-            new FunctionDefinition('c'),
+            new Functor('a'),
+            new Functor('b'),
+            new Functor('c'),
           ]);
 
           el.removeRow({detail: 'b'});
           let rows = getRows();
           expect(rows.length).to.equal(2);
-          expect(rows[0].functionDefinition.name).to.equal('a');
-          expect(rows[1].functionDefinition.name).to.equal('c');
+          expect(rows[0].functor.name).to.equal('a');
+          expect(rows[1].functor.name).to.equal('c');
 
           let shouldFail = el.removeRow.bind(el, {detail: 'f'});
           expect(shouldFail).to.throw('Can\'t delete f because it doesn\'t exist');

@@ -58,7 +58,7 @@
 
           expectBoundingBoxesEqual(getOffsetRect(el.$.outline), boundingBox);
 
-          expect(el.compiledFunction.freeVariables).to.deep.equal([new Variable('x')]);
+          expect(el.functor.freeVariables).to.deep.equal([new Variable('x')]);
 
           expect(el.$.plot.graph.constructor).to.equal(LineGraph);
         });

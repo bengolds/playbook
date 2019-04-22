@@ -51,7 +51,7 @@
 
     <template is='dom-repeat' id='functionRepeater' items='{{scope.functions}}'>
       <function-row 
-        function-definition='{{item}}'
+        functor='{{item}}'
         primary-color='{{item.primaryColor}}'
         scope='{{scope}}'
         synced-parameters='{{syncedParameters}}'
@@ -99,7 +99,8 @@
       },
 
       observers: [
-        'pinnedVarsChanged(scope.pinnedVariables.*)'
+        'pinnedVarsChanged(scope.pinnedVariables.*)',
+        'functionsChanged(scope.functions.*)'
       ],
 
       attached: function () {
@@ -108,7 +109,7 @@
       },
 
       addRow: function () {
-        let nextFunc = new FunctionDefinition(this.getNextName());
+        let nextFunc = new Functor(this.getNextName(), this.scope);
         nextFunc.primaryColor = this.getNextColor();
         this.push('scope.functions', nextFunc);
       },
@@ -205,12 +206,23 @@
         }
       },
 
-      pinnedVarsChanged: function () {
+      pinnedVarsChanged: function (changeRecord) {
         if (this.scope.pinnedVariables.length > 0) {
           this.$.noPinnedVarsMsg.classList.add('hidden');
         }
         else {
           this.$.noPinnedVarsMsg.classList.remove('hidden');
+        }
+      },
+
+      functionsChanged: function(changeRecord) {
+        // FILTER THIS TO MAKE SURE WE'RE ONLY DOING THIS OCCASIONALLY
+        if (MathQuill && this.scope && this.scope.functions.length > 0) {
+          var MQ = MathQuill.getInterface(1);
+          MQ.config({
+            externalOperators: this.scope.allFunctionNames.join(' '),
+          });
+        console.log(this.scope.allFunctionNames.join(' '));
         }
       },
 

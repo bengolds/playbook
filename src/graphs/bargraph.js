@@ -6,13 +6,13 @@ class BarGraph extends Graph {
 
     this.rangeBinder = new RangeBinder(this);
     this.scaleLabel = new ScaleLabel(this, {
-      visibleCallback: () => {return this.mouseOver;},
+      visibleCallback: () => {return this.isMouseOver;},
       rangeBinder: this.rangeBinder
     });
 
     this.barProbeX = 0;
     this.probe = new Probe(this, {
-      visibilityCallback: () => {return this.mouseOver;}, 
+      visibleCallback: () => {return this.isMouseOver;}, 
       pointLabelCallback: this.getProbeLabel.bind(this),
       styles: {
         topLine: {opacity: 0},
@@ -25,6 +25,21 @@ class BarGraph extends Graph {
     });
 
     this.autoBoundsCalculator = new AutoBoundsCalculator(this, {});
+
+    this.autoButton = new GraphButton(this, {
+      css: `transform: translate(-100%, -50%);
+            left: -4px;
+            top: 50%; `,
+      toggles: true,
+      text: 'auto',
+      onTap: () => {
+        if (this.autoButton.active) {
+          AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
+        }
+      },
+      visibleCallback: () => {return this.isMouseOver;}
+    });
+    this.autoButton.active = true;
   }
 
   static get supportedSignatures() {
@@ -44,14 +59,14 @@ class BarGraph extends Graph {
   static get syncedParameterNames() {
     return [
       'xRange',
-      'mouseOver',
+      'isMouseOver',
       'barProbeX',
       'barProbeVisible'
     ];
   }
 
   isNatural() {
-    return this.compiled.getDomain()[0] == SETS.NATURAL;
+    return this.compiled.domain[0] == SETS.NATURAL;
   }
 
   //Setup & Teardown
@@ -109,6 +124,7 @@ class BarGraph extends Graph {
     this.scaleLabel.teardown();
     this.probe.teardown();
     this.rangeBinder.teardown();
+    this.autoButton.teardown();
   }
 
   get numBars() {
@@ -116,8 +132,8 @@ class BarGraph extends Graph {
   }
 
   showFunction(compiledFunction) {
-    if (!this.constructor.isSupported(compiledFunction.getSignature())) {
-      throw Error('The function signature ' + compiledFunction.getSignature() + 'is unsupported');
+    if (!this.constructor.isSupported(compiledFunction.signature)) {
+      throw Error('The function signature ' + compiledFunction.signature + 'is unsupported');
     }
 
     this.changeExpr(this.makeExpr(compiledFunction));
@@ -234,12 +250,12 @@ class BarGraph extends Graph {
   }
 
   onMouseEnter(e) {
-    this.mouseOver = true;
+    this.isMouseOver = true;
     this.barProbeVisible = true;
   }
 
   onMouseLeave(e) {
-    this.mouseOver = false;
+    this.isMouseOver = false;
     this.barProbeVisible = false;
   }
 
@@ -249,14 +265,20 @@ class BarGraph extends Graph {
   }
 
   onPan(dx, dy) {
-    this.translateRange(dx);
+    if (this.autoButton.active) {
+      this.translateRange(dx);
+    } else {
+      this.translateRange(dx, dy);
+    }
     if (this.isNatural()) {
       this.clampBounds(false);
     }
   }
 
   onPanStop() {
-    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
+    if (this.autoButton.active) {
+      AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
+    }
   }
 
   onZoom(amount, mouseX, mouseY) {
@@ -268,7 +290,12 @@ class BarGraph extends Graph {
       this.clampBounds(true);
     }
 
-    AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name], 50);
+    if (this.autoButton.active) {
+      AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name], 50);
+    } else {
+      let tY = mouseY/this.height;
+      this.zoomRange('yRange', zoomAmount, tY);
+    }
   }
 
 }

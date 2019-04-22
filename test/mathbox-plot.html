@@ -63,7 +63,7 @@
         test('graph signature finding', function(){
           let expectGraph = function(domain, range, graphType) {
             let f = helper.makeFunctionWithSignature(domain, range);
-            el.compiledFunction = f;
+            el.functor = f;
             expect(el.graph.constructor).to.equal(graphType);
             expect(el.noGraphFound).to.be.false;
           };
@@ -79,14 +79,14 @@
           let f = helper.makeFunctionWithSignature([SETS.REAL], [SETS.REAL]);
           let g = helper.makeFunctionWithSignature([SETS.REAL], [SETS.INTEGER]);
 
-          el.compiledFunction = f;
+          el.functor = f;
           let oldGraph = el.graph;
-          el.compiledFunction = g;
+          el.functor = g;
           expect(el.graph).to.eql(oldGraph);
         });
 
         test('throw error if no graph found', function() {
-          el.compiledFunction = helper.makeFunctionWithSignature([SETS.REAL], [SETS.REAL]);
+          el.functor = helper.makeFunctionWithSignature([SETS.REAL], [SETS.REAL]);
 
           el.addEventListener('graph-ok', function() {
             assert.fail(Error('expected input to throw an error'));
@@ -97,7 +97,7 @@
           });
 
           let bad = helper.makeFunctionWithSignature([SETS.COMPLEX, SETS.COMPLEX, SETS.COMPLEX], [SETS.REAL]);
-          el.compiledFunction = bad;
+          el.functor = bad;
           expect(el.noGraphFound).to.be.true;
           expect(didThrowError).to.be.test-fixture;
         });
@@ -114,8 +114,8 @@
 
         test('changing pinned variables changes graph', function() {
           el.scope = helper.makeScope(['a','b']);
-          let f = helper.makeFakeCompiled('a*b', ['a','b'], el.scope);
-          el.compiledFunction = f;
+          let f = new Functor('f', el.scope, 'a*b');
+          el.functor = f;
 
           expect(el.graph.constructor).to.equal(ColorGraph);
 

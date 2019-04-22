@@ -2,7 +2,9 @@
     constructor(variables = [], functions = []) {
       this.variables = variables;
       this.pinnedVariables = [];
+      //TODO: Rename this to Functors
       this.functions = functions;
+      this._loadedFunctions = {};
     }
 
     get freeVariables() {
@@ -11,8 +13,14 @@
       }).sort(Variable.compare);
     }
 
+    get allFunctionNames() {
+      return this.functions.map((functor) => {
+        return functor.name;
+      });
+    }
+
     getForMathJS() {
-      let ret = {};
+      let ret = Object.assign({}, this._loadedFunctions);
       for (let pinned of this.pinnedVariables) {
         ret[pinned.variable.name] = pinned.value; 
       }
@@ -68,6 +76,7 @@
     }
 
     clone() {
+      //TODO: Make sure functions are loaded into new scope
       let newScope = new Scope();
       //Variables themselves are copied by reference
       newScope.variables = this.variables.slice();

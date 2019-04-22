@@ -1,6 +1,7 @@
 class CompiledFunction {
   constructor(compiled=null, definition=null, variables=[], globalScope=new Scope()) {
     this.compiled = compiled;
+    //ONLY NEEDED FOR RE/DEHYDRATE
     this.definition = definition;
     this.variables = variables;
     this.globalScope = globalScope;
@@ -58,10 +59,12 @@ class CompiledFunction {
       definition = Algebrite.simplify(definition).toString();
       definition = this._insertMultipliers(definition, scope);
     }
+    //TODO: just eval f(x) = parsed into the global scope somehow
     let parsed = math.parse(definition);
     let symbols = this._getVariables(parsed, scope);
 
-    return new this(parsed.compile(), definition, symbols, scope);
+    //TODO: then this part just becomes loading math.compile('f(x)')
+    return new CompiledFunction(parsed.compile(), definition, symbols, scope);
   }
 
   static _insertMultipliers(funcString, scope) {

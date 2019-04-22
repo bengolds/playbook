@@ -9,24 +9,24 @@ class AutoBoundsCalculator {
     //   console.error(e.detail.message + ' at ' + e.detail.filename + ':' + e.detail.lineno);
     // };
     this._recalcHandler = this.recalculateBoundsReceived.bind(this);
-    document.addEventListener('recalculate-bounds', this._recalcHandler);
+    // document.addEventListener('recalculate-bounds', this._recalcHandler);
   }
 
   teardown() {
     this.minMaxWorker.terminate();
     this.minMaxWorker.postMessage('stop');
     clearTimeout(this.timeout);
-    document.removeEventListener('recalculate-bounds', this._recalcHandler);
+    // document.removeEventListener('recalculate-bounds', this._recalcHandler);
   }
 
   getNewBounds(debounceTimeout = 0) {
-    clearTimeout(this.timeout);
-    this.timeout = setTimeout( () => {
-      this.minMaxWorker.postMessage({
-        dehydratedFunction: this.graph.compiled.dehydrate(),
-        unboundRanges: this.graph.unboundRanges()
-      });
-    }, debounceTimeout);
+    // clearTimeout(this.timeout);
+    // this.timeout = setTimeout( () => {
+    //   this.minMaxWorker.postMessage({
+    //     dehydratedFunction: this.graph.compiled.dehydrate(),
+    //     unboundRanges: this.graph.unboundRanges()
+    //   });
+    // }, debounceTimeout);
   }
 
   recalculateBoundsReceived(e) {

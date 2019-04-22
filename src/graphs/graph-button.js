@@ -3,21 +3,38 @@ class GraphButton {
     css = '',
     toggles = false,
     icon = 'star',
-    onTap = () => {}
+    text = '',
+    onTap = () => {},
+    visibleCallback = () => {return true;}
   }) {
     this.overlayDiv = graph.overlayDiv;
     this.onTap = onTap;
+    this.visibleCallback = visibleCallback;
 
     this.groupDiv = document.createElement('div');
     this.overlayDiv.appendChild(this.groupDiv);
     this.groupDiv.style.cssText = 'height: 100%';
 
-    this.button = document.createElement('paper-icon-button');
-    this.button.icon = icon;
+    //Create the button.
+    if (text === '') {
+      this.button = document.createElement('paper-icon-button');
+      this.button.icon = icon;
+    } else {
+      this.button = document.createElement('paper-button');
+      this.button.textContent = text;
+    }
     this.button.toggles = true;
     this.button.style.cssText = css;
     this.button.addEventListener('tap', this.tapped.bind(this));
     this.groupDiv.appendChild(this.button);
+
+    this.updateVisibility();
+  }
+
+  teardown() {
+    this.overlayDiv.removeChild(this.groupDiv);
+    window.cancelAnimationFrame(this.requestId);
+    this.requestId = null;
   }
 
   get active() {
@@ -31,7 +48,13 @@ class GraphButton {
     this.onTap();
   }
 
-  teardown() {
-    this.overlayDiv.removeChild(this.groupDiv);
+  updateVisibility() {
+    if (this.visibleCallback()) {
+      this.groupDiv.classList.remove('hidden');
+    } else {
+      this.groupDiv.classList.add('hidden');
+    }
+
+    this.requestId = window.requestAnimationFrame(this.updateVisibility.bind(this));
   }
 }

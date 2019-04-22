@@ -1,7 +1,7 @@
 class Probe {
   constructor(graph, {
     locationCallback = graph.getProbePoint.bind(graph),
-    visibilityCallback = function () {return true;},
+    visibleCallback = function () {return true;},
     pointLabelCallback = function () {return '';},
     styles = {},
     horizAlign = 'right',
@@ -11,7 +11,7 @@ class Probe {
     this.mathbox = graph.mathbox;
     this.overlayDiv = graph.overlayDiv;
     this.locationCallback = locationCallback;
-    this.visibilityCallback = visibilityCallback;
+    this.visibleCallback = visibleCallback;
     this.pointLabelCallback = pointLabelCallback;
     this.styles = styles;
     this.labelMargin = labelMargin;
@@ -132,8 +132,8 @@ class Probe {
       this.layoutLabels();
     }
 
-    if (this.visibilityCallback) {
-      if (this.visibilityCallback()) {
+    if (this.visibleCallback) {
+      if (this.visibleCallback()) {
         this.parentDiv.classList.remove('hidden');
         this.group.set('visible', true);
       } else {
