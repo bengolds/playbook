@@ -28,7 +28,7 @@
     </style>
     <arrow-box id='arrowBox' direction='up'>
       <mathbox-plot id='plot' animated
-        compiled-function='{{compiledFunction}}'
+        functor = '{{functor}}'
         scope='{{scope}}'
         primary-color='{{primaryColor}}'
         synced-parameters='{{syncedParameters}}'></mathbox-plot>
@@ -57,7 +57,7 @@
           observer: '_hiddenChanged',
           reflectToAttribute: true
         },
-        compiledFunction: {
+        functor: {
           type: Object,
           notify: true,
         }
@@ -72,7 +72,7 @@
         clearTimeout(this.hideTimeout);
         this.hideTimeout = null;
         if (funcString != this.oldString) {
-          this.compiledFunction = CompiledFunction.compile(funcString, this.scope);
+          this.functor = new Functor('hovergraph', this.scope, funcString);
         }
         this.oldString = funcString;
 
@@ -98,7 +98,7 @@
 
       hide: function() {
         this.hidden = true;
-        this.compiledFunction = null;
+        this.functor = null;
         this.oldString = '';
         clearTimeout(this.hideTimeout);
         this.hideTimeout = null;

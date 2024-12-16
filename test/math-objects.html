@@ -59,13 +59,21 @@
 
         test('clone', function() {
           let scope = helper.makeScope(['a','b','c'], [SETS.INTEGER, SETS.REAL, SETS.COMPLEX], ['b']);
-          scope.functions.push(new FunctionDefinition('g', 'a+a'));
+          scope.functions.push(new Functor('g', scope));
           expect(scope.clone()).to.deep.equal(scope);
+        });
+
+        test('allFunctionNames', function() {
+          let scope = new Scope();
+          scope.functions.push(new Functor('f', scope));
+          scope.functions.push(new Functor('g', scope));
+          scope.functions.push(new Functor('voltage', scope));
+          expect(scope.allFunctionNames).to.deep.equal(['f','g','voltage']);
         });
 
       });
 
-      suite ('compiledFunction tests', function() {
+      suite ('functor tests', function() {
         let epsilon = 1e-14;
         let numSamples = 100;
         let range = [-5, 5];
@@ -74,8 +82,8 @@
         setup(function(){
         });
 
-        let assertCompiledMatches = function(compiled, expected, paramNames) {
-          let wrapped = wrapEval(compiled, paramNames);
+        let assertFunctorMatches = function(functor, expected, paramNames) {
+          let wrapped = wrapEval(functor, paramNames);
 
           let evaluate = function(bound1, bound2, dim) {
             for (let i = 0; i < numSamples; i++) {
@@ -95,57 +103,57 @@
           evaluate(wrapped, expected, 0);
         };
 
-        let wrapEval = function(compiled, paramNames) {
+        let wrapEval = function(functor, paramNames) {
           return function(...args) {
             let scope = {};
             for (let i = 0; i < paramNames.length; i++) {
               let param = paramNames[i];
               scope[param] = args[i];
             }
-            return compiled.evalWithoutGlobalScope(scope);
+            return functor.eval(scope);
           };
         };
 
         test('compiling scopeless function', function(){
-          let compiled = CompiledFunction.compile('2*x', new Scope());
+          let functor = new Functor('f', new Scope(), '2*x');
           let expected = (x) => {return 2*x;};
-          assertCompiledMatches(compiled, expected, ['x']);
+          assertFunctorMatches(functor, expected, ['x']);
         });
 
         test('compiling multivar function', function() {
-          let compiled = CompiledFunction.compile('2*x*y', new Scope());
+          let functor = new Functor('f', new Scope(), '2*x*y');
           let expected = (x,y) => {return 2*x*y;};
-          assertCompiledMatches(compiled, expected, ['x', 'y']);
+          assertFunctorMatches(functor, expected, ['x', 'y']);
         });
 
         test('handle factoring correctly', function() {
-          let compiled = CompiledFunction.compile('x+x*x', new Scope());
+          let functor = new Functor('f', new Scope(), 'x+x*x');
           let expected = (x) => {return x+ x*x;};
-          assertCompiledMatches(compiled, expected, ['x']);
+          assertFunctorMatches(functor, expected, ['x']);
         });
 
-        test('symbols array is proper', function() {
-          let compiled = CompiledFunction.compile('2*a*b*c*d', new Scope());
+        test('variables array is proper', function() {
+          let functor = new Functor('f', new Scope(), '2*a*b*c*d');
 
-          expect(compiled.variables).to.deep.equal([
+          expect(functor.variables).to.deep.equal([
             new Variable('a'),
             new Variable('b'),
             new Variable('c'),
             new Variable('d')
           ]);
 
-          compiled = CompiledFunction.compile('x + cos(x) + cos(x)', new Scope());
-          expect(compiled.variables).to.deep.equal([
+          functor = new Functor('f', new Scope(), 'x + cos(x) + cos(x)');
+          expect(functor.variables).to.deep.equal([
             new Variable('x')
           ]);
         });
 
         test('insert multipliers behaves properly', function() {
           let scope = new Scope();
-          scope.functions.push(new FunctionDefinition('g'));
+          scope.functions.push(new Functor('g', scope));
 
           let expectTransform = (input, expected) => {
-            let transformed = CompiledFunction._insertMultipliers(input, scope);
+            let transformed = Functor._insertMultipliers(input, scope);
             expect(transformed).to.equal(expected);
           };
 
@@ -160,27 +168,27 @@
             ['a','g','b','c'],
             [SETS.REAL, SETS.REAL, SETS.INTEGER, SETS.COMPLEX],
             ['c','g']);
-          let f = helper.makeFakeCompiled('a*g*b*c', ['a','g','b','c'], scope);
+          let functor = new Functor('f', scope, 'a*g*b*c');
 
-          expect(f.getDomain()).to.deep.equal([SETS.REAL, SETS.INTEGER]);
+          expect(functor.domain).to.deep.equal([SETS.REAL, SETS.INTEGER]);
         });
 
         test('dehydrate/rehydrate', function() {
           let scope = helper.makeScope(['a','b'],
             [SETS.INTEGER, SETS.REAL],
             ['b'], [[-10, 10]], [3]);
-          let compiled = CompiledFunction.compile('cos(a*b)', scope);
+          let functor = new Functor('f', scope, 'cos(a*b)');
           let expected = (a,b) => {
             return Math.cos(a*b);
           };
-          assertCompiledMatches(compiled, expected, ['a','b']);
+          assertFunctorMatches(functor, expected, ['a','b']);
 
-          let dehydrated = compiled.dehydrate();
+          let dehydrated = functor.dehydrate();
           expect(dehydrated.scope).to.deep.equal(scope);
           expect(dehydrated.definition).to.deep.equal('cos(a b)');
 
-          let rehydrated = CompiledFunction.rehydrate(dehydrated);
-          assertCompiledMatches(rehydrated, expected, ['a','b']);
+          let rehydrated = Functor.rehydrate(dehydrated);
+          assertFunctorMatches(rehydrated, expected, ['a','b']);
         });
 
         // test('compiledFunction shouldn\'t evaluate with incomplete scope', function() {
@@ -193,6 +201,18 @@
         // test('should resolve other functions', function() {
         //   //Test here
         // });
+      });
+
+      suite('function referencing', function() {
+
+        //Compiling a function writes it into the scope properly.
+        //change of 'names' works (defined as g(x), evaled as g(t))
+        //Evaluation works properly
+        //Handle cycles properly
+        //Removing functions from the scope works properly
+        //Renaming functions updates the scope properly
+        //de/rehydration works properly
+
       });
 
       suite('autoBoundsCalculator tests', function() {

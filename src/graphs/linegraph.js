@@ -7,7 +7,7 @@ class LineGraph extends Graph {
 
     this.rangeBinder = new RangeBinder(this);
     this.scaleLabel = new ScaleLabel(this, {
-      visibleCallback: () => {return this.labelsVisible;},
+      visibleCallback: () => {return this.isMouseOver;},
       rangeBinder: this.rangeBinder
     });
 
@@ -15,7 +15,7 @@ class LineGraph extends Graph {
       this.probeX = 0;
     }
     this.probe = new Probe(this, {
-      visibilityCallback: () => {return this.probeVisible;}, 
+      visibleCallback: () => {return this.isMouseOver;}, 
       styles: {
         topLine: {opacity: 0.5},
         rightLine: {opacity: 0}
@@ -30,12 +30,13 @@ class LineGraph extends Graph {
             left: -4px;
             top: 50%; `,
       toggles: true,
-      icon: 'http',
+      text: 'auto',
       onTap: () => {
         if (this.autoButton.active) {
           AutoBoundsCalculator.fireRecalcEvent([this.compiled.freeVariables[0].name]);
         }
-      }
+      },
+      visibleCallback: () => {return this.isMouseOver;}
     });
     this.autoButton.active = true;
   }
@@ -57,8 +58,7 @@ class LineGraph extends Graph {
   static get syncedParameterNames() {
     return [
       'xRange',
-      'labelsVisible',
-      'probeVisible',
+      'isMouseOver',
       'probeX',
       'selectedLineGraph'
     ];
@@ -124,8 +124,8 @@ class LineGraph extends Graph {
   }
 
   showFunction(compiledFunction) {
-    if (!this.constructor.isSupported(compiledFunction.getSignature())) {
-      throw Error('The function signature ' + compiledFunction.getSignature() + 'is unsupported');
+    if (!this.constructor.isSupported(compiledFunction.signature)) {
+      throw Error('The function signature ' + compiledFunction.signature + 'is unsupported');
     }
 
     this.changeExpr(this.makeExpr(compiledFunction));
@@ -215,8 +215,7 @@ class LineGraph extends Graph {
   //Mouse events
 
   onMouseEnter(e) {
-    this.labelsVisible = true;
-    this.probeVisible = true;
+    this.isMouseOver = true;
     this.selectedLineGraph = this;
   }
 
@@ -226,8 +225,7 @@ class LineGraph extends Graph {
   }
 
   onMouseLeave(e) {
-    this.labelsVisible = false;
-    this.probeVisible = false;
+    this.isMouseOver = false;
     this.selectedLineGraph = null;
   }
 

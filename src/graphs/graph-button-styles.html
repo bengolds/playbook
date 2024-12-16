@@ -1,3 +1,6 @@
+<link rel="import" href="../../bower_components/paper-button/paper-button.html">
+<link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet">
+
 <dom-module id='graph-button-styles'>
   <template>
     <style>
@@ -6,6 +9,21 @@
 
       paper-icon-button {
         pointer-events: all;
+      }
+
+      paper-button {
+        pointer-events: all;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 11px;
+        opacity: .54;
+        min-width: 0;
+        width: 40px;
+        height: 40px;
+      }
+      paper-button[active] {
+        opacity: 1;
+        color: #4285F4;
       }
     </style>
   </template>
